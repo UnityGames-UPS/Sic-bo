@@ -722,10 +722,10 @@ TextureImporter:
       name: Sic_bo_Btn_2_49
       rect:
         serializedVersion: 2
-        x: 18
-        y: 36
-        width: 74
-        height: 75
+        x: 21
+        y: 40
+        width: 71
+        height: 71
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -743,10 +743,10 @@ TextureImporter:
       name: Sic_bo_Btn_2_50
       rect:
         serializedVersion: 2
-        x: 141
-        y: 36
-        width: 70
-        height: 75
+        x: 140
+        y: 40
+        width: 71
+        height: 71
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -764,10 +764,10 @@ TextureImporter:
       name: Sic_bo_Btn_2_51
       rect:
         serializedVersion: 2
-        x: 260
-        y: 39
-        width: 70
-        height: 75
+        x: 259
+        y: 40
+        width: 71
+        height: 71
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -785,9 +785,9 @@ TextureImporter:
       name: Sic_bo_Btn_2_52
       rect:
         serializedVersion: 2
-        x: 378
+        x: 377
         y: 40
-        width: 70
+        width: 71
         height: 71
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
