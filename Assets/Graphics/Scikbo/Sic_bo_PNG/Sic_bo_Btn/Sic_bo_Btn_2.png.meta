@@ -1,0 +1,875 @@
+fileFormatVersion: 2
+guid: 15521095a40074285971653b46410cc0
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 3
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_0
+      rect:
+        serializedVersion: 2
+        x: 17
+        y: 801
+        width: 80
+        height: 79
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8b3f43311e456455fbe170ac11e6c97e
+      internalID: -942062205
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_1
+      rect:
+        serializedVersion: 2
+        x: 136
+        y: 801
+        width: 80
+        height: 79
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d97e7a49b2d054a32a34bfc0a0b2e448
+      internalID: -1310770974
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_2
+      rect:
+        serializedVersion: 2
+        x: 252
+        y: 801
+        width: 84
+        height: 81
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 897f337f805494b1792e26934a71d16f
+      internalID: 1760016159
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_3
+      rect:
+        serializedVersion: 2
+        x: 372
+        y: 801
+        width: 84
+        height: 79
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2747d82ca820245c7ac0f7ed4e821b97
+      internalID: -2003982369
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_4
+      rect:
+        serializedVersion: 2
+        x: 16
+        y: 680
+        width: 81
+        height: 80
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cd299ad08cede4e8d92a63902e761788
+      internalID: 1591733783
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_5
+      rect:
+        serializedVersion: 2
+        x: 132
+        y: 680
+        width: 84
+        height: 80
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 593d89017999349cfb7904a9245c95d7
+      internalID: 471010687
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_6
+      rect:
+        serializedVersion: 2
+        x: 255
+        y: 680
+        width: 80
+        height: 80
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 24d8c8c17970b4947a50454d0c9d6a88
+      internalID: -1522056906
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_7
+      rect:
+        serializedVersion: 2
+        x: 373
+        y: 680
+        width: 83
+        height: 80
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d31a1e60b3a4846759ed7c04945aff46
+      internalID: -1684436950
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_9
+      rect:
+        serializedVersion: 2
+        x: 17
+        y: 565
+        width: 80
+        height: 72
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 079b682b057ec4e49974cd6bf76d4d3e
+      internalID: -1294416038
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_13
+      rect:
+        serializedVersion: 2
+        x: 136
+        y: 569
+        width: 80
+        height: 69
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a6b6ac16bf93440d49861194a89818fa
+      internalID: 607778455
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_16
+      rect:
+        serializedVersion: 2
+        x: 254
+        y: 568
+        width: 80
+        height: 70
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a5801a454498a46e6ac26b3de1bf0f0f
+      internalID: -181031930
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_19
+      rect:
+        serializedVersion: 2
+        x: 373
+        y: 566
+        width: 80
+        height: 84
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0a5928f5131ce42a7a368419b6e9f03e
+      internalID: -599183655
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_24
+      rect:
+        serializedVersion: 2
+        x: 17
+        y: 463
+        width: 85
+        height: 69
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cfe9334e8838f4c76a7892697ccc5333
+      internalID: 1133394029
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_27
+      rect:
+        serializedVersion: 2
+        x: 136
+        y: 463
+        width: 90
+        height: 69
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2aceffc40945945938fccdec0c9a8581
+      internalID: -1033999891
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_30
+      rect:
+        serializedVersion: 2
+        x: 253
+        y: 463
+        width: 89
+        height: 69
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f343b0eceddce40c5bd8008f98632a10
+      internalID: 956954885
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_33
+      rect:
+        serializedVersion: 2
+        x: 374
+        y: 462
+        width: 85
+        height: 72
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 766bcbabc180e4ba2af28acac8e97c95
+      internalID: -1585952631
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_35
+      rect:
+        serializedVersion: 2
+        x: 30
+        y: 356
+        width: 53
+        height: 71
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b4f3a66f25aa34880926fe179b1b1425
+      internalID: 1181736044
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_36
+      rect:
+        serializedVersion: 2
+        x: 154
+        y: 354
+        width: 47
+        height: 73
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 10a22fc933ef64fd08784af41a9eb102
+      internalID: 906451791
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_37
+      rect:
+        serializedVersion: 2
+        x: 273
+        y: 356
+        width: 51
+        height: 71
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bdaf025934ce143b99572ac5a664c08f
+      internalID: 1837805019
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_38
+      rect:
+        serializedVersion: 2
+        x: 391
+        y: 354
+        width: 48
+        height: 73
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f9f56fa9d3861440d8478c503899c02b
+      internalID: 835459740
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_39
+      rect:
+        serializedVersion: 2
+        x: 35
+        y: 247
+        width: 44
+        height: 68
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 56a3bb0bb6c4342e1822b95d4e2afb69
+      internalID: -795637373
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_40
+      rect:
+        serializedVersion: 2
+        x: 154
+        y: 247
+        width: 44
+        height: 68
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1393c9a92f4f844e494e7d441dfb87e2
+      internalID: 2133839802
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_41
+      rect:
+        serializedVersion: 2
+        x: 273
+        y: 247
+        width: 45
+        height: 68
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9108c22f52672493baac9b47deb51dab
+      internalID: -2097726430
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_42
+      rect:
+        serializedVersion: 2
+        x: 391
+        y: 247
+        width: 44
+        height: 69
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5bbcb6ebbedb2465ea1e1ddd519c9552
+      internalID: 1729224729
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_43
+      rect:
+        serializedVersion: 2
+        x: 22
+        y: 143
+        width: 70
+        height: 70
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 96843fc12144b480c93b3855527b61d9
+      internalID: 1603385598
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_44
+      rect:
+        serializedVersion: 2
+        x: 42
+        y: 168
+        width: 50
+        height: 46
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b6d0995e656d14ec7b24bb04671a397d
+      internalID: -1814879652
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_45
+      rect:
+        serializedVersion: 2
+        x: 141
+        y: 143
+        width: 70
+        height: 70
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 131fa64ff249c490697a5a168a5d670d
+      internalID: 1910779556
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_46
+      rect:
+        serializedVersion: 2
+        x: 260
+        y: 143
+        width: 70
+        height: 70
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 235adbe241fa04f4d9e13cc47944b83b
+      internalID: 786307272
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_47
+      rect:
+        serializedVersion: 2
+        x: 378
+        y: 143
+        width: 71
+        height: 73
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a66d0339ebec24d15beeb4271279cf88
+      internalID: 243554148
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_49
+      rect:
+        serializedVersion: 2
+        x: 18
+        y: 36
+        width: 74
+        height: 75
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ca28909bccbaa4c5fb99949e2c47ace7
+      internalID: 1571133569
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_50
+      rect:
+        serializedVersion: 2
+        x: 141
+        y: 36
+        width: 70
+        height: 75
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e4800ba9edb4145dab57bdf9378fb188
+      internalID: 273724537
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_51
+      rect:
+        serializedVersion: 2
+        x: 260
+        y: 39
+        width: 70
+        height: 75
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 372377a22cdf843de93aa599da79438e
+      internalID: -1617518738
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Btn_2_52
+      rect:
+        serializedVersion: 2
+        x: 378
+        y: 40
+        width: 70
+        height: 71
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 275e1f6c56f554ddcb62c6e65f167b4b
+      internalID: 1865646374
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    nameFileIdTable:
+      Sic_bo_Btn_2_0: -942062205
+      Sic_bo_Btn_2_1: -1310770974
+      Sic_bo_Btn_2_10: -534888336
+      Sic_bo_Btn_2_11: 1012667054
+      Sic_bo_Btn_2_12: -807086309
+      Sic_bo_Btn_2_13: 607778455
+      Sic_bo_Btn_2_14: -329164629
+      Sic_bo_Btn_2_15: 275890148
+      Sic_bo_Btn_2_16: -181031930
+      Sic_bo_Btn_2_17: 650454863
+      Sic_bo_Btn_2_18: 1325732676
+      Sic_bo_Btn_2_19: -599183655
+      Sic_bo_Btn_2_2: 1760016159
+      Sic_bo_Btn_2_20: -1754230388
+      Sic_bo_Btn_2_21: 769171626
+      Sic_bo_Btn_2_22: 90934615
+      Sic_bo_Btn_2_23: 893994400
+      Sic_bo_Btn_2_24: 1133394029
+      Sic_bo_Btn_2_25: 822511532
+      Sic_bo_Btn_2_26: 927004000
+      Sic_bo_Btn_2_27: -1033999891
+      Sic_bo_Btn_2_28: -968532730
+      Sic_bo_Btn_2_29: -480484527
+      Sic_bo_Btn_2_3: -2003982369
+      Sic_bo_Btn_2_30: 956954885
+      Sic_bo_Btn_2_31: 1563629365
+      Sic_bo_Btn_2_32: -2062365282
+      Sic_bo_Btn_2_33: -1585952631
+      Sic_bo_Btn_2_34: -1349522276
+      Sic_bo_Btn_2_35: 1181736044
+      Sic_bo_Btn_2_36: 906451791
+      Sic_bo_Btn_2_37: 1837805019
+      Sic_bo_Btn_2_38: 835459740
+      Sic_bo_Btn_2_39: -795637373
+      Sic_bo_Btn_2_4: 1591733783
+      Sic_bo_Btn_2_40: 2133839802
+      Sic_bo_Btn_2_41: -2097726430
+      Sic_bo_Btn_2_42: 1729224729
+      Sic_bo_Btn_2_43: 1603385598
+      Sic_bo_Btn_2_44: -1814879652
+      Sic_bo_Btn_2_45: 1910779556
+      Sic_bo_Btn_2_46: 786307272
+      Sic_bo_Btn_2_47: 243554148
+      Sic_bo_Btn_2_48: -333180134
+      Sic_bo_Btn_2_49: 1571133569
+      Sic_bo_Btn_2_5: 471010687
+      Sic_bo_Btn_2_50: 273724537
+      Sic_bo_Btn_2_51: -1617518738
+      Sic_bo_Btn_2_52: 1865646374
+      Sic_bo_Btn_2_53: 795874128
+      Sic_bo_Btn_2_54: 1993260412
+      Sic_bo_Btn_2_6: -1522056906
+      Sic_bo_Btn_2_7: -1684436950
+      Sic_bo_Btn_2_8: -437683570
+      Sic_bo_Btn_2_9: -1294416038
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

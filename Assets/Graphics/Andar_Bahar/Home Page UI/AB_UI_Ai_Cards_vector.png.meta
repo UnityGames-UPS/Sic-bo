@@ -1,0 +1,450 @@
+fileFormatVersion: 2
+guid: 8f99a4f10494f4aaea0c4471bf9af7bd
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 12
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 3
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: iPhone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_13
+      rect:
+        serializedVersion: 2
+        x: 109
+        y: 2024
+        width: 496
+        height: 602
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 98ead0e6f99164cf3b21121f50304e86
+      internalID: 2137716632
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_16
+      rect:
+        serializedVersion: 2
+        x: 756
+        y: 2024
+        width: 497
+        height: 602
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 00bd044095a2648b58c0d2059b302bf1
+      internalID: 1925386809
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_18
+      rect:
+        serializedVersion: 2
+        x: 1388
+        y: 2024
+        width: 496
+        height: 602
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0dfb5a6cb14104746a23e07dd5f661b4
+      internalID: -1464577336
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_23
+      rect:
+        serializedVersion: 2
+        x: 773
+        y: 1381
+        width: 480
+        height: 585
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8634e26cc57d541ec8b38914c084e7e0
+      internalID: 894062564
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_25
+      rect:
+        serializedVersion: 2
+        x: 126
+        y: 1382
+        width: 480
+        height: 584
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 386d8ed6227c1405db809be119a44203
+      internalID: -35284003
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_28
+      rect:
+        serializedVersion: 2
+        x: 1404
+        y: 1381
+        width: 481
+        height: 586
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d24ad9423f0824b1f9a1031bca302d5e
+      internalID: -1667440987
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_31
+      rect:
+        serializedVersion: 2
+        x: 769
+        y: 739
+        width: 484
+        height: 586
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cc8ebc516fb564aff9c85651cb4a5132
+      internalID: -171272155
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_32
+      rect:
+        serializedVersion: 2
+        x: 1400
+        y: 739
+        width: 485
+        height: 586
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: df0d6f5e85c0049059cecb092127eb8b
+      internalID: -1399584726
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_38
+      rect:
+        serializedVersion: 2
+        x: 123
+        y: 739
+        width: 484
+        height: 585
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 07e9395fc67ee49e7b4c6dc1894964c4
+      internalID: -909722169
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_40
+      rect:
+        serializedVersion: 2
+        x: 121
+        y: 95
+        width: 487
+        height: 588
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ff9f1d50d276540d0b0ec8605dc62252
+      internalID: -142324181
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_41
+      rect:
+        serializedVersion: 2
+        x: 766
+        y: 96
+        width: 489
+        height: 586
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2c899c0065751439199e1a7d07e5c293
+      internalID: -1015725607
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Ai_Cards_vector_43
+      rect:
+        serializedVersion: 2
+        x: 1397
+        y: 96
+        width: 489
+        height: 587
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ace9e0b602efa44159df2edb37d45c67
+      internalID: 946027600
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    nameFileIdTable:
+      AB_UI_Ai_Cards_vector_0: -513664685
+      AB_UI_Ai_Cards_vector_1: 318511924
+      AB_UI_Ai_Cards_vector_10: -460376490
+      AB_UI_Ai_Cards_vector_11: 662212306
+      AB_UI_Ai_Cards_vector_12: -1704448792
+      AB_UI_Ai_Cards_vector_13: 2137716632
+      AB_UI_Ai_Cards_vector_14: 52210662
+      AB_UI_Ai_Cards_vector_15: 1686764983
+      AB_UI_Ai_Cards_vector_16: 1925386809
+      AB_UI_Ai_Cards_vector_17: -125163884
+      AB_UI_Ai_Cards_vector_18: -1464577336
+      AB_UI_Ai_Cards_vector_19: -108140216
+      AB_UI_Ai_Cards_vector_2: -1187305099
+      AB_UI_Ai_Cards_vector_20: 111369673
+      AB_UI_Ai_Cards_vector_21: 898367587
+      AB_UI_Ai_Cards_vector_22: 1502459558
+      AB_UI_Ai_Cards_vector_23: 894062564
+      AB_UI_Ai_Cards_vector_24: 1781484942
+      AB_UI_Ai_Cards_vector_25: -35284003
+      AB_UI_Ai_Cards_vector_26: -769523033
+      AB_UI_Ai_Cards_vector_27: 943428035
+      AB_UI_Ai_Cards_vector_28: -1667440987
+      AB_UI_Ai_Cards_vector_29: -1348881442
+      AB_UI_Ai_Cards_vector_3: 1342922917
+      AB_UI_Ai_Cards_vector_30: -1610720226
+      AB_UI_Ai_Cards_vector_31: -171272155
+      AB_UI_Ai_Cards_vector_32: -1399584726
+      AB_UI_Ai_Cards_vector_33: -180724039
+      AB_UI_Ai_Cards_vector_34: 1698006374
+      AB_UI_Ai_Cards_vector_35: -1258484178
+      AB_UI_Ai_Cards_vector_36: 1031974694
+      AB_UI_Ai_Cards_vector_37: 1029709944
+      AB_UI_Ai_Cards_vector_38: -909722169
+      AB_UI_Ai_Cards_vector_39: -1190883732
+      AB_UI_Ai_Cards_vector_4: -231320479
+      AB_UI_Ai_Cards_vector_40: -142324181
+      AB_UI_Ai_Cards_vector_41: -1015725607
+      AB_UI_Ai_Cards_vector_42: -2035771337
+      AB_UI_Ai_Cards_vector_43: 946027600
+      AB_UI_Ai_Cards_vector_44: 178086457
+      AB_UI_Ai_Cards_vector_5: -529688477
+      AB_UI_Ai_Cards_vector_6: -1392508712
+      AB_UI_Ai_Cards_vector_7: 1402687721
+      AB_UI_Ai_Cards_vector_8: 1655700355
+      AB_UI_Ai_Cards_vector_9: -843889848
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

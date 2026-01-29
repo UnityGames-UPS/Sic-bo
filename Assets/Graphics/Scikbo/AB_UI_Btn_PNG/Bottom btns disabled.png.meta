@@ -1,0 +1,331 @@
+fileFormatVersion: 2
+guid: 94afa9cf982784aa09489ea1f17ab6b6
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 3
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: iPhone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Bottom btns disabled_0
+      rect:
+        serializedVersion: 2
+        x: 50
+        y: 48
+        width: 157
+        height: 159
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3f1f3205f1a824f2daea69f18a33bb90
+      internalID: 587684585
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bottom btns disabled_1
+      rect:
+        serializedVersion: 2
+        x: 273
+        y: 49
+        width: 224
+        height: 158
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4cd1b78a70797433f9afd20a9ebe8e53
+      internalID: -540743871
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bottom btns disabled_2
+      rect:
+        serializedVersion: 2
+        x: 552
+        y: 43
+        width: 177
+        height: 170
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7c60b29d3067244e6ae015dbb07a33fb
+      internalID: -1545577331
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bottom btns disabled_3
+      rect:
+        serializedVersion: 2
+        x: 809
+        y: 46
+        width: 176
+        height: 164
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 89f43f20743104609a20903da4a8fdc2
+      internalID: -936637864
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bottom btns disabled_4
+      rect:
+        serializedVersion: 2
+        x: 1044
+        y: 43
+        width: 216
+        height: 170
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 06e2b646eb5474908b74e8e774c5643b
+      internalID: 565577249
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Bottom btns disabled_7
+      rect:
+        serializedVersion: 2
+        x: 1330
+        y: 31
+        width: 157
+        height: 193
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c8936f6e499214be590dde20f63c0001
+      internalID: -68105802
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    nameFileIdTable:
+      Bottom btns disabled_0: 587684585
+      Bottom btns disabled_1: -540743871
+      Bottom btns disabled_10: 459992633
+      Bottom btns disabled_11: -1243277123
+      Bottom btns disabled_12: -2021544057
+      Bottom btns disabled_13: 940581192
+      Bottom btns disabled_14: 1214789674
+      Bottom btns disabled_15: -713754650
+      Bottom btns disabled_16: -1522637847
+      Bottom btns disabled_17: 1353337669
+      Bottom btns disabled_18: 370453194
+      Bottom btns disabled_19: -1395608344
+      Bottom btns disabled_2: -1545577331
+      Bottom btns disabled_20: 162617622
+      Bottom btns disabled_21: 1731381315
+      Bottom btns disabled_22: 502262370
+      Bottom btns disabled_23: -953001599
+      Bottom btns disabled_24: -1110952291
+      Bottom btns disabled_25: -1674522035
+      Bottom btns disabled_26: -193693039
+      Bottom btns disabled_27: -961555650
+      Bottom btns disabled_28: 306169195
+      Bottom btns disabled_29: -7832819
+      Bottom btns disabled_3: -936637864
+      Bottom btns disabled_30: 593692725
+      Bottom btns disabled_31: -1584392580
+      Bottom btns disabled_32: 258037300
+      Bottom btns disabled_33: -2017008304
+      Bottom btns disabled_34: 1242541756
+      Bottom btns disabled_35: -226950104
+      Bottom btns disabled_36: -594080157
+      Bottom btns disabled_37: -419254094
+      Bottom btns disabled_38: -1095352586
+      Bottom btns disabled_39: 2054125198
+      Bottom btns disabled_4: 565577249
+      Bottom btns disabled_40: 2062925201
+      Bottom btns disabled_41: 986505130
+      Bottom btns disabled_42: -256255285
+      Bottom btns disabled_43: -88133807
+      Bottom btns disabled_44: -457333071
+      Bottom btns disabled_45: -1305214545
+      Bottom btns disabled_46: -709477069
+      Bottom btns disabled_47: -1154139376
+      Bottom btns disabled_48: 572925591
+      Bottom btns disabled_49: -1027763581
+      Bottom btns disabled_5: 2108083250
+      Bottom btns disabled_50: -1648144243
+      Bottom btns disabled_51: -2090540950
+      Bottom btns disabled_6: -1212381246
+      Bottom btns disabled_7: -68105802
+      Bottom btns disabled_8: -1742013793
+      Bottom btns disabled_9: -287589473
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

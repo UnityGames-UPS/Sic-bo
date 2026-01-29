@@ -1,0 +1,630 @@
+fileFormatVersion: 2
+guid: 2fd1dc9233bbb457f9a43df03c22d22f
+TextureImporter:
+  internalIDToNameTable: []
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 3
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: iPhone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 3
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_0
+      rect:
+        serializedVersion: 2
+        x: 49
+        y: 561
+        width: 157
+        height: 159
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f5b9955be3f664247996403bf6bc0991
+      internalID: 1604882281
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_1
+      rect:
+        serializedVersion: 2
+        x: 273
+        y: 561
+        width: 223
+        height: 159
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ae27d20be50b3422d879e61b57d2b36d
+      internalID: -888574728
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_2
+      rect:
+        serializedVersion: 2
+        x: 552
+        y: 555
+        width: 176
+        height: 171
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 42a80e81d48494548b8eff13f57f19a6
+      internalID: -1404332794
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_3
+      rect:
+        serializedVersion: 2
+        x: 809
+        y: 558
+        width: 174
+        height: 164
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0954b3c6a6704467cb0cc12d62e2c050
+      internalID: -852585776
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_4
+      rect:
+        serializedVersion: 2
+        x: 1044
+        y: 555
+        width: 216
+        height: 170
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9267ccdec35d84f0f8d82d8bd0e27fd8
+      internalID: 1322187743
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_6
+      rect:
+        serializedVersion: 2
+        x: 1330
+        y: 543
+        width: 156
+        height: 195
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f84f044a9eba44ab28533956525a2ee7
+      internalID: -1603357947
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_29
+      rect:
+        serializedVersion: 2
+        x: 272
+        y: 306
+        width: 224
+        height: 157
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2eaadc9240b75470eb0dd4f0aba059d6
+      internalID: -1248955838
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_30
+      rect:
+        serializedVersion: 2
+        x: 550
+        y: 298
+        width: 179
+        height: 172
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 19722a12cd1e145c0aec9720bcf44b6b
+      internalID: 1637093634
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_32
+      rect:
+        serializedVersion: 2
+        x: 808
+        y: 302
+        width: 176
+        height: 165
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cb389b1f4ffee4b998fc01d3040a2fe1
+      internalID: 1928889501
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_34
+      rect:
+        serializedVersion: 2
+        x: 1044
+        y: 298
+        width: 217
+        height: 172
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 282500fa96ad64a68b4b8ad2007c17ee
+      internalID: 413423139
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_35
+      rect:
+        serializedVersion: 2
+        x: 1327
+        y: 288
+        width: 161
+        height: 192
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6dbdce572890f4534b2680d36e362088
+      internalID: 2067551198
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_48
+      rect:
+        serializedVersion: 2
+        x: 273
+        y: 48
+        width: 222
+        height: 159
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9dbc9a6ceed3b4942b76856c69b05c4a
+      internalID: -521182289
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_49
+      rect:
+        serializedVersion: 2
+        x: 552
+        y: 43
+        width: 176
+        height: 170
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: da344d568bae843838f46282d8801e18
+      internalID: 551999915
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_50
+      rect:
+        serializedVersion: 2
+        x: 809
+        y: 46
+        width: 175
+        height: 164
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e09432f6c3e8d4d51b9240d168f3a63f
+      internalID: 94905105
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_51
+      rect:
+        serializedVersion: 2
+        x: 1044
+        y: 43
+        width: 216
+        height: 170
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b80ca7c42a235402a94ef330da66cd9a
+      internalID: -16565222
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_54
+      rect:
+        serializedVersion: 2
+        x: 1330
+        y: 31
+        width: 156
+        height: 193
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 23e17b508493844d992c66f2f6c0ece1
+      internalID: 1009897352
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_16
+      rect:
+        serializedVersion: 2
+        x: 49
+        y: 308
+        width: 157
+        height: 159
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 105dc1329c0224753aa080fe35fb327a
+      internalID: -361689800
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: AB_UI_Btn_Icons_28
+      rect:
+        serializedVersion: 2
+        x: 51
+        y: 51
+        width: 157
+        height: 159
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b9a0fd508d3e348a08c2d81c5b5e2c92
+      internalID: -1708914646
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    nameFileIdTable:
+      AB_UI_Btn_Icons_0: 1604882281
+      AB_UI_Btn_Icons_1: -888574728
+      AB_UI_Btn_Icons_10: 162575555
+      AB_UI_Btn_Icons_11: 494399540
+      AB_UI_Btn_Icons_12: -2142951130
+      AB_UI_Btn_Icons_13: 2030799889
+      AB_UI_Btn_Icons_14: -720694289
+      AB_UI_Btn_Icons_15: 848351725
+      AB_UI_Btn_Icons_16: -361689800
+      AB_UI_Btn_Icons_17: 85727884
+      AB_UI_Btn_Icons_18: -2020758945
+      AB_UI_Btn_Icons_19: 1994344331
+      AB_UI_Btn_Icons_2: -1404332794
+      AB_UI_Btn_Icons_20: -1706030843
+      AB_UI_Btn_Icons_21: -824438767
+      AB_UI_Btn_Icons_22: 1199831045
+      AB_UI_Btn_Icons_23: -723601456
+      AB_UI_Btn_Icons_24: -437007191
+      AB_UI_Btn_Icons_25: 451144814
+      AB_UI_Btn_Icons_26: 379495697
+      AB_UI_Btn_Icons_27: -2069592305
+      AB_UI_Btn_Icons_28: -1708914646
+      AB_UI_Btn_Icons_29: -1248955838
+      AB_UI_Btn_Icons_3: -852585776
+      AB_UI_Btn_Icons_30: 1637093634
+      AB_UI_Btn_Icons_31: 1173621817
+      AB_UI_Btn_Icons_32: 1928889501
+      AB_UI_Btn_Icons_33: 1900198363
+      AB_UI_Btn_Icons_34: 413423139
+      AB_UI_Btn_Icons_35: 2067551198
+      AB_UI_Btn_Icons_36: 436522185
+      AB_UI_Btn_Icons_37: -1422343792
+      AB_UI_Btn_Icons_38: 366058510
+      AB_UI_Btn_Icons_39: 559959092
+      AB_UI_Btn_Icons_4: 1322187743
+      AB_UI_Btn_Icons_40: 199922527
+      AB_UI_Btn_Icons_41: -1139412014
+      AB_UI_Btn_Icons_42: -869603348
+      AB_UI_Btn_Icons_43: -775925116
+      AB_UI_Btn_Icons_44: 283354519
+      AB_UI_Btn_Icons_45: 188157926
+      AB_UI_Btn_Icons_46: -1185204128
+      AB_UI_Btn_Icons_47: -357934422
+      AB_UI_Btn_Icons_48: -521182289
+      AB_UI_Btn_Icons_49: 551999915
+      AB_UI_Btn_Icons_5: -171432693
+      AB_UI_Btn_Icons_50: 94905105
+      AB_UI_Btn_Icons_51: -16565222
+      AB_UI_Btn_Icons_52: -937230171
+      AB_UI_Btn_Icons_53: 1162121489
+      AB_UI_Btn_Icons_54: 1009897352
+      AB_UI_Btn_Icons_55: 289811306
+      AB_UI_Btn_Icons_56: -1322228075
+      AB_UI_Btn_Icons_57: -2119528969
+      AB_UI_Btn_Icons_58: 1462270068
+      AB_UI_Btn_Icons_59: -1646020449
+      AB_UI_Btn_Icons_6: -1603357947
+      AB_UI_Btn_Icons_60: -1915167145
+      AB_UI_Btn_Icons_61: 1138569262
+      AB_UI_Btn_Icons_62: -17433548
+      AB_UI_Btn_Icons_63: 980870965
+      AB_UI_Btn_Icons_64: -1732155853
+      AB_UI_Btn_Icons_65: -572708234
+      AB_UI_Btn_Icons_66: -642192346
+      AB_UI_Btn_Icons_67: 1171764452
+      AB_UI_Btn_Icons_68: -530283330
+      AB_UI_Btn_Icons_69: 1902063256
+      AB_UI_Btn_Icons_7: 1991336929
+      AB_UI_Btn_Icons_70: 1759353263
+      AB_UI_Btn_Icons_71: -389051089
+      AB_UI_Btn_Icons_72: -398980519
+      AB_UI_Btn_Icons_73: -39249390
+      AB_UI_Btn_Icons_74: -694821312
+      AB_UI_Btn_Icons_75: 814619540
+      AB_UI_Btn_Icons_76: -1356060472
+      AB_UI_Btn_Icons_77: 267223943
+      AB_UI_Btn_Icons_78: -1742262615
+      AB_UI_Btn_Icons_79: -1231065150
+      AB_UI_Btn_Icons_8: -755657339
+      AB_UI_Btn_Icons_80: 461417498
+      AB_UI_Btn_Icons_81: 1952207523
+      AB_UI_Btn_Icons_82: 1083590418
+      AB_UI_Btn_Icons_83: -1078944779
+      AB_UI_Btn_Icons_84: 1638923190
+      AB_UI_Btn_Icons_85: -85623982
+      AB_UI_Btn_Icons_86: 1281856319
+      AB_UI_Btn_Icons_87: 1515714390
+      AB_UI_Btn_Icons_88: 416445947
+      AB_UI_Btn_Icons_89: -577437332
+      AB_UI_Btn_Icons_9: 514320488
+      AB_UI_Btn_Icons_90: 2032002299
+      AB_UI_Btn_Icons_91: -69920171
+      AB_UI_Btn_Icons_92: 1841529316
+      AB_UI_Btn_Icons_93: -1552373698
+      AB_UI_Btn_Icons_94: -2035611294
+      AB_UI_Btn_Icons_95: 1920639693
+      AB_UI_Btn_Icons_96: 1173610651
+      AB_UI_Btn_Icons_97: 1238533616
+      AB_UI_Btn_Icons_98: -33113655
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
