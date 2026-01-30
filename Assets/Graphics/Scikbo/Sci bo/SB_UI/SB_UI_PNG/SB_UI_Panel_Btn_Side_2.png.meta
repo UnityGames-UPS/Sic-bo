@@ -43,7 +43,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -108,7 +108,175 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites: []
+    sprites:
+    - serializedVersion: 2
+      name: SB_UI_Panel_Btn_Side_2_0
+      rect:
+        serializedVersion: 2
+        x: 45
+        y: 828
+        width: 160
+        height: 135
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6681fe539f71c90479f5bf9104cf1dfa
+      internalID: 1611922316
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SB_UI_Panel_Btn_Side_2_1
+      rect:
+        serializedVersion: 2
+        x: 308
+        y: 828
+        width: 160
+        height: 135
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 81ee855c17ee9554f884b576f1f699b3
+      internalID: -623030931
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SB_UI_Panel_Btn_Side_2_2
+      rect:
+        serializedVersion: 2
+        x: 308
+        y: 572
+        width: 160
+        height: 135
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d2cfda78745841b4c9dafffc2147ef46
+      internalID: -161381200
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SB_UI_Panel_Btn_Side_2_3
+      rect:
+        serializedVersion: 2
+        x: 45
+        y: 572
+        width: 160
+        height: 135
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fbea864cbd65e6548ab9670c3c5fe0f7
+      internalID: -2131915485
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SB_UI_Panel_Btn_Side_2_4
+      rect:
+        serializedVersion: 2
+        x: 308
+        y: 315
+        width: 160
+        height: 135
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 27c450d877c13a649bc38551e9b401e1
+      internalID: -277977410
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SB_UI_Panel_Btn_Side_2_5
+      rect:
+        serializedVersion: 2
+        x: 45
+        y: 315
+        width: 160
+        height: 135
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7c16184114d07b1479180f002b6d6013
+      internalID: 2134067187
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SB_UI_Panel_Btn_Side_2_6
+      rect:
+        serializedVersion: 2
+        x: 45
+        y: 61
+        width: 160
+        height: 135
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 43719299c2e1d094ea8ee822f331a8e8
+      internalID: -1787406159
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: SB_UI_Panel_Btn_Side_2_7
+      rect:
+        serializedVersion: 2
+        x: 308
+        y: 61
+        width: 160
+        height: 135
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4eba96426decc0444881f2321e27c827
+      internalID: 1332973223
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
     physicsShape: []
     bones: []
@@ -119,7 +287,15 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      SB_UI_Panel_Btn_Side_2_0: 1611922316
+      SB_UI_Panel_Btn_Side_2_1: -623030931
+      SB_UI_Panel_Btn_Side_2_2: -161381200
+      SB_UI_Panel_Btn_Side_2_3: -2131915485
+      SB_UI_Panel_Btn_Side_2_4: -277977410
+      SB_UI_Panel_Btn_Side_2_5: 2134067187
+      SB_UI_Panel_Btn_Side_2_6: -1787406159
+      SB_UI_Panel_Btn_Side_2_7: 1332973223
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

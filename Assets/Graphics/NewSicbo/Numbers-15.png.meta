@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: b8544e37126db4083b29afeef66af8e8
+guid: 33558cbcba49d73448a2bc06ed7045c3
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -93,102 +93,68 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
-  - serializedVersion: 3
-    buildTarget: WebGL
-    maxTextureSize: 2048
-    resizeAlgorithm: 0
-    textureFormat: -1
-    textureCompression: 1
-    compressionQuality: 50
-    crunchedCompression: 0
-    allowsAlphaSplitting: 0
-    overridden: 0
-    ignorePlatformSupport: 0
-    androidETC2FallbackOverride: 0
-    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Sic_bo_Extra_4_0
+      name: Numbers-15_0
       rect:
         serializedVersion: 2
-        x: 6
-        y: 187
-        width: 142
-        height: 40
+        x: 43
+        y: 270
+        width: 171
+        height: 100
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: e5a8cb08ec15c4e5790757edb93a95f7
-      internalID: 749505256
+      spriteID: c445f9d3aa525664586ecc49e6fb93e2
+      internalID: -851866159
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Sic_bo_Extra_4_1
+      name: Numbers-15_1
       rect:
         serializedVersion: 2
-        x: 9
-        y: 128
-        width: 98
-        height: 40
+        x: 31
+        y: 143
+        width: 193
+        height: 100
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: e2d5ef9f133f14363b63554927c4c080
-      internalID: 1857912858
+      spriteID: b025610ef3cc69c4c97ad71ab2075326
+      internalID: 1836763095
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Sic_bo_Extra_4_2
+      name: Numbers-15_2
       rect:
         serializedVersion: 2
-        x: 10
-        y: 68
-        width: 70
-        height: 40
+        x: 35
+        y: 17
+        width: 185
+        height: 96
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 4843008cc49534ffdace948055f4117e
-      internalID: -1150470044
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: Sic_bo_Extra_4_3
-      rect:
-        serializedVersion: 2
-        x: 10
-        y: 8
-        width: 107
-        height: 40
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 22ef3660175d44428b59e346de6c062a
-      internalID: 1789822566
+      spriteID: 91e5497d2d2e21a459c82786705ce174
+      internalID: -1878985695
       vertices: []
       indices: 
       edges: []
@@ -204,10 +170,9 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Sic_bo_Extra_4_0: 749505256
-      Sic_bo_Extra_4_1: 1857912858
-      Sic_bo_Extra_4_2: -1150470044
-      Sic_bo_Extra_4_3: 1789822566
+      Numbers-15_0: -851866159
+      Numbers-15_1: 1836763095
+      Numbers-15_2: -1878985695
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
