@@ -1,7 +1,13 @@
 fileFormatVersion: 2
-guid: 03fb4d777bf5a4d6a85b4142c441d86a
+guid: c13bd8a87fde29d40ae4e86e455ff2e7
 TextureImporter:
-  internalIDToNameTable: []
+  internalIDToNameTable:
+  - first:
+      213: -2081592157862793593
+    second: bet history-20_0
+  - first:
+      213: -8540637631709921941
+    second: bet history-20_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -94,7 +100,7 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
-    buildTarget: iOS
+    buildTarget: Android
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
@@ -120,7 +126,7 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
-    buildTarget: Android
+    buildTarget: iOS
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
@@ -136,89 +142,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: AB_UI_Btn_Info_0
+      name: bet history-20_1
       rect:
         serializedVersion: 2
-        x: 43
-        y: 43
-        width: 168
-        height: 168
+        x: 0
+        y: 0
+        width: 497
+        height: 108
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 1ccf0238d08ae4ed9a9c23cae0e34ad1
-      internalID: -688102821
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: AB_UI_Btn_Info_1
-      rect:
-        serializedVersion: 2
-        x: 299
-        y: 43
-        width: 168
-        height: 168
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: d995ea888dbbd48048822212a01c0565
-      internalID: 301835935
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: AB_UI_Btn_Info_2
-      rect:
-        serializedVersion: 2
-        x: 555
-        y: 43
-        width: 168
-        height: 168
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: d13fb08b46b1346f188144b4d0c55a47
-      internalID: 1869138837
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: AB_UI_Btn_Info_3
-      rect:
-        serializedVersion: 2
-        x: 811
-        y: 43
-        width: 168
-        height: 168
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: e25978ff0cd524fec8c3b8757f524894
-      internalID: -192280291
+      spriteID: b6db89ef25f897980800000000000000
+      internalID: -8540637631709921941
       vertices: []
       indices: 
       edges: []
@@ -227,7 +167,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: c3e5db7147acf9b458ddfee3dbbd719b
     internalID: 0
     vertices: []
     indices: 
@@ -237,10 +177,8 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      AB_UI_Btn_Info_0: -688102821
-      AB_UI_Btn_Info_1: 301835935
-      AB_UI_Btn_Info_2: 1869138837
-      AB_UI_Btn_Info_3: -192280291
+      bet history-20_0: -2081592157862793593
+      bet history-20_1: -8540637631709921941
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
