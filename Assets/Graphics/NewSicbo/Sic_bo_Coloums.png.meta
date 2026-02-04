@@ -1,0 +1,936 @@
+fileFormatVersion: 2
+guid: a1223b5df81293843b4aa55d58e1418f
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -3111787627317070374
+    second: Sic_bo_Coloums_0
+  - first:
+      213: -3520310116801490108
+    second: Sic_bo_Coloums_1
+  - first:
+      213: 167550597062446482
+    second: Sic_bo_Coloums_2
+  - first:
+      213: 8449467710908747128
+    second: Sic_bo_Coloums_3
+  - first:
+      213: -1029610822721229967
+    second: Sic_bo_Coloums_4
+  - first:
+      213: 2988387908231740957
+    second: Sic_bo_Coloums_5
+  - first:
+      213: -8881968308105649513
+    second: Sic_bo_Coloums_6
+  - first:
+      213: 561185522216039589
+    second: Sic_bo_Coloums_7
+  - first:
+      213: -747281251685184335
+    second: Sic_bo_Coloums_8
+  - first:
+      213: 1953010257417183683
+    second: Sic_bo_Coloums_9
+  - first:
+      213: 2862383320781052176
+    second: Sic_bo_Coloums_10
+  - first:
+      213: 8682976836186970943
+    second: Sic_bo_Coloums_11
+  - first:
+      213: -1611864060467119770
+    second: Sic_bo_Coloums_12
+  - first:
+      213: -8121802893432393956
+    second: Sic_bo_Coloums_13
+  - first:
+      213: 8350352762597123622
+    second: Sic_bo_Coloums_14
+  - first:
+      213: 1807315967816901169
+    second: Sic_bo_Coloums_15
+  - first:
+      213: -1190757681545022084
+    second: Sic_bo_Coloums_16
+  - first:
+      213: -3053890979952618943
+    second: Sic_bo_Coloums_17
+  - first:
+      213: -1182691682282810611
+    second: Sic_bo_Coloums_18
+  - first:
+      213: -5118828483974058659
+    second: Sic_bo_Coloums_19
+  - first:
+      213: -6093234153676217688
+    second: Sic_bo_Coloums_20
+  - first:
+      213: -2559496742837816898
+    second: Sic_bo_Coloums_21
+  - first:
+      213: -1769010130397999117
+    second: Sic_bo_Coloums_22
+  - first:
+      213: -7006686707505348412
+    second: Sic_bo_Coloums_23
+  - first:
+      213: 3212611366697722811
+    second: Sic_bo_Coloums_24
+  - first:
+      213: -2907340595279017008
+    second: Sic_bo_Coloums_25
+  - first:
+      213: 7446145224456934363
+    second: Sic_bo_Coloums_26
+  - first:
+      213: 2446949373191084916
+    second: Sic_bo_Coloums_27
+  - first:
+      213: 4862209861539136217
+    second: Sic_bo_Coloums_28
+  - first:
+      213: 638784854891758431
+    second: Sic_bo_Coloums_29
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_0
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 2403
+        width: 673
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ad57f41d3a5b0d4d0800000000000000
+      internalID: -3111787627317070374
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_1
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 2320
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 44355d4a998552fc0800000000000000
+      internalID: -3520310116801490108
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_2
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 2238
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 29dcfcb5162435200800000000000000
+      internalID: 167550597062446482
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_3
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 2156
+        width: 673
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 87d49d9ad1a824570800000000000000
+      internalID: 8449467710908747128
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_4
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 2073
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 17badce696616b1f0800000000000000
+      internalID: -1029610822721229967
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_5
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1991
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d1eb93928f2e87920800000000000000
+      internalID: 2988387908231740957
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_6
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1909
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 792e519e1e8ecb480800000000000000
+      internalID: -8881968308105649513
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_7
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1827
+        width: 673
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5a477c8524bb9c700800000000000000
+      internalID: 561185522216039589
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_8
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1744
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1bccefd29af11a5f0800000000000000
+      internalID: -747281251685184335
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_9
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1662
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3c1ab0c4b7c7a1b10800000000000000
+      internalID: 1953010257417183683
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_10
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1580
+        width: 673
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0195826f67a39b720800000000000000
+      internalID: 2862383320781052176
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_11
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1497
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f3b9ed99d61208870800000000000000
+      internalID: 8682976836186970943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_12
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1415
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 66973a15d2281a9e0800000000000000
+      internalID: -1611864060467119770
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_13
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1333
+        width: 673
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c1fe831bc4f894f80800000000000000
+      internalID: -8121802893432393956
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_14
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1250
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 626adc3789962e370800000000000000
+      internalID: 8350352762597123622
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_15
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1168
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1322e921c40e41910800000000000000
+      internalID: 1807315967816901169
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_16
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1086
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c75f0f19234997fe0800000000000000
+      internalID: -1190757681545022084
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_17
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 1004
+        width: 673
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 142972d75566e95d0800000000000000
+      internalID: -3053890979952618943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_18
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 921
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d0359be5e2c369fe0800000000000000
+      internalID: -1182691682282810611
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_19
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 839
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d5d23925d9446f8b0800000000000000
+      internalID: -5118828483974058659
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_20
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 757
+        width: 673
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8a2e9d012db707ba0800000000000000
+      internalID: -6093234153676217688
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_21
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 674
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eb1f16fe547da7cd0800000000000000
+      internalID: -2559496742837816898
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_22
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 592
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3ff4f85b8a63377e0800000000000000
+      internalID: -1769010130397999117
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_23
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 510
+        width: 673
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4c041b2009f33ce90800000000000000
+      internalID: -7006686707505348412
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_24
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 427
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bb36661540d759c20800000000000000
+      internalID: 3212611366697722811
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_25
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 345
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0db4251e12d07a7d0800000000000000
+      internalID: -2907340595279017008
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_26
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 263
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bd31ab951a5065760800000000000000
+      internalID: 7446145224456934363
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_27
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 181
+        width: 673
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 47b5b6c8d7f45f120800000000000000
+      internalID: 2446949373191084916
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_28
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 98
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d20174ab1a0a7340800000000000000
+      internalID: 4862209861539136217
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Coloums_29
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 16
+        width: 673
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f5309bbe07b6dd800800000000000000
+      internalID: 638784854891758431
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Sic_bo_Coloums_0: -3111787627317070374
+      Sic_bo_Coloums_1: -3520310116801490108
+      Sic_bo_Coloums_10: 2862383320781052176
+      Sic_bo_Coloums_11: 8682976836186970943
+      Sic_bo_Coloums_12: -1611864060467119770
+      Sic_bo_Coloums_13: -8121802893432393956
+      Sic_bo_Coloums_14: 8350352762597123622
+      Sic_bo_Coloums_15: 1807315967816901169
+      Sic_bo_Coloums_16: -1190757681545022084
+      Sic_bo_Coloums_17: -3053890979952618943
+      Sic_bo_Coloums_18: -1182691682282810611
+      Sic_bo_Coloums_19: -5118828483974058659
+      Sic_bo_Coloums_2: 167550597062446482
+      Sic_bo_Coloums_20: -6093234153676217688
+      Sic_bo_Coloums_21: -2559496742837816898
+      Sic_bo_Coloums_22: -1769010130397999117
+      Sic_bo_Coloums_23: -7006686707505348412
+      Sic_bo_Coloums_24: 3212611366697722811
+      Sic_bo_Coloums_25: -2907340595279017008
+      Sic_bo_Coloums_26: 7446145224456934363
+      Sic_bo_Coloums_27: 2446949373191084916
+      Sic_bo_Coloums_28: 4862209861539136217
+      Sic_bo_Coloums_29: 638784854891758431
+      Sic_bo_Coloums_3: 8449467710908747128
+      Sic_bo_Coloums_4: -1029610822721229967
+      Sic_bo_Coloums_5: 2988387908231740957
+      Sic_bo_Coloums_6: -8881968308105649513
+      Sic_bo_Coloums_7: 561185522216039589
+      Sic_bo_Coloums_8: -747281251685184335
+      Sic_bo_Coloums_9: 1953010257417183683
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
