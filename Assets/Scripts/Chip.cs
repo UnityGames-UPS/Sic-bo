@@ -12,7 +12,7 @@ public class Chip : MonoBehaviour
 {
     [SerializeField] internal Image chipImage;
     [SerializeField] internal TMP_Text chipText;
-    
+
     internal int chipIndex { get; private set; }
 
     /// <summary>

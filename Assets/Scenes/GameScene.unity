@@ -2119,7 +2119,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &46738961
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6589,7 +6589,7 @@ GameObject:
   - component: {fileID: 110764070}
   - component: {fileID: 110764069}
   m_Layer: 0
-  m_Name: MinBetCasualtxt
+  m_Name: MinBetExctxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -13741,152 +13741,122 @@ MonoBehaviour:
     WinImage: {fileID: 1160551662}
     WinRatio_Text: {fileID: 1636588718}
     PlayerBetContainer: {fileID: 1656661458}
-    OtherBetsContainer: {fileID: 1656661458}
   BigArea:
     Button: {fileID: 1289539970}
     WinImage: {fileID: 1585875243}
     WinRatio_Text: {fileID: 1133700712}
     PlayerBetContainer: {fileID: 1289539967}
-    OtherBetsContainer: {fileID: 1289539967}
   OddArea:
     Button: {fileID: 1937846151}
     WinImage: {fileID: 1581366387}
     WinRatio_Text: {fileID: 1665363949}
     PlayerBetContainer: {fileID: 1937846150}
-    OtherBetsContainer: {fileID: 1937846150}
   EvenArea:
     Button: {fileID: 10433631}
     WinImage: {fileID: 359686567}
     WinRatio_Text: {fileID: 1300435204}
     PlayerBetContainer: {fileID: 10433630}
-    OtherBetsContainer: {fileID: 10433630}
   TripleDiceAreas:
   - Button: {fileID: 2034449703}
     WinImage: {fileID: 325381760}
+    WinRatio_Text: {fileID: 877812384}
     PlayerBetContainer: {fileID: 2034449702}
-    OtherBetsContainer: {fileID: 2034449702}
   - Button: {fileID: 1501146516}
     WinImage: {fileID: 81813565}
+    WinRatio_Text: {fileID: 877812384}
     PlayerBetContainer: {fileID: 1501146515}
-    OtherBetsContainer: {fileID: 1501146515}
   - Button: {fileID: 509634683}
     WinImage: {fileID: 1223103450}
+    WinRatio_Text: {fileID: 877812384}
     PlayerBetContainer: {fileID: 509634682}
-    OtherBetsContainer: {fileID: 509634682}
   - Button: {fileID: 1511002051}
     WinImage: {fileID: 1803255852}
+    WinRatio_Text: {fileID: 877812384}
     PlayerBetContainer: {fileID: 1511002050}
-    OtherBetsContainer: {fileID: 1511002050}
   - Button: {fileID: 1504720330}
     WinImage: {fileID: 1694399932}
+    WinRatio_Text: {fileID: 877812384}
     PlayerBetContainer: {fileID: 1504720329}
-    OtherBetsContainer: {fileID: 1504720329}
   - Button: {fileID: 93434211}
     WinImage: {fileID: 1732600266}
+    WinRatio_Text: {fileID: 877812384}
     PlayerBetContainer: {fileID: 93434209}
-    OtherBetsContainer: {fileID: 93434209}
-  SingleAreas:
+  SingleDiceAreas:
   - Button: {fileID: 1157701830}
     WinImage: {fileID: 347533608}
-    WinRatio_Text: {fileID: 0}
     PlayerBetContainer: {fileID: 1157701829}
-    OtherBetsContainer: {fileID: 2115471506}
   - Button: {fileID: 2115471507}
     WinImage: {fileID: 634739700}
-    WinRatio_Text: {fileID: 0}
     PlayerBetContainer: {fileID: 2115471506}
-    OtherBetsContainer: {fileID: 2115471506}
   - Button: {fileID: 1583946627}
     WinImage: {fileID: 1266227254}
-    WinRatio_Text: {fileID: 0}
     PlayerBetContainer: {fileID: 1583946626}
-    OtherBetsContainer: {fileID: 1583946626}
   - Button: {fileID: 1362166606}
     WinImage: {fileID: 1788027494}
-    WinRatio_Text: {fileID: 0}
     PlayerBetContainer: {fileID: 1362166605}
-    OtherBetsContainer: {fileID: 1362166605}
   - Button: {fileID: 1023310842}
     WinImage: {fileID: 3550362}
-    WinRatio_Text: {fileID: 0}
     PlayerBetContainer: {fileID: 1023310841}
-    OtherBetsContainer: {fileID: 1023310841}
   - Button: {fileID: 2098396716}
     WinImage: {fileID: 1405595829}
-    WinRatio_Text: {fileID: 0}
-    PlayerBetContainer: {fileID: 2098396715}
-    OtherBetsContainer: {fileID: 2098396715}
+    PlayerBetContainer: {fileID: 669258925}
   SumAreas:
   - Button: {fileID: 892113643}
     WinImage: {fileID: 2018279354}
     WinRatio_Text: {fileID: 102222237}
     PlayerBetContainer: {fileID: 892113642}
-    OtherBetsContainer: {fileID: 892113642}
   - Button: {fileID: 724560961}
     WinImage: {fileID: 1699524969}
     WinRatio_Text: {fileID: 629947806}
     PlayerBetContainer: {fileID: 724560960}
-    OtherBetsContainer: {fileID: 724560960}
   - Button: {fileID: 2100954598}
     WinImage: {fileID: 1771331039}
     WinRatio_Text: {fileID: 1139783686}
     PlayerBetContainer: {fileID: 2100954597}
-    OtherBetsContainer: {fileID: 2100954597}
   - Button: {fileID: 1336080792}
     WinImage: {fileID: 1918099540}
     WinRatio_Text: {fileID: 1499186612}
     PlayerBetContainer: {fileID: 1336080791}
-    OtherBetsContainer: {fileID: 1336080791}
   - Button: {fileID: 2144231937}
     WinImage: {fileID: 446756773}
     WinRatio_Text: {fileID: 402140791}
     PlayerBetContainer: {fileID: 2144231936}
-    OtherBetsContainer: {fileID: 2144231936}
   - Button: {fileID: 301394110}
     WinImage: {fileID: 1631431969}
     WinRatio_Text: {fileID: 857887911}
     PlayerBetContainer: {fileID: 301394109}
-    OtherBetsContainer: {fileID: 301394109}
   - Button: {fileID: 1244234797}
     WinImage: {fileID: 396464062}
     WinRatio_Text: {fileID: 1876140615}
     PlayerBetContainer: {fileID: 1244234796}
-    OtherBetsContainer: {fileID: 1244234796}
   - Button: {fileID: 579249747}
     WinImage: {fileID: 1525047210}
     WinRatio_Text: {fileID: 1776458736}
     PlayerBetContainer: {fileID: 579249746}
-    OtherBetsContainer: {fileID: 579249746}
   - Button: {fileID: 993873213}
     WinImage: {fileID: 1252403219}
     WinRatio_Text: {fileID: 1556175322}
     PlayerBetContainer: {fileID: 993873212}
-    OtherBetsContainer: {fileID: 993873212}
   - Button: {fileID: 65678576}
     WinImage: {fileID: 150979233}
     WinRatio_Text: {fileID: 2033856453}
     PlayerBetContainer: {fileID: 65678575}
-    OtherBetsContainer: {fileID: 65678575}
   - Button: {fileID: 159044044}
     WinImage: {fileID: 1572997385}
     WinRatio_Text: {fileID: 506666814}
     PlayerBetContainer: {fileID: 159044043}
-    OtherBetsContainer: {fileID: 159044043}
   - Button: {fileID: 680200043}
     WinImage: {fileID: 90355267}
     WinRatio_Text: {fileID: 896344755}
     PlayerBetContainer: {fileID: 680200042}
-    OtherBetsContainer: {fileID: 680200042}
   - Button: {fileID: 399784777}
     WinImage: {fileID: 719128781}
     WinRatio_Text: {fileID: 796313035}
     PlayerBetContainer: {fileID: 399784776}
-    OtherBetsContainer: {fileID: 399784776}
   - Button: {fileID: 2031837198}
     WinImage: {fileID: 984479912}
     WinRatio_Text: {fileID: 1968157371}
     PlayerBetContainer: {fileID: 2031837197}
-    OtherBetsContainer: {fileID: 2031837197}
   RepeatPanel: {fileID: 2047882397}
   Repeat_Button: {fileID: 256106496}
   BetActionsPanel: {fileID: 1255611363}
@@ -13895,7 +13865,10 @@ MonoBehaviour:
   Double_Button: {fileID: 2110324137}
   TotalBet_Text: {fileID: 1050689494}
   TotalBetPanel: {fileID: 902567198}
+  MinBet_Text: {fileID: 168208699}
+  MaxBet_Text: {fileID: 1742532678}
   gameManager: {fileID: 1673436615}
+  uiController: {fileID: 1759262012}
 --- !u!4 &275686508
 Transform:
   m_ObjectHideFlags: 0
@@ -21530,7 +21503,7 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: 9d8a645444394e0491d3ceefeddee70c
+  testToken: 0894556c78f749c19b48848525adad19
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
   enableVerboseLogging: 1
@@ -25843,7 +25816,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 95.5, y: 103.24}
-  m_SizeDelta: {x: 0, y: 80}
+  m_SizeDelta: {x: 93, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &507807960
 MonoBehaviour:
@@ -34665,7 +34638,7 @@ GameObject:
   - component: {fileID: 669841732}
   - component: {fileID: 669841731}
   m_Layer: 0
-  m_Name: MaxBetCasualtxt
+  m_Name: MaxBetNovicetxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -40188,7 +40161,7 @@ GameObject:
   - component: {fileID: 770531627}
   - component: {fileID: 770531626}
   m_Layer: 0
-  m_Name: MinBetCasualtxt
+  m_Name: MinBetExperttxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -40542,7 +40515,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &776184814
 RectTransform:
   m_ObjectHideFlags: 0
@@ -49656,7 +49629,7 @@ GameObject:
   - component: {fileID: 959254894}
   - component: {fileID: 959254893}
   m_Layer: 0
-  m_Name: MaxBetCasualtxt
+  m_Name: MaxBetExetxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -66056,7 +66029,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1255611364
 RectTransform:
   m_ObjectHideFlags: 0
@@ -68027,7 +68000,7 @@ GameObject:
   - component: {fileID: 1315384955}
   - component: {fileID: 1315384954}
   m_Layer: 0
-  m_Name: MinBetCasualtxt
+  m_Name: MinBetNovicetxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -71805,7 +71778,7 @@ GameObject:
   - component: {fileID: 1390679435}
   - component: {fileID: 1390679434}
   m_Layer: 0
-  m_Name: HIstoryManager
+  m_Name: HistoryManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -76269,7 +76242,7 @@ GameObject:
   - component: {fileID: 1505413021}
   - component: {fileID: 1505413020}
   m_Layer: 0
-  m_Name: MaxBetCasualtxt
+  m_Name: MaxBetExperttxt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -88524,9 +88497,18 @@ MonoBehaviour:
   NoviceCount_Text: {fileID: 422510295}
   ExpertCount_Text: {fileID: 2126316441}
   HighRollerCount_Text: {fileID: 218457754}
+  CasualMin_Text: {fileID: 1657080581}
+  CasualMax_Text: {fileID: 710953151}
+  NoviceMin_Text: {fileID: 1315384954}
+  NoviceMax_Text: {fileID: 669841731}
+  ExpertMin_Text: {fileID: 770531626}
+  ExpertMax_Text: {fileID: 1505413020}
+  HighRollerMin_Text: {fileID: 110764069}
+  HighRollerMax_Text: {fileID: 110764069}
   HistoryHome_Button: {fileID: 168092344}
   SettingsHome_Button: {fileID: 980207986}
   ExitHome_Button: {fileID: 319385144}
+  GamePlayerName_Text: {fileID: 44655686}
   GameBalance_Text: {fileID: 1056463210}
   PlayerCount_Text: {fileID: 576061293}
   RoundPhase_Text: {fileID: 0}
@@ -89490,7 +89472,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1765690011
 RectTransform:
   m_ObjectHideFlags: 0
@@ -102232,7 +102214,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &2047882398
 RectTransform:
   m_ObjectHideFlags: 0

@@ -34,20 +34,17 @@ public class SicBoGameData
     public Bets bets;
     public List<string> levels;
     public Wagers wagers;
-
     public Lobby lobby;
-
     public Leaderboards leaderboards;
     public List<object> stats;
     public BonusMultipliers bonusMultipliers;
 }
 
-
 [Serializable]
 public class Bets
 {
-    public List<double> casual; // Contains 0.5, so needs double
-    public List<int> novice;    
+    public List<double> casual;
+    public List<int> novice;
     public List<int> expert;
     public List<int> high_roller;
 }
@@ -108,8 +105,8 @@ public class SideBets
     public BetWager single_match_1;
     public BetWager single_match_2;
     public BetWager single_match_3;
-    public BetWager specific_2;
     public BetWager specific_3;
+    public BetWager specific_2;
 }
 
 [Serializable]
@@ -134,12 +131,9 @@ public class OpBets
 [Serializable]
 public class BetWager
 {
-    public List<double> payout; // [1, 0.95] format - multiply bet, win ratio
+    public List<double> payout;
     public MaxBetLimit max_bet_limit;
 
-    /// <summary>
-    /// Get win ratio as formatted string "1 : 0.95"
-    /// </summary>
     public string GetPayoutRatioString()
     {
         if (payout != null && payout.Count >= 2)
@@ -149,9 +143,15 @@ public class BetWager
         return "1 : 1";
     }
 
-    /// <summary>
-    /// Calculate win amount based on bet
-    /// </summary>
+    public string GetMultiMatchPayoutString()
+    {
+        if (payout != null && payout.Count >= 2)
+        {
+            return $"2 HIT PAYS 1 : 5 3 HIT PAYS 1 : {payout[1]}";
+        }
+        return "2 HIT PAYS 1 : 5 3 HIT PAYS 1 : 100";
+    }
+
     public double CalculateWin(double betAmount)
     {
         if (payout != null && payout.Count >= 2)
@@ -159,6 +159,20 @@ public class BetWager
             return betAmount * payout[1];
         }
         return betAmount;
+    }
+
+    public double GetMaxBet(string level)
+    {
+        if (max_bet_limit == null) return 0;
+
+        return level switch
+        {
+            "casual" => max_bet_limit.casual,
+            "novice" => max_bet_limit.novice,
+            "expert" => max_bet_limit.expert,
+            "high_roller" => max_bet_limit.high_roller,
+            _ => 0
+        };
     }
 }
 
@@ -184,8 +198,6 @@ public class RoomPayload
     public string level;
     public Leaderboards leaderboards;
     public RoundState roundState;
-
-    // Bet Response
     public string username;
     public string betId;
     public double totalBet;
@@ -193,18 +205,10 @@ public class RoomPayload
     public double amount;
     public double balance;
     public string message;
-
-    // History Response
     public List<HistoryEntry> history;
     public HistoryMeta meta;
-
-    // Home Response
     public Lobby lobby;
-
-    // Cashout Response
     public List<Payout> payouts;
-
-    // Bet list for double/repeat
     public List<BetInfo> bets;
 }
 
@@ -216,7 +220,7 @@ public class RoundState
     public long bettingEndTime;
     public long serverTime;
     public int timeRemaining;
-    public string phase; // "betting" or "dealing"
+    public string phase;
 }
 #endregion
 
@@ -256,7 +260,7 @@ public class DiceResultData
     public int dice2;
     public int dice3;
     public int sum;
-    public string matchSide; // "small", "big", "odd", "even"
+    public string matchSide;
 }
 
 [Serializable]
@@ -266,7 +270,7 @@ public class BetPlacedData
     public string betId;
     public string betType;
     public string betOption;
-    public double amount; // Negative = cancellation
+    public double amount;
 }
 
 [Serializable]
@@ -338,6 +342,24 @@ public class BetInfo
     public string betType;
     public string betOption;
     public double amount;
-    public double delta; // For double bet
+    public double delta;
+}
+
+public class BetLimitInfo
+{
+    public double MinBet { get; set; }
+    public double MaxBet { get; set; }
+    public double CurrentBetOnArea { get; set; }
+    public double TotalBet { get; set; }
+
+    public bool CanPlaceBet(double betAmount)
+    {
+        return (CurrentBetOnArea + betAmount) <= MaxBet;
+    }
+
+    public bool ExceedsMax(double betAmount)
+    {
+        return (CurrentBetOnArea + betAmount) > MaxBet;
+    }
 }
 #endregion

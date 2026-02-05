@@ -5,10 +5,6 @@ using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 
-/// <summary>
-/// Handles all UI screens, popups, and visual updates
-/// Updated with MenuController integration and improved timer management
-/// </summary>
 public class UIController : MonoBehaviour
 {
     #region Serialized Fields
@@ -27,15 +23,24 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text NoviceCount_Text;
     [SerializeField] private TMP_Text ExpertCount_Text;
     [SerializeField] private TMP_Text HighRollerCount_Text;
+    [SerializeField] private TMP_Text CasualMin_Text;
+    [SerializeField] private TMP_Text CasualMax_Text;
+    [SerializeField] private TMP_Text NoviceMin_Text;
+    [SerializeField] private TMP_Text NoviceMax_Text;
+    [SerializeField] private TMP_Text ExpertMin_Text;
+    [SerializeField] private TMP_Text ExpertMax_Text;
+    [SerializeField] private TMP_Text HighRollerMin_Text;
+    [SerializeField] private TMP_Text HighRollerMax_Text;
     [SerializeField] private Button HistoryHome_Button;
     [SerializeField] private Button SettingsHome_Button;
-    [SerializeField] private Button ExitHome_Button; // Exit button on home screen
+    [SerializeField] private Button ExitHome_Button;
 
     [Header("Game Screen Elements")]
+    [SerializeField] private TMP_Text GamePlayerName_Text;
     [SerializeField] private TMP_Text GameBalance_Text;
     [SerializeField] private TMP_Text PlayerCount_Text;
     [SerializeField] private TMP_Text RoundPhase_Text;
-    [SerializeField] private Button ExitGame_Button; // Exit button on game screen
+    [SerializeField] private Button ExitGame_Button;
     [SerializeField] private Button HistoryGame_Button;
     [SerializeField] private Button SettingsGame_Button;
 
@@ -82,13 +87,16 @@ public class UIController : MonoBehaviour
     #region Private Fields
     private Tween winTween;
     private Tween bonusTween;
+    private string playerName;
+    private Wagers gameWagers;
+    private Bets gameBets;
     #endregion
 
     #region Unity Lifecycle
     private void Start()
     {
         SetupButtonListeners();
-        HideAllScreens();
+        ShowHomeScreen();
         CloseAllPopups();
     }
     #endregion
@@ -96,7 +104,6 @@ public class UIController : MonoBehaviour
     #region Setup
     private void SetupButtonListeners()
     {
-        // Home screen buttons
         if (CasualRoom_Button) CasualRoom_Button.onClick.AddListener(() => gameManager.JoinRoom("casual"));
         if (NoviceRoom_Button) NoviceRoom_Button.onClick.AddListener(() => gameManager.JoinRoom("novice"));
         if (ExpertRoom_Button) ExpertRoom_Button.onClick.AddListener(() => gameManager.JoinRoom("expert"));
@@ -105,27 +112,33 @@ public class UIController : MonoBehaviour
         if (SettingsHome_Button) SettingsHome_Button.onClick.AddListener(OpenInfoFromHome);
         if (ExitHome_Button) ExitHome_Button.onClick.AddListener(ShowQuitPopup);
 
-        // Game screen buttons
         if (ExitGame_Button) ExitGame_Button.onClick.AddListener(ShowQuitPopup);
         if (HistoryGame_Button) HistoryGame_Button.onClick.AddListener(OpenHistoryFromGame);
         if (SettingsGame_Button) SettingsGame_Button.onClick.AddListener(OpenInfoFromGame);
 
-        // Popup buttons
         if (ErrorOK_Button) ErrorOK_Button.onClick.AddListener(CloseAllPopups);
         if (DisconnectOK_Button) DisconnectOK_Button.onClick.AddListener(() => gameManager.ExitGame());
         if (QuitYes_Button) QuitYes_Button.onClick.AddListener(() => { CloseAllPopups(); gameManager.LeaveRoom(); });
         if (QuitNo_Button) QuitNo_Button.onClick.AddListener(CloseAllPopups);
     }
 
-    internal void SetupInitialData(string playerName, double balance, Leaderboards leaderboards)
+    internal void SetupInitialData(string name, double balance, Leaderboards leaderboards, Wagers wagers, Bets bets)
     {
-        if (PlayerName_Text) PlayerName_Text.text = playerName;
+        playerName = name;
+        gameWagers = wagers;
+        gameBets = bets;
+
+        if (PlayerName_Text) PlayerName_Text.text = name;
+        if (GamePlayerName_Text) GamePlayerName_Text.text = name;
+
         UpdateBalance(balance);
 
         if (leaderboards != null)
         {
             UpdateLeaderboards(leaderboards);
         }
+
+        UpdateLobbyMinMaxDisplay();
     }
     #endregion
 
@@ -203,7 +216,6 @@ public class UIController : MonoBehaviour
         if (Notification_Text) Notification_Text.text = message;
         if (NotificationPopup) NotificationPopup.SetActive(true);
 
-        // Auto-hide after 3 seconds
         StartCoroutine(HideNotificationAfterDelay(3f));
     }
 
@@ -268,20 +280,17 @@ public class UIController : MonoBehaviour
     {
         if (RoundPhase_Text) RoundPhase_Text.text = phase.ToUpper();
 
-        // Also update bet timer state based on phase
         if (betTimerController)
         {
             switch (phase.ToLower())
             {
                 case "betting":
-                    // Timer will be updated via UpdateTimer calls
                     break;
                 case "rolling":
                 case "result":
                     betTimerController.ShowBetLocked();
                     break;
                 case "nextround":
-                    // Timer will be set via next round countdown
                     break;
             }
         }
@@ -289,17 +298,16 @@ public class UIController : MonoBehaviour
 
     internal void UpdateLobbyPlayerCounts(int casual = 0, int novice = 0, int expert = 0, int highRoller = 0)
     {
-        if (CasualCount_Text) CasualCount_Text.text = $"{casual} Players";
-        if (NoviceCount_Text) NoviceCount_Text.text = $"{novice} Players";
-        if (ExpertCount_Text) ExpertCount_Text.text = $"{expert} Players";
-        if (HighRollerCount_Text) HighRollerCount_Text.text = $"{highRoller} Players";
+        if (CasualCount_Text) CasualCount_Text.text = $"{casual} ";
+        if (NoviceCount_Text) NoviceCount_Text.text = $"{novice} ";
+        if (ExpertCount_Text) ExpertCount_Text.text = $"{expert} ";
+        if (HighRollerCount_Text) HighRollerCount_Text.text = $"{highRoller} ";
     }
 
     internal void UpdateLeaderboards(Leaderboards leaderboards)
     {
         if (leaderboards?.richest == null) return;
 
-        // Update first place
         if (leaderboards.richest.Count > 0)
         {
             if (FirstPlace_Name) FirstPlace_Name.text = leaderboards.richest[0].username;
@@ -311,7 +319,6 @@ public class UIController : MonoBehaviour
             if (FirstPlace_Balance) FirstPlace_Balance.text = "0.00";
         }
 
-        // Update second place
         if (leaderboards.richest.Count > 1)
         {
             if (SecondPlace_Name) SecondPlace_Name.text = leaderboards.richest[1].username;
@@ -323,7 +330,6 @@ public class UIController : MonoBehaviour
             if (SecondPlace_Balance) SecondPlace_Balance.text = "0.00";
         }
 
-        // Update third place
         if (leaderboards.richest.Count > 2)
         {
             if (ThirdPlace_Name) ThirdPlace_Name.text = leaderboards.richest[2].username;
@@ -333,6 +339,43 @@ public class UIController : MonoBehaviour
         {
             if (ThirdPlace_Name) ThirdPlace_Name.text = "-";
             if (ThirdPlace_Balance) ThirdPlace_Balance.text = "0.00";
+        }
+    }
+
+    private void UpdateLobbyMinMaxDisplay()
+    {
+        if (gameWagers == null || gameBets == null) return;
+
+        if (CasualMin_Text && CasualMax_Text && gameBets.casual != null && gameBets.casual.Count > 0)
+        {
+            double min = gameBets.casual[0];
+            double max = gameWagers.main_bets?.small?.GetMaxBet("casual") ?? 0;
+            CasualMin_Text.text = $"{min:F2}";
+            CasualMax_Text.text = $"{max:F2}";
+        }
+
+        if (NoviceMin_Text && NoviceMax_Text && gameBets.novice != null && gameBets.novice.Count > 0)
+        {
+            double min = gameBets.novice[0];
+            double max = gameWagers.main_bets?.small?.GetMaxBet("novice") ?? 0;
+            NoviceMin_Text.text = $"{min:F2}";
+            NoviceMax_Text.text = $"{max:F2}";
+        }
+
+        if (ExpertMin_Text && ExpertMax_Text && gameBets.expert != null && gameBets.expert.Count > 0)
+        {
+            double min = gameBets.expert[0];
+            double max = gameWagers.main_bets?.small?.GetMaxBet("expert") ?? 0;
+            ExpertMin_Text.text = $"{min:F2}";
+            ExpertMax_Text.text = $"{max:F2}";
+        }
+
+        if (HighRollerMin_Text && HighRollerMax_Text && gameBets.high_roller != null && gameBets.high_roller.Count > 0)
+        {
+            double min = gameBets.high_roller[0];
+            double max = gameWagers.main_bets?.small?.GetMaxBet("high_roller") ?? 0;
+            HighRollerMin_Text.text = $"{min:F2}";
+            HighRollerMax_Text.text = $"{max:F2}";
         }
     }
     #endregion

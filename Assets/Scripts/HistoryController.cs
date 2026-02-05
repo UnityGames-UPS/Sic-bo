@@ -4,8 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// Manages bet history display with pagination
-/// Updates existing rows instead of spawning
+/// Manages bet history display with pagination 
 /// </summary>
 public class HistoryController : MonoBehaviour
 {
