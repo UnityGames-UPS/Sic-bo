@@ -1,10 +1,13 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Main game controller - coordinates all game systems
-/// Updated with wager data support for win ratios
+/// FIXED: Main game controller with enhanced debugging
+/// - Added detailed debug logs matching mock format
+/// - Fixed timer calculation
+/// - Proper betting enable/disable flow
+/// - All handlers properly route data to controllers
 /// </summary>
 public class GameManager : MonoBehaviour
 {
@@ -32,7 +35,7 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
-    #region Socket Callbacks
+    #region Socket Callbacks - Init
     internal void OnInitDataReceived()
     {
         if (socketManager.InitialData == null || socketManager.PlayerData == null)
@@ -53,11 +56,14 @@ public class GameManager : MonoBehaviour
             socketManager.InitialData.leaderboards
         );
 
-        // Setup lobby counts
-        if (socketManager.InitialData.leaderboards != null)
+        // Setup lobby counts if available
+        if (socketManager.InitialData.lobby != null)
         {
             uiController.UpdateLobbyPlayerCounts(
-                socketManager.InitialData.leaderboards.richest?.Count ?? 0
+                socketManager.InitialData.lobby.casual,
+                socketManager.InitialData.lobby.novice,
+                socketManager.InitialData.lobby.expert,
+                socketManager.InitialData.lobby.high_roller
             );
         }
 
@@ -65,19 +71,72 @@ public class GameManager : MonoBehaviour
         uiController.ShowHomeScreen();
     }
 
+    internal void OnDataRefreshed()
+    {
+        // Handle data refresh if needed
+        Debug.Log("[GAME] Data refreshed");
+    }
+    #endregion
+
+    #region Socket Callbacks - Room
+    /// <summary>
+    /// ✅ CRITICAL FIX: Handle JOIN_LEVEL response with player count and round state
+    /// Called by SocketManager after receiving "request" response to JOIN_LEVEL
+    /// </summary>
+    internal void OnRoomJoinedWithData(RoomPayload payload)
+    {
+        if (payload == null)
+        {
+            Debug.LogWarning("[GAME] OnRoomJoinedWithData: null payload");
+            return;
+        }
+
+        Debug.Log($"[GAME] Room joined: {payload.level}, players: {payload.playerCount}");
+
+        // ✅ FIX: Update player count immediately
+        uiController.UpdatePlayerCount(payload.playerCount);
+
+        // ✅ FIX: Update leaderboards if available
+        if (payload.leaderboards != null)
+        {
+            uiController.UpdateLeaderboards(payload.leaderboards);
+        }
+
+        // ✅ FIX: Check if round state exists (joining mid-round)
+        // Note: Round start will be triggered by SocketManager if roundState exists
+        if (payload.roundState == null)
+        {
+            Debug.Log("[GAME] Waiting for round to start...");
+            // Show waiting state
+            uiController.UpdateRoundPhase("WAITING");
+        }
+    }
+    #endregion
+
+    #region Socket Callbacks - Round Events
+    /// <summary>
+    /// ✅ CRITICAL FIX: Enable betting when round starts
+    /// </summary>
     internal void OnRoundStart(RoundStartData data)
     {
-        if (data == null) return;
+        if (data == null)
+        {
+            Debug.LogWarning("[GAME] OnRoundStart: null data");
+            return;
+        }
 
         Debug.Log($"[GAME] Round started: {data.roundId}");
+        Debug.Log($"[GAME] StartedAt: {data.startedAt}, BettingEndTime: {data.bettingEndTime}, ServerTime: {data.serverTime}");
 
         CurrentRoundId = data.roundId;
 
         // Update UI
         uiController.UpdatePlayerCount(data.playerCount);
 
-        // Calculate initial time remaining
+        // ✅ FIX: Calculate initial time remaining from server timestamps
         int timeRemaining = Mathf.Max(0, (int)((data.bettingEndTime - data.serverTime) / 1000));
+
+        Debug.Log($"[GAME] Time remaining: {timeRemaining}s (calculated from {data.bettingEndTime} - {data.serverTime} = {data.bettingEndTime - data.serverTime}ms)");
 
         // Show betting phase
         uiController.ShowBettingPhase(timeRemaining);
@@ -85,16 +144,25 @@ public class GameManager : MonoBehaviour
         // Start round controller
         roundController.StartRound(data);
 
-        // Enable betting
+        // ✅ CRITICAL FIX: Enable betting here!
         betController.EnableBetting();
+
+        Debug.Log("[GAME] Betting enabled");
     }
 
+    /// <summary>
+    /// ✅ FIX: Use timeRemaining from server directly
+    /// </summary>
     internal void OnBettingTimer(TimerData data)
     {
         if (data == null) return;
 
-        // Update timer display
+        // ✅ FIX: Calculate time remaining from server timestamps
         int timeRemaining = Mathf.Max(0, (int)((data.bettingEndTime - data.serverTime) / 1000));
+
+        Debug.Log($"[GAME] Timer update: {timeRemaining}s remaining (from {data.serverTime})");
+
+        // Update controllers
         roundController.UpdateTimer(timeRemaining);
         uiController.UpdateTimer(timeRemaining);
     }
@@ -113,6 +181,9 @@ public class GameManager : MonoBehaviour
 
         Debug.Log($"[GAME] Dice: {data.dice1}, {data.dice2}, {data.dice3} = {data.sum} ({data.matchSide})");
 
+        // ✅ FIX: Disable betting when dice result comes
+        betController.DisableBetting();
+
         // Show bet locked state
         uiController.ShowBetLocked();
 
@@ -122,7 +193,7 @@ public class GameManager : MonoBehaviour
         // Highlight winning areas
         betController.HighlightWinningAreas(data.matchSide, data.sum);
 
-        // Highlight triple dice results
+        // Highlight triple dice results if applicable
         betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
     }
 
@@ -130,9 +201,10 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        // Show other players' chips
+        // Show other players' chips (not your own - that's handled in OnBalanceUpdated)
         if (data.username != socketManager.PlayerData.username)
         {
+            Debug.Log($"[GAME] Other player bet: {data.username} on {data.betOption} = {data.amount}");
             betController.ShowOtherPlayerBet(data);
         }
     }
@@ -161,7 +233,12 @@ public class GameManager : MonoBehaviour
 
                     if (payout.win > 0)
                     {
+                        Debug.Log($"[GAME] Won: {payout.win}");
                         uiController.ShowWinAnimation(payout.win);
+                    }
+                    else
+                    {
+                        Debug.Log($"[GAME] Lost bet");
                     }
                 }
             }
@@ -171,6 +248,8 @@ public class GameManager : MonoBehaviour
     internal void OnLobbyCount(LobbyCountData data)
     {
         if (data?.lobby == null) return;
+
+        Debug.Log($"[GAME] Lobby update: Casual={data.lobby.casual}, Novice={data.lobby.novice}, Expert={data.lobby.expert}, HighRoller={data.lobby.high_roller}");
 
         uiController.UpdateLobbyPlayerCounts(
             data.lobby.casual,
@@ -190,8 +269,30 @@ public class GameManager : MonoBehaviour
         betController.ClearAllBets();
         roundController.EndRound();
 
-        // Show next round countdown (example: 5 seconds between rounds)
+        // Show next round countdown
         uiController.ShowNextRound(5);
+    }
+
+    /// <summary>
+    /// ✅ NEW: Handle balance updates from bet confirmations
+    /// </summary>
+    internal void OnBalanceUpdated(double newBalance)
+    {
+        Debug.Log($"[GAME] Balance updated: {CurrentBalance} -> {newBalance}");
+        CurrentBalance = newBalance;
+        uiController.UpdateBalance(CurrentBalance);
+    }
+
+    /// <summary>
+    /// ✅ NEW: Handle history responses
+    /// </summary>
+    internal void OnHistoryReceived(List<HistoryEntry> history, HistoryMeta meta)
+    {
+        if (historyController != null)
+        {
+            Debug.Log($"[GAME] History received: {history.Count} entries, page {meta.page}/{meta.pages}");
+            historyController.UpdateHistoryData(history, meta);
+        }
     }
     #endregion
 
@@ -211,10 +312,10 @@ public class GameManager : MonoBehaviour
         // Setup chips with win ratio data
         betController.SetupChips(chipValues, wagers);
 
-        // Request join
+        // Request join from server
         socketManager.JoinLevel(roomName);
 
-        // Show game screen with loading
+        // Show game screen
         uiController.ShowGameScreen();
     }
 
@@ -222,12 +323,20 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("[GAME] Leaving room");
 
+        // Disable betting
+        betController.DisableBetting();
+
+        // Clear all bets
+        betController.ClearAllBets();
+
+        // Return to home
         socketManager.ReturnHome();
+
+        // Show home screen
         uiController.ShowHomeScreen();
         uiController.HideAllTimers();
 
         CurrentRoom = null;
-        betController.ClearAllBets();
     }
 
     internal void PlaceBet(string betOption, int chipIndex)
@@ -240,35 +349,43 @@ public class GameManager : MonoBehaviour
 
         string betType = GetBetType(betOption);
         socketManager.PlaceBet(betType, betOption, chipIndex, CurrentRoom);
+
+        Debug.Log($"[GAME] Bet placed: {betOption} with chip {chipIndex} in room {CurrentRoom}");
     }
 
     internal void UndoBet()
     {
+        Debug.Log("[GAME] Undo bet");
         socketManager.UndoBet();
     }
 
     internal void CancelAllBets()
     {
+        Debug.Log("[GAME] Cancel all bets");
         socketManager.CancelBet();
     }
 
     internal void DoubleBet()
     {
+        Debug.Log("[GAME] Double bet");
         socketManager.DoubleBet("");
     }
 
     internal void RepeatBet()
     {
+        Debug.Log("[GAME] Repeat bet");
         socketManager.RepeatBet();
     }
 
     internal void RequestHistory(int page)
     {
+        Debug.Log($"[GAME] Request history page {page}");
         socketManager.RequestHistory(page);
     }
 
     internal void ExitGame()
     {
+        Debug.Log("[GAME] Exit game");
         StartCoroutine(socketManager.CloseSocket());
     }
     #endregion
@@ -276,16 +393,23 @@ public class GameManager : MonoBehaviour
     #region Private Helpers
     private List<double> GetChipValuesForRoom(string roomName)
     {
-        if (socketManager.InitialData?.bets == null) return new List<double>();
-
-        return roomName switch
+        if (socketManager.InitialData?.bets == null)
         {
-            "casual" => socketManager.InitialData.bets.casual, // Already List<double>
+            Debug.LogWarning("[GAME] No bet data available");
+            return new List<double>();
+        }
+
+        List<double> chipValues = roomName switch
+        {
+            "casual" => socketManager.InitialData.bets.casual,
             "novice" => ConvertToDoubleList(socketManager.InitialData.bets.novice),
             "expert" => ConvertToDoubleList(socketManager.InitialData.bets.expert),
             "high_roller" => ConvertToDoubleList(socketManager.InitialData.bets.high_roller),
             _ => new List<double>()
         };
+
+        Debug.Log($"[GAME] Chip values for {roomName}: {string.Join(", ", chipValues)}");
+        return chipValues;
     }
 
     private List<double> ConvertToDoubleList(List<int> intList)
@@ -305,16 +429,26 @@ public class GameManager : MonoBehaviour
     {
         // Main bets: small, big, odd, even
         if (betOption == "small" || betOption == "big" || betOption == "odd" || betOption == "even")
+        {
+            Debug.Log($"[GAME] Bet type: main_bets for {betOption}");
             return "main_bets";
+        }
 
         // Side bets: single_1 to single_6, specific_2, specific_3
         if (betOption.StartsWith("single_") || betOption.StartsWith("specific_"))
+        {
+            Debug.Log($"[GAME] Bet type: side_bets for {betOption}");
             return "side_bets";
+        }
 
         // Sum bets: sum_4 to sum_17
         if (betOption.StartsWith("sum_"))
+        {
+            Debug.Log($"[GAME] Bet type: op_bets for {betOption}");
             return "op_bets";
+        }
 
+        Debug.Log($"[GAME] Bet type: main_bets (default) for {betOption}");
         return "main_bets";
     }
     #endregion

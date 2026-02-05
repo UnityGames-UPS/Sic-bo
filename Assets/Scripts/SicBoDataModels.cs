@@ -29,18 +29,25 @@ public class SicBoGameData
     public List<string> betOptions;
     public int roundInterval;
     public int diceInterval;
+    public int diceLimit;
+    public int statsLimit;
     public Bets bets;
     public List<string> levels;
-    public Leaderboards leaderboards;
-    public BonusMultipliers bonusMultipliers;
     public Wagers wagers;
+
+    public Lobby lobby;
+
+    public Leaderboards leaderboards;
+    public List<object> stats;
+    public BonusMultipliers bonusMultipliers;
 }
+
 
 [Serializable]
 public class Bets
 {
     public List<double> casual; // Contains 0.5, so needs double
-    public List<int> novice;
+    public List<int> novice;    
     public List<int> expert;
     public List<int> high_roller;
 }

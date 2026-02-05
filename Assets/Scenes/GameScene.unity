@@ -21530,9 +21530,10 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: 1926ae109380421aa7dc7003a2abc5e8
+  testToken: 9d8a645444394e0491d3ceefeddee70c
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
+  enableVerboseLogging: 1
 --- !u!4 &410521237
 Transform:
   m_ObjectHideFlags: 0

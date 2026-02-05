@@ -3,12 +3,12 @@ using Best.SocketIO.Events;
 using Newtonsoft.Json;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// Handles all Socket.IO communication for Sic Bo multiplayer game
-/// PRODUCTION-READY: Includes proper cleanup, timeouts, error handling, and multiplayer features
-/// Based on improved Plinko architecture with Andar Bahar multiplayer patterns
+/// MERGED VERSION: Stable old structure + new request/response pattern with Dictionary error handling
 /// </summary>
 public class SocketIOManager : MonoBehaviour
 {
@@ -26,6 +26,9 @@ public class SocketIOManager : MonoBehaviour
 
     [Header("Settings")]
     [SerializeField] private float disconnectDelay = 60f;
+
+    [Header("Debug")]
+    [SerializeField] private bool enableVerboseLogging = true;
     #endregion
 
     #region Public Properties
@@ -227,13 +230,17 @@ public class SocketIOManager : MonoBehaviour
 
 #if UNITY_EDITOR
         this.manager = new SocketManager(new Uri(TestSocketURI), options);
+        Debug.Log($"[SOCKET] Connecting to: {TestSocketURI}");
 #else
         this.manager = new SocketManager(new Uri(SocketURI), options);
+        Debug.Log($"[SOCKET] Connecting to: {SocketURI}");
 #endif
 
         gameSocket = string.IsNullOrEmpty(nameSpace) ?
             this.manager.Socket :
             this.manager.GetSocket("/" + nameSpace);
+
+        Debug.Log($"[SOCKET] Using namespace: /{nameSpace}");
 
         RegisterEventHandlers();
         manager.Open();
@@ -246,10 +253,14 @@ public class SocketIOManager : MonoBehaviour
 
     private void RegisterEventHandlers()
     {
+        Debug.Log("[EVENTS] ========== REGISTERING EVENT HANDLERS ==========");
+
         // Connection events
         gameSocket.On<ConnectResponse>(SocketIOEventTypes.Connect, OnConnected);
         gameSocket.On(SocketIOEventTypes.Disconnect, OnDisconnected);
-        gameSocket.On<Error>(SocketIOEventTypes.Error, OnError);
+
+        // ✅ FIX: Use Dictionary type for error handler
+        gameSocket.On<Dictionary<string, object>>(SocketIOEventTypes.Error, OnErrorDict);
 
         // Game events
         gameSocket.On<string>("game:init", OnInitData);
@@ -264,16 +275,17 @@ public class SocketIOManager : MonoBehaviour
 
         // Room events
         gameSocket.On<string>("room:joined", OnRoomJoined);
-        gameSocket.On<string>("room:left", OnRoomLeft);
 
-        // Request responses
-        gameSocket.On<string>("request", OnRequest);
+        // ✅ NEW: Request response handler (Dictionary type for flexibility)
+        gameSocket.On<Dictionary<string, object>>("request", OnRequest);
 
         // System events
         gameSocket.On<string>("pong", OnPongReceived);
-        gameSocket.On<string>("internalError", OnInternalError);
+        gameSocket.On<Dictionary<string, object>>("error", OnInternalErrorDict);
         gameSocket.On<string>("alert", OnAlert);
-        gameSocket.On<string>("AnotherDevice", OnAnotherDevice);
+        gameSocket.On<string>("another-device", OnAnotherDevice);
+
+        Debug.Log("[EVENTS] All handlers registered successfully");
     }
 
     private IEnumerator ConnectionAndInitTimeout()
@@ -326,6 +338,7 @@ public class SocketIOManager : MonoBehaviour
         if (isBeingDestroyed) return;
 
         Debug.Log("[CONNECT] ✅ Connected to server");
+        Debug.Log($"[CONNECT] Socket ID: {gameSocket?.Id ?? "NULL"}");
 
         if (hasEverConnected)
         {
@@ -356,30 +369,55 @@ public class SocketIOManager : MonoBehaviour
         isConnected = false;
         ResetPingRoutine();
 
-        uiController?.ShowDisconnectPopup();
+        if (isExiting || !hasEverConnected || !gameObject.activeInHierarchy)
+        {
+            return;
+        }
 
         // Start disconnect timer
-        if (disconnectTimerCoroutine == null && gameObject.activeInHierarchy && !isExiting)
+        if (disconnectTimerCoroutine == null)
         {
             disconnectTimerCoroutine = StartCoroutine(DisconnectTimer());
         }
     }
 
-    private void OnError(Error err)
+    /// <summary>
+    /// ✅ FIX: Handle Socket.IO Error event as Dictionary
+    /// </summary>
+    private void OnErrorDict(Dictionary<string, object> errorData)
     {
         if (isBeingDestroyed) return;
 
-        Debug.LogError($"[ERROR] Socket error: {err}");
+        try
+        {
+            string errorJson = JsonConvert.SerializeObject(errorData);
+            Debug.LogError($"[ERROR] Socket error: {errorJson}");
+
+            string errorMessage = "Unknown error";
+            if (errorData.ContainsKey("message"))
+            {
+                errorMessage = errorData["message"]?.ToString() ?? "Unknown error";
+            }
+            else if (errorData.ContainsKey("error"))
+            {
+                errorMessage = errorData["error"]?.ToString() ?? "Unknown error";
+            }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
-        JSManager?.SendCustomMessage("error");
+            JSManager?.SendCustomMessage("error");
 #endif
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[ERROR] Failed to process error data: {e.Message}");
+        }
     }
 
     private void OnPongReceived(string data)
     {
         if (isBeingDestroyed) return;
 
+        Debug.Log("[PONG] Received");
         waitingForPong = false;
         missedPongs = 0;
         lastPongTime = Time.time;
@@ -387,21 +425,31 @@ public class SocketIOManager : MonoBehaviour
 
     private IEnumerator DisconnectTimer()
     {
+        Debug.Log($"[DISCONNECT] Starting {disconnectDelay}s timer");
+
+        uiController?.ShowReconnectPopup();
         float elapsed = 0f;
 
-        while (elapsed < disconnectDelay && !isExiting && !isBeingDestroyed)
+        while (elapsed < disconnectDelay && !isConnected && !isExiting && !isBeingDestroyed)
         {
             elapsed += Time.deltaTime;
             yield return new WaitForSeconds(1f);
         }
 
-        if (!isConnected && !isExiting && !isBeingDestroyed)
+        disconnectTimerCoroutine = null;
+
+        if (isBeingDestroyed) yield break;
+
+        if (!isConnected && !isExiting)
         {
             Debug.LogError("[DISCONNECT] Timeout reached");
-            ShowErrorAndBlock("Connection lost. Please refresh the page.");
+            uiController?.ShowDisconnectPopup();
         }
-
-        disconnectTimerCoroutine = null;
+        else
+        {
+            Debug.Log("[DISCONNECT] Reconnected before timeout");
+            uiController?.CloseReconnectPopup();
+        }
     }
     #endregion
 
@@ -498,7 +546,8 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log("[INIT] Data received");
+        Debug.Log($"[🎯 RECEIVED] game:init");
+        Debug.Log($"[game:init]: \"{jsonData}\"");
 
         isWaitingForInitData = false;
 
@@ -512,9 +561,10 @@ public class SocketIOManager : MonoBehaviour
         {
             SicBoRoot root = JsonConvert.DeserializeObject<SicBoRoot>(jsonData);
 
-            if (root == null)
+            if (root == null || root.gameData == null || root.player == null)
             {
-                Debug.LogError("[INIT] Null response");
+                Debug.LogError("[INIT] Invalid data structure");
+                ShowErrorAndBlock("Invalid game data received");
                 return;
             }
 
@@ -545,55 +595,76 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log($"[ROOM] Joined: {jsonData}");
-
-        try
-        {
-            // Room join data is simple, no special handling needed
-            // Game will handle state through game:init or request response
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[ROOM] Join error: {e.Message}");
-        }
+        Debug.Log($"[🎯 RECEIVED] room:joined");
+        Debug.Log($"[room:joined]: \"{jsonData}\"");
     }
 
-    private void OnRoomLeft(string jsonData)
+    /// <summary>
+    /// ✅ NEW: Handle "request" response from server with new structure
+    /// Server responds to our request events (JOIN_LEVEL, PLACE_BET, etc.) with this
+    /// </summary>
+    private void OnRequest(Dictionary<string, object> data)
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log($"[ROOM] Left: {jsonData}");
-    }
-
-    private void OnRequest(string jsonData)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.Log($"[REQUEST] Response: {jsonData}");
-
         try
         {
-            SicBoRoot response = JsonConvert.DeserializeObject<SicBoRoot>(jsonData);
+            Debug.Log($"[🎯 RECEIVED] request");
 
-            if (response == null) return;
+            // Convert dictionary to JSON string for logging
+            string json = JsonConvert.SerializeObject(data);
+            Debug.Log($"[request]: {json}");
 
-            // Handle different request responses
-            if (!response.success)
+            // Check if it's a successful response
+            if (data.ContainsKey("success") && (bool)data["success"])
             {
-                // Show error message if provided
-                if (response.payload?.message != null)
+                // Get the payload
+                if (data.ContainsKey("payload"))
                 {
-                    uiController?.ShowNotification(response.payload.message);
-                }
-                return;
-            }
+                    var payloadJson = JsonConvert.SerializeObject(data["payload"]);
+                    var payload = JsonConvert.DeserializeObject<RoomPayload>(payloadJson);
 
-            // Success responses handled by GameManager based on payload
-            // Could include: room join, bet placed, etc.
+                    // Route to appropriate handler based on payload content
+                    if (payload != null)
+                    {
+                        // JOIN_LEVEL response
+                        if (!string.IsNullOrEmpty(payload.level))
+                        {
+                            Debug.Log($"[REQUEST] Join response for level: {payload.level}");
+                            gameManager?.OnRoomJoinedWithData(payload);
+                        }
+                        // PLACE_BET response
+                        else if (!string.IsNullOrEmpty(payload.betId))
+                        {
+                            Debug.Log($"[REQUEST] Bet confirmed: {payload.betId}");
+                            gameManager?.OnBalanceUpdated(payload.balance);
+                        }
+                        // GET_HISTORY response
+                        else if (payload.history != null)
+                        {
+                            Debug.Log($"[REQUEST] History received");
+                            gameManager?.OnHistoryReceived(payload.history, payload.meta);
+                        }
+                        // HOME response
+                        else if (payload.lobby != null)
+                        {
+                            Debug.Log($"[REQUEST] Returned to lobby");
+                            // Handle lobby data if needed
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Error response
+                string message = data.ContainsKey("message") ? data["message"].ToString() : "Request failed";
+                Debug.LogWarning($"[REQUEST] Error: {message}");
+                uiController?.ShowNotification(message);
+            }
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Debug.LogError($"[REQUEST] Error: {e.Message}");
+            Debug.LogError($"[REQUEST] Error processing response: {ex.Message}");
         }
     }
 
@@ -601,7 +672,8 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log("[ROUND] Start");
+        Debug.Log($"[🎯 RECEIVED] game:round_start");
+        Debug.Log($"[game:round_start]: \"{jsonData}\"");
 
         try
         {
@@ -618,6 +690,8 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
 
+        Debug.Log($"[game:betting_timer]: \"{jsonData}\"");
+
         try
         {
             TimerData data = JsonConvert.DeserializeObject<TimerData>(jsonData);
@@ -633,7 +707,8 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log("[BONUS] Received");
+        Debug.Log($"[🎯 RECEIVED] game:bonus");
+        Debug.Log($"[game:bonus]: \"{jsonData}\"");
 
         try
         {
@@ -650,7 +725,8 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log("[DICE] Result received");
+        Debug.Log($"[🎯 RECEIVED] game:dice_result");
+        Debug.Log($"[game:dice_result]: \"{jsonData}\"");
 
         try
         {
@@ -667,7 +743,8 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log("[BET] Placed by player");
+        Debug.Log($"[🎯 RECEIVED] game:bet_placed");
+        Debug.Log($"[game:bet_placed]: \"{jsonData}\"");
 
         try
         {
@@ -684,7 +761,8 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log("[CASHOUT] Received");
+        Debug.Log($"[🎯 RECEIVED] game:cashout");
+        Debug.Log($"[game:cashout]: \"{jsonData}\"");
 
         try
         {
@@ -701,6 +779,9 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
 
+        Debug.Log($"[🎯 RECEIVED] game:lobby_count");
+        Debug.Log($"[game:lobby_count]: \"{jsonData}\"");
+
         try
         {
             LobbyCountData data = JsonConvert.DeserializeObject<LobbyCountData>(jsonData);
@@ -716,7 +797,8 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log("[ROUND] End");
+        Debug.Log($"[🎯 RECEIVED] game:round_end");
+        Debug.Log($"[game:round_end]: \"{jsonData}\"");
 
         try
         {
@@ -729,12 +811,31 @@ public class SocketIOManager : MonoBehaviour
         }
     }
 
-    private void OnInternalError(string data)
+    /// <summary>
+    /// ✅ FIX: Handle internal "error" event as Dictionary
+    /// </summary>
+    private void OnInternalErrorDict(Dictionary<string, object> errorData)
     {
         if (isBeingDestroyed) return;
 
-        Debug.LogError($"[ERROR] Internal: {data}");
-        uiController?.ShowNotification("Server error occurred");
+        try
+        {
+            string errorJson = JsonConvert.SerializeObject(errorData);
+            Debug.LogError($"[ERROR] Internal: {errorJson}");
+
+            string message = "Server error occurred";
+            if (errorData.ContainsKey("message"))
+            {
+                message = errorData["message"]?.ToString() ?? message;
+            }
+
+            uiController?.ShowNotification(message);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[ERROR] Failed to process internal error: {e.Message}");
+            uiController?.ShowNotification("Server error occurred");
+        }
     }
 
     private void OnAlert(string data)
@@ -754,80 +855,162 @@ public class SocketIOManager : MonoBehaviour
     #endregion
 
     #region Public API - Client Actions
+    /// <summary>
+    /// ✅ NEW: Join level with new request structure
+    /// </summary>
     internal void JoinLevel(string level)
     {
         if (isBeingDestroyed) return;
 
-        var payload = new { level };
-        string json = JsonConvert.SerializeObject(payload);
-        SendDataWithNamespace("JOIN_LEVEL", json);
-
+        Debug.Log($"[JOIN] ===== SENDING JOIN_LEVEL =====");
         Debug.Log($"[JOIN] Level: {level}");
+
+        var requestData = new
+        {
+            type = "JOIN_LEVEL",
+            payload = new { level = level }
+        };
+
+        string jsonPayload = JsonConvert.SerializeObject(requestData);
+        Debug.Log($"[JOIN] Request Data: {jsonPayload}");
+
+        SendDataWithNamespace("request", jsonPayload);
+
+        Debug.Log($"[JOIN] ===== JOIN_LEVEL SENT =====");
     }
 
-    internal void PlaceBet(string betType, string betOption, int amountIndex, string level)
+    /// <summary>
+    /// ✅ NEW: Place bet with new request structure
+    /// </summary>
+    internal void PlaceBet(string betType, string betOption, int chipIndex, string currentRoom)
     {
         if (isBeingDestroyed) return;
 
-        var payload = new { betType, betOption, amountIndex, level };
-        string json = JsonConvert.SerializeObject(payload);
-        SendDataWithNamespace("PLACE_BET", json);
+        Debug.Log($"[BET] ===== PLACING BET =====");
 
-        Debug.Log($"[BET] Placing: {betOption} at index {amountIndex}");
+        var requestData = new
+        {
+            type = "PLACE_BET",
+            payload = new
+            {
+                amountIndex = chipIndex,
+                betType = betType,
+                betOption = betOption
+            }
+        };
+
+        string jsonPayload = JsonConvert.SerializeObject(requestData);
+        Debug.Log($"[BET] Request: {jsonPayload}");
+
+        SendDataWithNamespace("request", jsonPayload);
     }
 
+    /// <summary>
+    /// ✅ NEW: Cancel bet with new request structure
+    /// </summary>
     internal void CancelBet()
     {
         if (isBeingDestroyed) return;
 
-        SendDataWithNamespace("CANCEL_BET", "{}");
-        Debug.Log("[BET] Canceling all");
+        Debug.Log("[CANCEL] Sending cancel all bets request");
+
+        var requestData = new
+        {
+            type = "CANCEL_BET",
+            payload = new { }
+        };
+
+        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
     }
 
-    internal void DoubleBet(string betId)
+    /// <summary>
+    /// ✅ NEW: Double bet with new request structure
+    /// </summary>
+    internal void DoubleBet(string currentRoom)
     {
         if (isBeingDestroyed) return;
 
-        var payload = new { betId };
-        string json = JsonConvert.SerializeObject(payload);
-        SendDataWithNamespace("DOUBLE_BET", json);
+        Debug.Log("[DOUBLE] Sending double bet request");
 
-        Debug.Log("[BET] Doubling");
+        var requestData = new
+        {
+            type = "DOUBLE_BET",
+            payload = new { }
+        };
+
+        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
     }
 
+    /// <summary>
+    /// ✅ NEW: Repeat bet with new request structure
+    /// </summary>
     internal void RepeatBet()
     {
         if (isBeingDestroyed) return;
 
-        SendDataWithNamespace("REPEAT_BET", "{}");
-        Debug.Log("[BET] Repeating");
+        Debug.Log("[REPEAT] Sending repeat bet request");
+
+        var requestData = new
+        {
+            type = "REPEAT_BET",
+            payload = new { }
+        };
+
+        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
     }
 
+    /// <summary>
+    /// ✅ NEW: Undo bet with new request structure
+    /// </summary>
     internal void UndoBet()
     {
         if (isBeingDestroyed) return;
 
-        SendDataWithNamespace("UNDO_BET", "{}");
-        Debug.Log("[BET] Undoing last");
+        Debug.Log("[UNDO] Sending undo bet request");
+
+        var requestData = new
+        {
+            type = "UNDO_BET",
+            payload = new { }
+        };
+
+        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
     }
 
+    /// <summary>
+    /// ✅ NEW: Request history with new request structure
+    /// </summary>
     internal void RequestHistory(int page)
     {
         if (isBeingDestroyed) return;
 
-        var payload = new { page };
-        string json = JsonConvert.SerializeObject(payload);
-        SendDataWithNamespace("BET_HISTORY", json);
-
         Debug.Log($"[HISTORY] Requesting page {page}");
+
+        var requestData = new
+        {
+            type = "GET_HISTORY",
+            payload = new { page = page }
+        };
+
+        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
     }
 
+    /// <summary>
+    /// ✅ NEW: Return home with new request structure
+    /// </summary>
     internal void ReturnHome()
     {
         if (isBeingDestroyed) return;
 
-        SendDataWithNamespace("HOME", "{}");
-        Debug.Log("[HOME] Returning");
+        Debug.Log("[HOME] Returning to lobby");
+
+        var requestData = new
+        {
+            type = "HOME",
+            payload = new { }
+        };
+
+        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
     }
 
     internal void ReceiveAuthToken(string jsonData)
@@ -900,12 +1083,18 @@ public class SocketIOManager : MonoBehaviour
             if (json != null)
             {
                 gameSocket.Emit(eventName, json);
-                Debug.Log($"[EMIT] {eventName}: {json}");
+                if (enableVerboseLogging)
+                {
+                    Debug.Log($"[EMIT] {eventName}: {json}");
+                }
             }
             else
             {
                 gameSocket.Emit(eventName);
-                Debug.Log($"[EMIT] {eventName}");
+                if (enableVerboseLogging)
+                {
+                    Debug.Log($"[EMIT] {eventName}");
+                }
             }
         }
         else

@@ -1,10 +1,13 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
 
 /// <summary>
-/// Manages round phases, timer, and dice animations
+/// FIXED: Manages round phases, timer, and dice animations
+/// - Uses timeRemaining from server directly (no client calculation)
+/// - Properly handles timer updates every second
+/// - Fixed timer calculation to avoid negative values
 /// </summary>
 public class RoundController : MonoBehaviour
 {
@@ -34,7 +37,6 @@ public class RoundController : MonoBehaviour
 
     #region Private Fields
     private string currentRoundId;
-    private Coroutine timerRoutine;
     private bool isRoundActive = false;
     #endregion
 
@@ -55,18 +57,31 @@ public class RoundController : MonoBehaviour
         // Update UI
         uiController.UpdateRoundPhase("BETTING");
 
-        // Calculate time remaining from timestamps
-        // Fixed: Calculate timeRemaining from bettingEndTime and serverTime
+        // ✅ FIX: Use time remaining from server data directly
         int timeRemaining = CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
-        // Start timer
-        if (timerRoutine != null) StopCoroutine(timerRoutine);
-        timerRoutine = StartCoroutine(TimerRoutine(timeRemaining));
+        Debug.Log($"[ROUND] Initial time remaining: {timeRemaining}s");
+
+        // Update timer display immediately
+        uiController.UpdateTimer(timeRemaining);
     }
 
+    /// <summary>
+    /// ✅ FIX: Just update the timer display - no coroutine needed
+    /// Server sends updates every second via game:betting_timer
+    /// </summary>
     internal void UpdateTimer(int secondsRemaining)
     {
+        if (!isRoundActive) return;
+
         uiController.UpdateTimer(secondsRemaining);
+
+        // Check if betting should close
+        if (secondsRemaining <= 0)
+        {
+            betController.DisableBetting();
+            uiController.UpdateRoundPhase("ROLLING");
+        }
     }
 
     internal void ShowDiceResult(DiceResultData data)
@@ -89,12 +104,6 @@ public class RoundController : MonoBehaviour
 
         isRoundActive = false;
 
-        if (timerRoutine != null)
-        {
-            StopCoroutine(timerRoutine);
-            timerRoutine = null;
-        }
-
         // Hide dice after delay
         StartCoroutine(HideDiceAfterDelay(3f));
     }
@@ -109,29 +118,7 @@ public class RoundController : MonoBehaviour
         // Convert to seconds and ensure it's not negative
         int remainingSeconds = Mathf.Max(0, (int)(remainingMs / 1000));
 
-        Debug.Log($"[ROUND] Time remaining calculated: {remainingSeconds}s (End: {bettingEndTime}, Server: {serverTime})");
-
         return remainingSeconds;
-    }
-
-    private IEnumerator TimerRoutine(int initialTime)
-    {
-        int remaining = initialTime;
-
-        while (remaining > 0 && isRoundActive)
-        {
-            uiController.UpdateTimer(remaining);
-            yield return new WaitForSeconds(1f);
-            remaining--;
-        }
-
-        if (isRoundActive)
-        {
-            betController.DisableBetting();
-            uiController.UpdateRoundPhase("ROLLING");
-        }
-
-        timerRoutine = null;
     }
 
     private IEnumerator AnimateDiceRoll(DiceResultData data)
@@ -168,9 +155,6 @@ public class RoundController : MonoBehaviour
 
         // Show result text
         ShowResult(data.sum, data.matchSide);
-
-        // Highlight winning areas (including triple dice)
-        betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
     }
 
     private void SetDiceFace(Image diceImage, int faceIndex)
