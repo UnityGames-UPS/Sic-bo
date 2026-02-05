@@ -243,8 +243,17 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
-    }
 
+        // ✅ CORRECTED: Clear bets after cashout
+        // Server will send next round_start after ~5 seconds
+        betController.ClearAllBets();
+        roundController.EndRound();
+
+        // ✅ NEW: Hide timer during gap between rounds
+        uiController.HideAllTimers();
+
+        Debug.Log("[GAME] Waiting for next round...");
+    }
     internal void OnLobbyCount(LobbyCountData data)
     {
         if (data?.lobby == null) return;

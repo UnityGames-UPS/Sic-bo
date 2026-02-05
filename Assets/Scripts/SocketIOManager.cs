@@ -6,10 +6,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Handles all Socket.IO communication for Sic Bo multiplayer game
-/// MERGED VERSION: Stable old structure + new request/response pattern with Dictionary error handling
-/// </summary>
 public class SocketIOManager : MonoBehaviour
 {
     #region Serialized Fields
@@ -258,9 +254,7 @@ public class SocketIOManager : MonoBehaviour
         // Connection events
         gameSocket.On<ConnectResponse>(SocketIOEventTypes.Connect, OnConnected);
         gameSocket.On(SocketIOEventTypes.Disconnect, OnDisconnected);
-
-        // ✅ FIX: Use Dictionary type for error handler
-        gameSocket.On<Dictionary<string, object>>(SocketIOEventTypes.Error, OnErrorDict);
+        gameSocket.On<Error>(SocketIOEventTypes.Error, OnError);
 
         // Game events
         gameSocket.On<string>("game:init", OnInitData);
@@ -271,241 +265,376 @@ public class SocketIOManager : MonoBehaviour
         gameSocket.On<string>("game:bet_placed", OnBetPlaced);
         gameSocket.On<string>("game:cashout", OnCashout);
         gameSocket.On<string>("game:lobby_count", OnLobbyCount);
-        gameSocket.On<string>("game:round_end", OnRoundEnd);
 
         // Room events
         gameSocket.On<string>("room:joined", OnRoomJoined);
 
-        // ✅ NEW: Request response handler (Dictionary type for flexibility)
-        gameSocket.On<Dictionary<string, object>>("request", OnRequest);
+        gameSocket.On<string>("request", OnRequest);
 
         // System events
         gameSocket.On<string>("pong", OnPongReceived);
-        gameSocket.On<Dictionary<string, object>>("error", OnInternalErrorDict);
-        gameSocket.On<string>("alert", OnAlert);
-        gameSocket.On<string>("another-device", OnAnotherDevice);
+        gameSocket.On<string>("error", OnInternalError);
+        gameSocket.On<string>("force-disconnect", OnForceDisconnect);
 
-        Debug.Log("[EVENTS] All handlers registered successfully");
-    }
-
-    private IEnumerator ConnectionAndInitTimeout()
-    {
-        float connectionTimeout = 15f;
-        float initTimeout = 10f;
-        float elapsed = 0f;
-
-        // Wait for connection
-        while (!isConnected && elapsed < connectionTimeout && !isExiting && !isBeingDestroyed)
-        {
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        if (isBeingDestroyed) yield break;
-
-        if (!isConnected)
-        {
-            Debug.LogError("[CONNECT] Connection timeout");
-            ShowErrorAndBlock("Failed to connect. Please check your connection.");
-            yield break;
-        }
-
-        // Wait for init data
-        isWaitingForInitData = true;
-        elapsed = 0f;
-
-        while (isWaitingForInitData && elapsed < initTimeout && !isExiting && !isBeingDestroyed)
-        {
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        if (isBeingDestroyed) yield break;
-
-        if (isWaitingForInitData)
-        {
-            Debug.LogError("[INIT] Data timeout");
-            ShowErrorAndBlock("Failed to load game data. Please refresh.");
-        }
-
-        initTimeoutRoutine = null;
+        Debug.Log("[EVENTS] All handlers registered");
     }
     #endregion
 
-    #region Connection Events
+    #region Event Handlers - Connection
     private void OnConnected(ConnectResponse resp)
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log("[CONNECT] ✅ Connected to server");
-        Debug.Log($"[CONNECT] Socket ID: {gameSocket?.Id ?? "NULL"}");
-
-        if (hasEverConnected)
-        {
-            uiController?.CloseReconnectPopup();
-        }
+        Debug.Log($"[CONNECTED] Socket ID: {resp.sid}");
 
         isConnected = true;
         hasEverConnected = true;
-        waitingForPong = false;
-        missedPongs = 0;
-        lastPongTime = Time.time;
+        isWaitingForInitData = true;
 
-        // Stop disconnect timer if running
-        if (disconnectTimerCoroutine != null)
-        {
-            StopCoroutine(disconnectTimerCoroutine);
-            disconnectTimerCoroutine = null;
-        }
+        RaycastBlocker?.SetActive(false);
+        uiController?.CloseReconnectPopup();
 
-        SendPing();
+        StartPingPongRoutine();
     }
 
     private void OnDisconnected()
     {
-        if (isBeingDestroyed) return;
+        if (isBeingDestroyed || isExiting) return;
 
-        Debug.LogWarning("[DISCONNECT] ⚠️ Disconnected from server");
+        Debug.LogWarning("[DISCONNECTED] Connection lost");
+
         isConnected = false;
         ResetPingRoutine();
 
-        if (isExiting || !hasEverConnected || !gameObject.activeInHierarchy)
+        if (hasEverConnected)
         {
-            return;
+            uiController?.ShowDisconnectPopup();
         }
-
-        // Start disconnect timer
-        if (disconnectTimerCoroutine == null)
+        else
         {
-            disconnectTimerCoroutine = StartCoroutine(DisconnectTimer());
+            ShowErrorAndBlock("Failed to connect to server");
         }
     }
 
-    /// <summary>
-    /// ✅ FIX: Handle Socket.IO Error event as Dictionary
-    /// </summary>
-    private void OnErrorDict(Dictionary<string, object> errorData)
+    private void OnError(Error error)
+    {
+        if (isBeingDestroyed) return;
+
+        Debug.LogError($"[ERROR] Socket error: {error.message}");
+    }
+
+    private void OnInternalError(string data)
+    {
+        if (isBeingDestroyed) return;
+
+        Debug.LogError($"[ERROR] Internal: {data}");
+        try
+        {
+            var errorObj = JsonConvert.DeserializeObject<Dictionary<string, object>>(data);
+            if (errorObj != null && errorObj.ContainsKey("code"))
+            {
+                string code = errorObj["code"].ToString();
+                // Don't show popup for REQUEST_ERROR
+                if (code != "REQUEST_ERROR")
+                {
+                    ShowErrorAndBlock($"Server error: {code}");
+                }
+            }
+        }
+        catch
+        {
+            // If we can't parse it, it might be critical
+            Debug.LogError($"[ERROR] Could not parse error: {data}");
+        }
+    }
+
+    private void OnForceDisconnect(string data)
+    {
+        if (isBeingDestroyed) return;
+
+        Debug.LogWarning("[FORCE_DISCONNECT] Removed by admin or another device");
+        uiController?.ShowAnotherDevicePopup();
+
+        StartCoroutine(CloseSocket());
+    }
+    #endregion
+
+    #region Event Handlers - Game Init
+    private void OnInitData(string jsonData)
+    {
+        if (isBeingDestroyed) return;
+
+        Debug.Log("[RECEIVED] game:init");
+        if (enableVerboseLogging) Debug.Log($"[game:init]: {jsonData}");
+
+        try
+        {
+            SicBoRoot root = JsonConvert.DeserializeObject<SicBoRoot>(jsonData);
+
+            if (root == null)
+            {
+                Debug.LogError("[INIT] Failed to parse init data");
+                return;
+            }
+
+            InitialData = root.gameData;
+            PlayerData = root.player;
+
+            if (InitialData != null && PlayerData != null)
+            {
+                IsInitialized = true;
+                isWaitingForInitData = false;
+
+                Debug.Log($"[INIT] Complete - Player: {PlayerData.username}, Balance: {PlayerData.balance}");
+
+                gameManager.OnInitDataReceived();
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+                JSManager?.SendCustomMessage("OnEnter");
+#endif
+            }
+            else
+            {
+                Debug.LogError("[INIT] Missing game data or player data");
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[INIT] Parse error: {e.Message}\n{e.StackTrace}");
+        }
+    }
+    #endregion
+
+    #region Event Handlers - Room
+    private void OnRoomJoined(string jsonData)
+    {
+        if (isBeingDestroyed) return;
+
+        Debug.Log("[RECEIVED] room:joined");
+        if (enableVerboseLogging) Debug.Log($"[room:joined]: {jsonData}");
+    }
+    #endregion
+
+    #region Event Handlers - Round
+    private void OnRoundStart(string jsonData)
+    {
+        if (isBeingDestroyed) return;
+
+        Debug.Log("[RECEIVED] game:round_start");
+        if (enableVerboseLogging) Debug.Log($"[game:round_start]: {jsonData}");
+
+        try
+        {
+            RoundStartData data = JsonConvert.DeserializeObject<RoundStartData>(jsonData);
+            if (data != null)
+            {
+                gameManager.OnRoundStart(data);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[ROUND_START] Parse error: {e.Message}");
+        }
+    }
+
+    private void OnBettingTimer(string jsonData)
     {
         if (isBeingDestroyed) return;
 
         try
         {
-            string errorJson = JsonConvert.SerializeObject(errorData);
-            Debug.LogError($"[ERROR] Socket error: {errorJson}");
-
-            string errorMessage = "Unknown error";
-            if (errorData.ContainsKey("message"))
+            TimerData data = JsonConvert.DeserializeObject<TimerData>(jsonData);
+            if (data != null)
             {
-                errorMessage = errorData["message"]?.ToString() ?? "Unknown error";
+                gameManager.OnBettingTimer(data);
             }
-            else if (errorData.ContainsKey("error"))
-            {
-                errorMessage = errorData["error"]?.ToString() ?? "Unknown error";
-            }
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-            JSManager?.SendCustomMessage("error");
-#endif
         }
         catch (Exception e)
         {
-            Debug.LogError($"[ERROR] Failed to process error data: {e.Message}");
+            Debug.LogError($"[TIMER] Parse error: {e.Message}");
         }
     }
 
-    private void OnPongReceived(string data)
+    private void OnBonus(string jsonData)
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log("[PONG] Received");
-        waitingForPong = false;
-        missedPongs = 0;
-        lastPongTime = Time.time;
+        if (enableVerboseLogging) Debug.Log($"[game:bonus]: {jsonData}");
+
+        try
+        {
+            BonusData data = JsonConvert.DeserializeObject<BonusData>(jsonData);
+            if (data != null)
+            {
+                gameManager.OnBonus(data);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[BONUS] Parse error: {e.Message}");
+        }
     }
 
-    private IEnumerator DisconnectTimer()
+    private void OnDiceResult(string jsonData)
     {
-        Debug.Log($"[DISCONNECT] Starting {disconnectDelay}s timer");
+        if (isBeingDestroyed) return;
 
-        uiController?.ShowReconnectPopup();
-        float elapsed = 0f;
+        if (enableVerboseLogging) Debug.Log($"[game:dice_result]: {jsonData}");
 
-        while (elapsed < disconnectDelay && !isConnected && !isExiting && !isBeingDestroyed)
+        try
         {
-            elapsed += Time.deltaTime;
-            yield return new WaitForSeconds(1f);
+            DiceResultData data = JsonConvert.DeserializeObject<DiceResultData>(jsonData);
+            if (data != null)
+            {
+                gameManager.OnDiceResult(data);
+            }
         }
-
-        disconnectTimerCoroutine = null;
-
-        if (isBeingDestroyed) yield break;
-
-        if (!isConnected && !isExiting)
+        catch (Exception e)
         {
-            Debug.LogError("[DISCONNECT] Timeout reached");
-            uiController?.ShowDisconnectPopup();
+            Debug.LogError($"[DICE_RESULT] Parse error: {e.Message}");
         }
-        else
+    }
+
+    private void OnBetPlaced(string jsonData)
+    {
+        if (isBeingDestroyed) return;
+
+        try
         {
-            Debug.Log("[DISCONNECT] Reconnected before timeout");
-            uiController?.CloseReconnectPopup();
+            BetPlacedData data = JsonConvert.DeserializeObject<BetPlacedData>(jsonData);
+            if (data != null)
+            {
+                gameManager.OnBetPlaced(data);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[BET_PLACED] Parse error: {e.Message}");
+        }
+    }
+
+    private void OnCashout(string jsonData)
+    {
+        if (isBeingDestroyed) return;
+
+        if (enableVerboseLogging) Debug.Log($"[game:cashout]: {jsonData}");
+
+        try
+        {
+            CashoutData data = JsonConvert.DeserializeObject<CashoutData>(jsonData);
+            if (data != null)
+            {
+                gameManager.OnCashout(data);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[CASHOUT] Parse error: {e.Message}");
+        }
+    }
+
+    private void OnLobbyCount(string jsonData)
+    {
+        if (isBeingDestroyed) return;
+
+        Debug.Log("[RECEIVED] game:lobby_count");
+        if (enableVerboseLogging) Debug.Log($"[game:lobby_count]: {jsonData}");
+
+        try
+        {
+            LobbyCountData data = JsonConvert.DeserializeObject<LobbyCountData>(jsonData);
+            if (data != null)
+            {
+                gameManager.OnLobbyCount(data);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[LOBBY_COUNT] Parse error: {e.Message}");
         }
     }
     #endregion
 
-    #region Ping/Pong System
-    private void SendPing()
+    #region Event Handlers - Request Response
+    private void OnRequest(string jsonData)
     {
-        if (isBeingDestroyed || !isConnected) return;
+        if (isBeingDestroyed) return;
 
-        ResetPingRoutine();
+        Debug.Log("[RECEIVED] request");
+        if (enableVerboseLogging) Debug.Log($"[request]: {jsonData}");
 
-        if (gameObject.activeInHierarchy)
+        try
         {
-            PingRoutine = StartCoroutine(PingCheck());
+            SicBoRoot root = JsonConvert.DeserializeObject<SicBoRoot>(jsonData);
+
+            if (root == null || !root.success)
+            {
+                Debug.LogWarning("[REQUEST] Request failed or null response");
+                return;
+            }
+
+            if (root.payload == null)
+            {
+                Debug.LogWarning("[REQUEST] Null payload");
+                return;
+            }
+
+            // Handle different response types based on payload content
+
+            // Room join response
+            if (!string.IsNullOrEmpty(root.payload.level))
+            {
+                Debug.Log($"[REQUEST] JOIN_LEVEL response: {root.payload.level}");
+                gameManager.OnRoomJoinedWithData(root.payload);
+
+                // If round state exists, start round immediately
+                if (root.payload.roundState != null)
+                {
+                    var roundData = new RoundStartData
+                    {
+                        roundId = root.payload.roundState.roundId,
+                        startedAt = root.payload.roundState.startedAt,
+                        bettingEndTime = root.payload.roundState.bettingEndTime,
+                        serverTime = root.payload.roundState.serverTime,
+                        playerCount = root.payload.playerCount
+                    };
+                    gameManager.OnRoundStart(roundData);
+                }
+            }
+            // Bet response
+            else if (root.payload.balance > 0 && !string.IsNullOrEmpty(root.payload.betId))
+            {
+                Debug.Log($"[REQUEST] PLACE_BET response: balance={root.payload.balance}");
+                gameManager.OnBalanceUpdated(root.payload.balance);
+            }
+            // History response
+            else if (root.payload.history != null)
+            {
+                Debug.Log($"[REQUEST] GET_HISTORY response");
+                gameManager.OnHistoryReceived(root.payload.history, root.payload.meta);
+            }
+            // Home response
+            else if (root.payload.lobby != null)
+            {
+                Debug.Log($"[REQUEST] HOME response");
+                // Home response handled - just logged
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[REQUEST] Parse error: {e.Message}");
         }
     }
+    #endregion
 
-    private IEnumerator PingCheck()
+    #region Ping/Pong
+    private void StartPingPongRoutine()
     {
-        while (isConnected && !isExiting && !isBeingDestroyed)
+        ResetPingRoutine();
+        if (gameObject.activeInHierarchy)
         {
-            if (isBeingDestroyed) yield break;
-
-            Debug.Log($"[PING] waitingForPong: {waitingForPong}, missedPongs: {missedPongs}");
-
-            if (missedPongs == 0)
-            {
-                uiController?.CloseReconnectPopup();
-            }
-
-            if (waitingForPong)
-            {
-                if (missedPongs == 2)
-                {
-                    uiController?.ShowReconnectPopup();
-                }
-
-                missedPongs++;
-                Debug.LogWarning($"[PING] Missed #{missedPongs}/{MaxMissedPongs}");
-
-                if (missedPongs >= MaxMissedPongs)
-                {
-                    Debug.LogError("[PING] 5 consecutive misses");
-                    isConnected = false;
-                    uiController?.ShowDisconnectPopup();
-                    yield break;
-                }
-            }
-
-            waitingForPong = true;
-            lastPongTime = Time.time;
-            SendDataWithNamespace("ping");
-
-            yield return new WaitForSeconds(pingInterval);
+            PingRoutine = StartCoroutine(PingPongCheck());
         }
-
-        PingRoutine = null;
     }
 
     private void ResetPingRoutine()
@@ -518,352 +647,92 @@ public class SocketIOManager : MonoBehaviour
         waitingForPong = false;
         missedPongs = 0;
     }
+
+    private IEnumerator PingPongCheck()
+    {
+        while (!isBeingDestroyed && isConnected)
+        {
+            yield return new WaitForSeconds(pingInterval);
+
+            if (!isConnected || isBeingDestroyed) yield break;
+
+            if (waitingForPong)
+            {
+                missedPongs++;
+                Debug.LogWarning($"[PING] Missed pong #{missedPongs}");
+
+                if (missedPongs >= MaxMissedPongs)
+                {
+                    Debug.LogError("[PING] Connection lost - too many missed pongs");
+                    OnDisconnected();
+                    yield break;
+                }
+            }
+
+            SendDataWithNamespace("ping");
+            waitingForPong = true;
+        }
+    }
+
+    private void OnPongReceived(string data)
+    {
+        if (isBeingDestroyed) return;
+
+        lastPongTime = Time.time;
+        waitingForPong = false;
+        missedPongs = 0;
+    }
     #endregion
 
-    #region Background Handling
+    #region Timeouts
+    private IEnumerator ConnectionAndInitTimeout()
+    {
+        float elapsed = 0f;
+        float timeout = 30f;
+
+        while (elapsed < timeout && !isBeingDestroyed)
+        {
+            if (IsInitialized)
+            {
+                Debug.Log("[TIMEOUT] Init successful");
+                yield break;
+            }
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (!isBeingDestroyed && !IsInitialized)
+        {
+            Debug.LogError("[TIMEOUT] Init timeout");
+            ShowErrorAndBlock("Connection timeout. Please refresh.");
+        }
+    }
+
     private IEnumerator FocusTimeoutCheck()
     {
-        while (!hasFocus && !isExiting && !isBeingDestroyed)
+        while (!hasFocus && !isBeingDestroyed)
         {
             float timeInBackground = Time.time - focusLostTime;
 
             if (timeInBackground >= maxBackgroundTime)
             {
                 Debug.LogWarning("[FOCUS] Max background time exceeded");
-                ShowErrorAndBlock("Session expired due to inactivity. Please refresh.");
+                OnDisconnected();
                 yield break;
             }
 
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(5f);
         }
-
-        focusCheckRoutine = null;
     }
     #endregion
 
-    #region Game Events
-    private void OnInitData(string jsonData)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.Log($"[🎯 RECEIVED] game:init");
-        Debug.Log($"[game:init]: \"{jsonData}\"");
-
-        isWaitingForInitData = false;
-
-        if (initTimeoutRoutine != null)
-        {
-            StopCoroutine(initTimeoutRoutine);
-            initTimeoutRoutine = null;
-        }
-
-        try
-        {
-            SicBoRoot root = JsonConvert.DeserializeObject<SicBoRoot>(jsonData);
-
-            if (root == null || root.gameData == null || root.player == null)
-            {
-                Debug.LogError("[INIT] Invalid data structure");
-                ShowErrorAndBlock("Invalid game data received");
-                return;
-            }
-
-            InitialData = root.gameData;
-            PlayerData = root.player;
-
-            if (!IsInitialized)
-            {
-                gameManager?.OnInitDataReceived();
-                IsInitialized = true;
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-                JSManager?.SendCustomMessage("OnEnter");
-#endif
-
-                RaycastBlocker?.SetActive(false);
-                Debug.Log("[INIT] Game ready");
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[INIT] Parse error: {e.Message}\n{e.StackTrace}");
-            ShowErrorAndBlock("Failed to initialize game data");
-        }
-    }
-
-    private void OnRoomJoined(string jsonData)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.Log($"[🎯 RECEIVED] room:joined");
-        Debug.Log($"[room:joined]: \"{jsonData}\"");
-    }
-
-    /// <summary>
-    /// ✅ NEW: Handle "request" response from server with new structure
-    /// Server responds to our request events (JOIN_LEVEL, PLACE_BET, etc.) with this
-    /// </summary>
-    private void OnRequest(Dictionary<string, object> data)
-    {
-        if (isBeingDestroyed) return;
-
-        try
-        {
-            Debug.Log($"[🎯 RECEIVED] request");
-
-            // Convert dictionary to JSON string for logging
-            string json = JsonConvert.SerializeObject(data);
-            Debug.Log($"[request]: {json}");
-
-            // Check if it's a successful response
-            if (data.ContainsKey("success") && (bool)data["success"])
-            {
-                // Get the payload
-                if (data.ContainsKey("payload"))
-                {
-                    var payloadJson = JsonConvert.SerializeObject(data["payload"]);
-                    var payload = JsonConvert.DeserializeObject<RoomPayload>(payloadJson);
-
-                    // Route to appropriate handler based on payload content
-                    if (payload != null)
-                    {
-                        // JOIN_LEVEL response
-                        if (!string.IsNullOrEmpty(payload.level))
-                        {
-                            Debug.Log($"[REQUEST] Join response for level: {payload.level}");
-                            gameManager?.OnRoomJoinedWithData(payload);
-                        }
-                        // PLACE_BET response
-                        else if (!string.IsNullOrEmpty(payload.betId))
-                        {
-                            Debug.Log($"[REQUEST] Bet confirmed: {payload.betId}");
-                            gameManager?.OnBalanceUpdated(payload.balance);
-                        }
-                        // GET_HISTORY response
-                        else if (payload.history != null)
-                        {
-                            Debug.Log($"[REQUEST] History received");
-                            gameManager?.OnHistoryReceived(payload.history, payload.meta);
-                        }
-                        // HOME response
-                        else if (payload.lobby != null)
-                        {
-                            Debug.Log($"[REQUEST] Returned to lobby");
-                            // Handle lobby data if needed
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // Error response
-                string message = data.ContainsKey("message") ? data["message"].ToString() : "Request failed";
-                Debug.LogWarning($"[REQUEST] Error: {message}");
-                uiController?.ShowNotification(message);
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[REQUEST] Error processing response: {ex.Message}");
-        }
-    }
-
-    private void OnRoundStart(string jsonData)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.Log($"[🎯 RECEIVED] game:round_start");
-        Debug.Log($"[game:round_start]: \"{jsonData}\"");
-
-        try
-        {
-            RoundStartData data = JsonConvert.DeserializeObject<RoundStartData>(jsonData);
-            gameManager?.OnRoundStart(data);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[ROUND] Start error: {e.Message}");
-        }
-    }
-
-    private void OnBettingTimer(string jsonData)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.Log($"[game:betting_timer]: \"{jsonData}\"");
-
-        try
-        {
-            TimerData data = JsonConvert.DeserializeObject<TimerData>(jsonData);
-            gameManager?.OnBettingTimer(data);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[TIMER] Error: {e.Message}");
-        }
-    }
-
-    private void OnBonus(string jsonData)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.Log($"[🎯 RECEIVED] game:bonus");
-        Debug.Log($"[game:bonus]: \"{jsonData}\"");
-
-        try
-        {
-            BonusData data = JsonConvert.DeserializeObject<BonusData>(jsonData);
-            gameManager?.OnBonus(data);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[BONUS] Error: {e.Message}");
-        }
-    }
-
-    private void OnDiceResult(string jsonData)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.Log($"[🎯 RECEIVED] game:dice_result");
-        Debug.Log($"[game:dice_result]: \"{jsonData}\"");
-
-        try
-        {
-            DiceResultData data = JsonConvert.DeserializeObject<DiceResultData>(jsonData);
-            gameManager?.OnDiceResult(data);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[DICE] Error: {e.Message}");
-        }
-    }
-
-    private void OnBetPlaced(string jsonData)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.Log($"[🎯 RECEIVED] game:bet_placed");
-        Debug.Log($"[game:bet_placed]: \"{jsonData}\"");
-
-        try
-        {
-            BetPlacedData data = JsonConvert.DeserializeObject<BetPlacedData>(jsonData);
-            gameManager?.OnBetPlaced(data);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[BET] Error: {e.Message}");
-        }
-    }
-
-    private void OnCashout(string jsonData)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.Log($"[🎯 RECEIVED] game:cashout");
-        Debug.Log($"[game:cashout]: \"{jsonData}\"");
-
-        try
-        {
-            CashoutData data = JsonConvert.DeserializeObject<CashoutData>(jsonData);
-            gameManager?.OnCashout(data);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[CASHOUT] Error: {e.Message}");
-        }
-    }
-
-    private void OnLobbyCount(string jsonData)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.Log($"[🎯 RECEIVED] game:lobby_count");
-        Debug.Log($"[game:lobby_count]: \"{jsonData}\"");
-
-        try
-        {
-            LobbyCountData data = JsonConvert.DeserializeObject<LobbyCountData>(jsonData);
-            gameManager?.OnLobbyCount(data);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[LOBBY] Error: {e.Message}");
-        }
-    }
-
-    private void OnRoundEnd(string jsonData)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.Log($"[🎯 RECEIVED] game:round_end");
-        Debug.Log($"[game:round_end]: \"{jsonData}\"");
-
-        try
-        {
-            RoundEndData data = JsonConvert.DeserializeObject<RoundEndData>(jsonData);
-            gameManager?.OnRoundEnd(data);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[ROUND] End error: {e.Message}");
-        }
-    }
-
-    /// <summary>
-    /// ✅ FIX: Handle internal "error" event as Dictionary
-    /// </summary>
-    private void OnInternalErrorDict(Dictionary<string, object> errorData)
-    {
-        if (isBeingDestroyed) return;
-
-        try
-        {
-            string errorJson = JsonConvert.SerializeObject(errorData);
-            Debug.LogError($"[ERROR] Internal: {errorJson}");
-
-            string message = "Server error occurred";
-            if (errorData.ContainsKey("message"))
-            {
-                message = errorData["message"]?.ToString() ?? message;
-            }
-
-            uiController?.ShowNotification(message);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[ERROR] Failed to process internal error: {e.Message}");
-            uiController?.ShowNotification("Server error occurred");
-        }
-    }
-
-    private void OnAlert(string data)
-    {
-        if (isBeingDestroyed) return;
-
-        uiController?.ShowNotification(data);
-    }
-
-    private void OnAnotherDevice(string data)
-    {
-        if (isBeingDestroyed) return;
-
-        Debug.LogWarning("[DEVICE] Another device detected");
-        uiController?.ShowAnotherDevicePopup();
-    }
-    #endregion
-
-    #region Public API - Client Actions
-    /// <summary>
-    /// ✅ NEW: Join level with new request structure
-    /// </summary>
+    #region Public API - Client Action
     internal void JoinLevel(string level)
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log($"[JOIN] ===== SENDING JOIN_LEVEL =====");
-        Debug.Log($"[JOIN] Level: {level}");
+        Debug.Log($"[JOIN] Sending JOIN_LEVEL for: {level}");
 
         var requestData = new
         {
@@ -872,21 +741,16 @@ public class SocketIOManager : MonoBehaviour
         };
 
         string jsonPayload = JsonConvert.SerializeObject(requestData);
-        Debug.Log($"[JOIN] Request Data: {jsonPayload}");
+        if (enableVerboseLogging) Debug.Log($"[JOIN] Request: {jsonPayload}");
 
         SendDataWithNamespace("request", jsonPayload);
-
-        Debug.Log($"[JOIN] ===== JOIN_LEVEL SENT =====");
     }
 
-    /// <summary>
-    /// ✅ NEW: Place bet with new request structure
-    /// </summary>
     internal void PlaceBet(string betType, string betOption, int chipIndex, string currentRoom)
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log($"[BET] ===== PLACING BET =====");
+        Debug.Log($"[BET] Placing: {betOption} with chip {chipIndex}");
 
         var requestData = new
         {
@@ -900,91 +764,32 @@ public class SocketIOManager : MonoBehaviour
         };
 
         string jsonPayload = JsonConvert.SerializeObject(requestData);
-        Debug.Log($"[BET] Request: {jsonPayload}");
-
         SendDataWithNamespace("request", jsonPayload);
     }
-
-    /// <summary>
-    /// ✅ NEW: Cancel bet with new request structure
-    /// </summary>
+    
     internal void CancelBet()
     {
-        if (isBeingDestroyed) return;
-
-        Debug.Log("[CANCEL] Sending cancel all bets request");
-
-        var requestData = new
-        {
-            type = "CANCEL_BET",
-            payload = new { }
-        };
-
-        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
+        SendSimpleRequest("CANCEL_BET");
     }
 
-    /// <summary>
-    /// ✅ NEW: Double bet with new request structure
-    /// </summary>
     internal void DoubleBet(string currentRoom)
     {
-        if (isBeingDestroyed) return;
-
-        Debug.Log("[DOUBLE] Sending double bet request");
-
-        var requestData = new
-        {
-            type = "DOUBLE_BET",
-            payload = new { }
-        };
-
-        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
+        SendSimpleRequest("DOUBLE_BET");
     }
 
-    /// <summary>
-    /// ✅ NEW: Repeat bet with new request structure
-    /// </summary>
     internal void RepeatBet()
     {
-        if (isBeingDestroyed) return;
-
-        Debug.Log("[REPEAT] Sending repeat bet request");
-
-        var requestData = new
-        {
-            type = "REPEAT_BET",
-            payload = new { }
-        };
-
-        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
+        SendSimpleRequest("REPEAT_BET");
     }
 
-    /// <summary>
-    /// ✅ NEW: Undo bet with new request structure
-    /// </summary>
     internal void UndoBet()
     {
-        if (isBeingDestroyed) return;
-
-        Debug.Log("[UNDO] Sending undo bet request");
-
-        var requestData = new
-        {
-            type = "UNDO_BET",
-            payload = new { }
-        };
-
-        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
+        SendSimpleRequest("UNDO_BET");
     }
 
-    /// <summary>
-    /// ✅ NEW: Request history with new request structure
-    /// </summary>
     internal void RequestHistory(int page)
     {
         if (isBeingDestroyed) return;
-
-        Debug.Log($"[HISTORY] Requesting page {page}");
 
         var requestData = new
         {
@@ -992,27 +797,31 @@ public class SocketIOManager : MonoBehaviour
             payload = new { page = page }
         };
 
-        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
+        string jsonPayload = JsonConvert.SerializeObject(requestData);
+        SendDataWithNamespace("request", jsonPayload);
     }
 
-    /// <summary>
-    /// ✅ NEW: Return home with new request structure
-    /// </summary>
     internal void ReturnHome()
+    {
+        SendSimpleRequest("HOME");
+    }
+
+    private void SendSimpleRequest(string requestType)
     {
         if (isBeingDestroyed) return;
 
-        Debug.Log("[HOME] Returning to lobby");
-
         var requestData = new
         {
-            type = "HOME",
+            type = requestType,
             payload = new { }
         };
 
-        SendDataWithNamespace("request", JsonConvert.SerializeObject(requestData));
+        string jsonPayload = JsonConvert.SerializeObject(requestData);
+        SendDataWithNamespace("request", jsonPayload);
     }
+    #endregion
 
+    #region Platform Communication
     internal void ReceiveAuthToken(string jsonData)
     {
         if (isBeingDestroyed) return;
