@@ -1,6 +1,7 @@
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using Unity.Burst.CompilerServices;
 
 #region Root Response
 [Serializable]
@@ -143,14 +144,6 @@ public class BetWager
         return "1 : 1";
     }
 
-    public string GetMultiMatchPayoutString()
-    {
-        if (payout != null && payout.Count >= 2)
-        {
-            return $"2 HIT PAYS 1 : 5 3 HIT PAYS 1 : {payout[1]}";
-        }
-        return "2 HIT PAYS 1 : 5 3 HIT PAYS 1 : 100";
-    }
 
     public double CalculateWin(double betAmount)
     {
@@ -173,6 +166,29 @@ public class BetWager
             "high_roller" => max_bet_limit.high_roller,
             _ => 0
         };
+    }
+
+    /// <summary>
+    /// Get combined display for specific_2 and specific_3 in single text field
+    /// Shows both payouts dynamically from server data
+    /// </summary>
+    public static string GetCombinedSpecificPayoutString(BetWager specific2, BetWager specific3)
+    {
+        string specific2Payout = "1";
+        string specific3Payout = "1";
+
+        if (specific2?.payout != null && specific2.payout.Count >= 2)
+        {
+            specific2Payout = specific2.payout[1].ToString();
+        }
+
+        if (specific3?.payout != null && specific3.payout.Count >= 2)
+        {
+            specific3Payout = specific3.payout[1].ToString();
+        }
+
+        return $"2 HIT PAYS 1 : {specific2Payout}   3 HIT PAYS 1 : {specific3Payout}";
+       
     }
 }
 
@@ -305,9 +321,12 @@ public class Lobby
 }
 
 [Serializable]
-public class RoundEndData
+public class RoundEndPayload
 {
     public string roundId;
+    public int cashoutInterval;
+    public long nextRoundStartTime;
+    public long serverTime;
 }
 #endregion
 

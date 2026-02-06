@@ -2,12 +2,6 @@ using System.Collections;
 using UnityEngine;
 using TMPro;
 
-/// <summary>
-/// Manages the three betting timer states:
-/// 1. During Betting (Place Bet panel, Timer, Last 5 Sec indicator)
-/// 2. Bet Locked (Bet Locked object)
-/// 3. Next Round (Next Round panel with countdown)
-/// </summary>
 public class BetTimerController : MonoBehaviour
 {
     #region Serialized Fields
@@ -27,14 +21,14 @@ public class BetTimerController : MonoBehaviour
     #region Private Fields
     private BetTimerState currentState = BetTimerState.Hidden;
     private int currentSeconds = 0;
+    private Coroutine countdownCoroutine;
     #endregion
 
     #region Public API
-    /// <summary>
-    /// Show betting phase with countdown timer
-    /// </summary>
     internal void ShowBettingPhase(int seconds)
     {
+        StopCountdown();
+
         currentState = BetTimerState.Betting;
         currentSeconds = seconds;
 
@@ -45,9 +39,6 @@ public class BetTimerController : MonoBehaviour
         UpdateBettingTimer(seconds);
     }
 
-    /// <summary>
-    /// Update betting timer and handle last 5 seconds indicator
-    /// </summary>
     internal void UpdateBettingTimer(int seconds)
     {
         currentSeconds = seconds;
@@ -57,18 +48,16 @@ public class BetTimerController : MonoBehaviour
             bettingTimer_Text.text = seconds.ToString();
         }
 
-        // Show last 5 seconds indicator
         if (last5SecIndicator)
         {
             last5SecIndicator.SetActive(seconds <= 5 && seconds > 0);
         }
     }
 
-    /// <summary>
-    /// Show bet locked state (betting is closed, waiting for dice result)
-    /// </summary>
     internal void ShowBetLocked()
     {
+        StopCountdown();
+
         currentState = BetTimerState.Locked;
 
         if (placeBetPanel) placeBetPanel.SetActive(false);
@@ -77,11 +66,10 @@ public class BetTimerController : MonoBehaviour
         if (last5SecIndicator) last5SecIndicator.SetActive(false);
     }
 
-    /// <summary>
-    /// Show next round countdown (between rounds)
-    /// </summary>
     internal void ShowNextRound(int seconds)
     {
+        StopCountdown();
+
         currentState = BetTimerState.NextRound;
         currentSeconds = seconds;
 
@@ -91,24 +79,24 @@ public class BetTimerController : MonoBehaviour
         if (last5SecIndicator) last5SecIndicator.SetActive(false);
 
         UpdateNextRoundTimer(seconds);
+
+        countdownCoroutine = StartCoroutine(NextRoundCountdown());
     }
 
-    /// <summary>
-    /// Update next round timer countdown
-    /// </summary>
     internal void UpdateNextRoundTimer(int seconds)
     {
+        currentSeconds = seconds;
+
         if (nextRoundTimer_Text)
         {
             nextRoundTimer_Text.text = seconds.ToString();
         }
     }
 
-    /// <summary>
-    /// Hide all timer panels
-    /// </summary>
     internal void HideAll()
     {
+        StopCountdown();
+
         currentState = BetTimerState.Hidden;
 
         if (placeBetPanel) placeBetPanel.SetActive(false);
@@ -117,20 +105,42 @@ public class BetTimerController : MonoBehaviour
         if (last5SecIndicator) last5SecIndicator.SetActive(false);
     }
 
-    /// <summary>
-    /// Get current timer state
-    /// </summary>
     internal BetTimerState GetState()
     {
         return currentState;
     }
 
-    /// <summary>
-    /// Get current countdown value
-    /// </summary>
     internal int GetCurrentSeconds()
     {
         return currentSeconds;
+    }
+    #endregion
+
+    #region Private Methods
+    private IEnumerator NextRoundCountdown()
+    {
+        while (currentSeconds > 0 && currentState == BetTimerState.NextRound)
+        {
+            yield return new WaitForSeconds(1f);
+            currentSeconds--;
+            UpdateNextRoundTimer(currentSeconds);
+        }
+
+        countdownCoroutine = null;
+    }
+
+    private void StopCountdown()
+    {
+        if (countdownCoroutine != null)
+        {
+            StopCoroutine(countdownCoroutine);
+            countdownCoroutine = null;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        StopCountdown();
     }
     #endregion
 }
