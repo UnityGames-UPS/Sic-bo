@@ -14,8 +14,12 @@ public class GameManager : MonoBehaviour
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
 
-    [Header("Debug")]
+    [Header("Debug Settings")]
     [SerializeField] private bool enableDebugLogs = true;
+    [SerializeField] private bool showRequestData = true;
+    [SerializeField] private bool showResponseData = true;
+    [SerializeField] private bool showBroadcastCycle = true;
+    [SerializeField] private bool showPingPong = false;
     #endregion
 
     #region Public Properties
@@ -28,46 +32,67 @@ public class GameManager : MonoBehaviour
     #region Unity Lifecycle
     private void Start()
     {
-        LogInfo("Manager started");
+        LogInfo(" Game Manager Initialized");
     }
     #endregion
 
     #region Debug Logging
-    private void LogInfo(string message)
+    internal void LogInfo(string message)
     {
         if (!enableDebugLogs) return;
         Debug.Log($"<color=cyan>[GAME]</color> {message}");
     }
 
-    private void LogSuccess(string message)
+    internal void LogSuccess(string message)
     {
         if (!enableDebugLogs) return;
         Debug.Log($"<color=green>[GAME]</color> {message}");
     }
 
-    private void LogWarning(string message)
+    internal void LogWarning(string message)
     {
         if (!enableDebugLogs) return;
         Debug.LogWarning($"<color=yellow>[GAME]</color> {message}");
     }
 
-    private void LogError(string message)
+    internal void LogError(string message)
     {
         if (!enableDebugLogs) return;
         Debug.LogError($"<color=red>[GAME]</color> {message}");
     }
 
-    private void LogRequest(string action, object payload)
+    internal void LogRequest(string action, object payload)
     {
-        if (!enableDebugLogs) return;
-        string json = payload != null ? JsonUtility.ToJson(payload) : "{}";
-        Debug.Log($"<color=magenta>[REQUEST]</color> {action}: {json}");
+        if (!enableDebugLogs || !showRequestData) return;
+        string json = payload != null ? Newtonsoft.Json.JsonConvert.SerializeObject(payload, Newtonsoft.Json.Formatting.Indented) : "{}";
+        Debug.Log($"<color=magenta>[REQUEST]</color> {action}\n{json}");
     }
 
-    private void LogResponse(string event_name, string data)
+    internal void LogResponse(string event_name, string data)
     {
-        if (!enableDebugLogs) return;
-        Debug.Log($"<color=lime>[RESPONSE]</color> {event_name}: {data}");
+        if (!enableDebugLogs || !showResponseData) return;
+        string formatted = data;
+        try
+        {
+            var parsed = Newtonsoft.Json.JsonConvert.DeserializeObject(data);
+            formatted = Newtonsoft.Json.JsonConvert.SerializeObject(parsed, Newtonsoft.Json.Formatting.Indented);
+        }
+        catch { }
+
+        Debug.Log($"<color=lime>[RESPONSE]</color> {event_name}\n{formatted}");
+    }
+
+    internal void LogBroadcast(string phase, string details = "")
+    {
+        if (!enableDebugLogs || !showBroadcastCycle) return;
+        string detailsStr = string.IsNullOrEmpty(details) ? "" : $" - {details}";
+        Debug.Log($"<color=orange>[BROADCAST]</color> {phase}{detailsStr}");
+    }
+
+    internal void LogPingPong(string message)
+    {
+        if (!enableDebugLogs || !showPingPong) return;
+        Debug.Log($"<color=grey>[PING-PONG]</color> {message}");
     }
     #endregion
 
@@ -80,7 +105,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        LogSuccess($"Init received - Player: {socketManager.PlayerData.username}, Balance: {socketManager.PlayerData.balance:F2}");
+        LogSuccess($"  Init received - Player: {socketManager.PlayerData.username}, Balance: {socketManager.PlayerData.balance:F2}");
 
         CurrentBalance = socketManager.PlayerData.balance;
 
@@ -107,7 +132,7 @@ public class GameManager : MonoBehaviour
 
     internal void OnDataRefreshed()
     {
-        LogInfo("Data refreshed");
+        LogInfo("Data refreshed from server");
     }
     #endregion
 
@@ -116,7 +141,7 @@ public class GameManager : MonoBehaviour
     {
         if (payload == null) return;
 
-        LogResponse("room:joined", $"Room: {payload.level}, Players: {payload.playerCount}");
+        LogSuccess($"Room joined: {payload.level}, Players: {payload.playerCount}");
 
         uiController.UpdatePlayerCount(payload.playerCount);
 
@@ -127,8 +152,12 @@ public class GameManager : MonoBehaviour
 
         if (payload.roundState == null)
         {
-            LogInfo("Waiting for round to start");
+            LogBroadcast("WAITING", "Waiting for next round to start");
             uiController.UpdateRoundPhase("WAITING");
+        }
+        else
+        {
+            LogBroadcast("IN_PROGRESS", $"Round in progress: {payload.roundState.phase}");
         }
     }
     #endregion
@@ -139,13 +168,22 @@ public class GameManager : MonoBehaviour
         if (data == null) return;
 
         CurrentRoundId = data.roundId;
-        int timeRemaining = Mathf.Max(0, (int)((data.bettingEndTime - data.serverTime) / 1000));
 
-        LogResponse("game:round_start", $"Round: {data.roundId}, Time: {timeRemaining}s, Players: {data.playerCount}");
+        // Calculate initial time remaining from server timestamps
+        int timeRemaining = CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
+        LogBroadcast("ROUND_START", $"Round: {data.roundId}, Betting Time: {timeRemaining}s, Players: {data.playerCount}");
+        LogInfo($"Timestamps - Start: {data.startedAt}, End: {data.bettingEndTime}, Server: {data.serverTime}");
+
+        // Update UI and controllers
         uiController.UpdatePlayerCount(data.playerCount);
         uiController.ShowBettingPhase(timeRemaining);
+        uiController.UpdateRoundPhase("BETTING");
+
+        // Start round in round controller
         roundController.StartRound(data);
+
+        // Enable betting
         betController.EnableBetting();
     }
 
@@ -153,7 +191,12 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        int timeRemaining = Mathf.Max(0, (int)((data.bettingEndTime - data.serverTime) / 1000));
+        // Calculate time remaining from server sync
+        int timeRemaining = CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
+
+        LogBroadcast("TIMER_SYNC", $"Round: {data.roundId}, Time: {timeRemaining}s");
+
+        // Update timer displays
         roundController.UpdateTimer(timeRemaining);
         uiController.UpdateTimer(timeRemaining);
     }
@@ -161,7 +204,8 @@ public class GameManager : MonoBehaviour
     internal void OnBonus(BonusData data)
     {
         if (data == null) return;
-        LogResponse("game:bonus", $"Player: {data.bonusPlayer}, Multiplier: x{data.bonusMultiplier}");
+
+        LogBroadcast("BONUS", $"Player {data.bonusPlayer} got x{data.bonusMultiplier} multiplier");
         uiController.ShowBonusNotification(data.bonusPlayer, data.bonusMultiplier);
     }
 
@@ -169,11 +213,19 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        LogResponse("game:dice_result", $"Dice: [{data.dice1},{data.dice2},{data.dice3}] = {data.sum} ({data.matchSide})");
+        LogBroadcast("DICE_RESULT", $"[{data.dice1}, {data.dice2}, {data.dice3}] = {data.sum} ({data.matchSide.ToUpper()})");
 
+        // Disable betting immediately
         betController.DisableBetting();
+
+        // Show bet locked UI
         uiController.ShowBetLocked();
+        uiController.UpdateRoundPhase("RESULT");
+
+        // Show dice animation and result
         roundController.ShowDiceResult(data);
+
+        // Highlight winning areas and keep highlighted
         betController.HighlightWinningAreas(data.matchSide, data.sum);
         betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
     }
@@ -193,7 +245,7 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        LogResponse("game:cashout", "Processing payouts");
+        LogBroadcast("CASHOUT", "Processing payouts");
 
         if (data.leaderboards != null)
         {
@@ -211,38 +263,43 @@ public class GameManager : MonoBehaviour
 
                     if (payout.win > 0)
                     {
-                        LogSuccess($"Won: {payout.win:F2}, New Balance: {CurrentBalance:F2}");
+                        LogSuccess($"WON: +{payout.win:F2}, New Balance: {CurrentBalance:F2}");
                         uiController.ShowWinAnimation(payout.win);
                     }
                     else
                     {
-                        LogInfo($"Lost, Balance: {CurrentBalance:F2}");
+                        LogInfo($"LOST - Balance: {CurrentBalance:F2}");
                     }
                 }
             }
         }
 
+        // Clear bet chips but keep win highlights visible
         betController.ClearAllBets();
-        roundController.EndRound();
     }
 
     internal void OnRoundEnd(RoundEndPayload data)
     {
         if (data == null) return;
 
-        long serverTime = data.serverTime;
-        long nextRoundStartTime = data.nextRoundStartTime;
-        int secondsUntilNextRound = Mathf.Max(0, (int)((nextRoundStartTime - serverTime) / 1000));
+        int secondsUntilNextRound = CalculateTimeRemaining(data.nextRoundStartTime, data.serverTime);
 
-        LogResponse("game:round_end", $"Next round in {secondsUntilNextRound}s");
+        LogBroadcast("ROUND_END", $"Next round in {secondsUntilNextRound}s");
+        LogInfo($"Cashout interval: {data.cashoutInterval}ms");
 
+        // Show next round countdown
         uiController.ShowNextRound(secondsUntilNextRound);
         uiController.UpdateRoundPhase("NEXTROUND");
+
+        // End round (will hide win highlights and dice after delay)
+        roundController.EndRound();
     }
 
     internal void OnLobbyCount(LobbyCountData data)
     {
         if (data?.lobby == null) return;
+
+        LogBroadcast("LOBBY_UPDATE", $"Casual: {data.lobby.casual}, Novice: {data.lobby.novice}, Expert: {data.lobby.expert}, High: {data.lobby.high_roller}");
 
         uiController.UpdateLobbyPlayerCounts(
             data.lobby.casual,
@@ -263,7 +320,7 @@ public class GameManager : MonoBehaviour
     {
         if (historyController != null)
         {
-            LogResponse("history", $"Page {meta.page}/{meta.pages}, Entries: {history.Count}");
+            LogInfo($"History received: Page {meta.page}/{meta.pages}, Entries: {history.Count}");
             historyController.UpdateHistoryData(history, meta);
         }
     }
@@ -345,6 +402,12 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region Private Helpers
+    private int CalculateTimeRemaining(long endTime, long serverTime)
+    {
+        long remainingMs = endTime - serverTime;
+        return Mathf.Max(0, (int)(remainingMs / 1000));
+    }
+
     private List<double> GetChipValuesForRoom(string roomName)
     {
         if (socketManager.InitialData?.bets == null)
