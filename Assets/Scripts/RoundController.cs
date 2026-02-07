@@ -33,10 +33,12 @@ public class RoundController : MonoBehaviour
     #region Private Fields
     private string currentRoundId;
     private bool isRoundActive = false;
-    private Coroutine hideResultsCoroutine;
     #endregion
 
     #region Public API
+    /// <summary>
+    /// FIXED: Start new round and clear previous round's results and highlights
+    /// </summary>
     internal void StartRound(RoundStartData data)
     {
         if (data == null) return;
@@ -46,16 +48,10 @@ public class RoundController : MonoBehaviour
         currentRoundId = data.roundId;
         isRoundActive = true;
 
-        // Clear previous round results immediately
+        // Clear previous round results and highlights NOW
         HideDiceImmediate();
         HideResultImmediate();
-
-        // Stop any pending hide coroutines
-        if (hideResultsCoroutine != null)
-        {
-            StopCoroutine(hideResultsCoroutine);
-            hideResultsCoroutine = null;
-        }
+        betController?.ClearAllWinHighlights(); // Clear win highlights from previous round
 
         // Update UI to betting phase
         uiController.UpdateRoundPhase("BETTING");
@@ -70,27 +66,30 @@ public class RoundController : MonoBehaviour
     }
 
     /// <summary>
-    /// Update timer - server sends updates every second via game:betting_timer
+    /// FIXED: Update timer - skip showing 0 to prevent delay before "Bet Locked"
+    /// Server sends updates every second via game:betting_timer
     /// </summary>
     internal void UpdateTimer(int secondsRemaining)
     {
         if (!isRoundActive) return;
 
-        // Just update the display - timer sync comes from server
+        // FIXED: Don't show 0 - it causes a 1-2 second pause before dice result
+        // When timer reaches 0, betting is already over, so skip the update
+        if (secondsRemaining <= 0)
+        {
+            gameManager?.LogInfo("[ROUND] Betting time expired (0s) - skipping display");
+            // Don't call UpdateTimer(0) - it just delays the "Bet Locked" message
+            // The dice result will trigger ShowBetLocked directly
+            return;
+        }
+
+        // Update the display - timer sync comes from server
         uiController.UpdateTimer(secondsRemaining);
 
         // Log last 5 seconds
-        if (secondsRemaining <= 5 && secondsRemaining > 0)
+        if (secondsRemaining <= 5)
         {
             gameManager?.LogBroadcast("TIMER", $" {secondsRemaining}s remaining");
-        }
-
-        // Check if betting should close
-        if (secondsRemaining <= 0)
-        {
-            gameManager?.LogInfo("[ROUND] Betting time expired");
-            betController.DisableBetting();
-            uiController.UpdateRoundPhase("ROLLING");
         }
     }
 
@@ -108,14 +107,27 @@ public class RoundController : MonoBehaviour
         StartCoroutine(AnimateDiceRoll(data));
     }
 
+    /// <summary>
+    /// FIXED: Round end no longer clears results - they stay until next round starts
+    /// </summary>
     internal void EndRound()
     {
-        gameManager?.LogInfo("[ROUND] Round ending - results will stay visible until next round");
-
+        gameManager?.LogInfo("[ROUND] Round ended - results will stay visible until next round");
         isRoundActive = false;
 
-        // DON'T hide results immediately - they stay visible during next round countdown
-        // They will be hidden when the next round starts (in StartRound method)
+        // DON'T hide results - they stay visible during next round countdown
+        // They will be hidden when StartRound() is called for the next round
+    }
+
+    /// <summary>
+    /// Clear all round displays (dice and results)
+    /// Called when leaving room
+    /// </summary>
+    internal void ClearRoundDisplay()
+    {
+        HideDiceImmediate();
+        HideResultImmediate();
+        gameManager?.LogInfo("[ROUND] Display cleared");
     }
     #endregion
 
@@ -181,7 +193,7 @@ public class RoundController : MonoBehaviour
         if (MatchSide_Text) MatchSide_Text.text = matchSide.ToUpper();
         if (ResultPanel) ResultPanel.SetActive(true);
 
-        gameManager?.LogInfo("[ROUND] Result panel displayed - will stay visible");
+        gameManager?.LogInfo("[ROUND] Result panel displayed - will stay visible until next round");
     }
 
     private void HideResultImmediate()

@@ -274,7 +274,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // Clear bet chips but keep win highlights visible
+        // Clear bet chips but KEEP win highlights visible (they will clear on next round start)
         betController.ClearAllBets();
     }
 
@@ -291,8 +291,8 @@ public class GameManager : MonoBehaviour
         uiController.ShowNextRound(secondsUntilNextRound);
         uiController.UpdateRoundPhase("NEXTROUND");
 
-        // End round (will hide win highlights and dice after delay)
-        roundController.EndRound();
+        // DON'T end round yet - let win highlights and dice stay visible
+        // They will be cleared when the next round starts
     }
 
     internal void OnLobbyCount(LobbyCountData data)
@@ -347,6 +347,8 @@ public class GameManager : MonoBehaviour
 
         betController.DisableBetting();
         betController.ClearAllBets();
+        betController.ClearAllWinHighlights(); // Clear win highlights when leaving room
+        roundController.ClearRoundDisplay(); // Clear dice and result display
         socketManager.ReturnHome();
         uiController.ShowHomeScreen();
         uiController.HideAllTimers();
@@ -402,10 +404,22 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region Private Helpers
+    /// <summary>
+    /// FIXED: Properly round time remaining to nearest second
+    /// Uses Mathf.RoundToInt for accurate rounding - so 13999ms becomes 14s, 13499ms becomes 13s
+    /// This ensures timer displays correctly without skipping numbers
+    /// </summary>
     private int CalculateTimeRemaining(long endTime, long serverTime)
     {
         long remainingMs = endTime - serverTime;
-        return Mathf.Max(0, (int)(remainingMs / 1000));
+
+        // Convert to seconds with proper rounding
+        // 13999ms -> 13.999s -> rounds to 14s
+        // 13499ms -> 13.499s -> rounds to 13s
+        // 13500ms -> 13.500s -> rounds to 14s
+        float remainingSeconds = remainingMs / 1000f;
+
+        return Mathf.Max(0, Mathf.RoundToInt(remainingSeconds));
     }
 
     private List<double> GetChipValuesForRoom(string roomName)

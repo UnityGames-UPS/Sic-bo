@@ -479,6 +479,14 @@ public class SocketIOManager : MonoBehaviour
 
         waitingForPong = false;
         lastPongTime = Time.time;
+
+        // If we had missed pongs and reconnect popup was showing, close it
+        if (missedPongs >= 2)
+        {
+            uiController?.CloseReconnectPopup();
+            gameManager?.LogPingPong($"  Connection restored - closing reconnect popup");
+        }
+
         missedPongs = 0;
 
         gameManager?.LogPingPong($"  Pong received - Health OK");
@@ -837,10 +845,18 @@ public class SocketIOManager : MonoBehaviour
                 missedPongs++;
                 gameManager?.LogPingPong($"Missed pong #{missedPongs}/{MaxMissedPongs}");
 
+                // Show reconnect popup at 2 missed pings
+                if (missedPongs == 2)
+                {
+                    gameManager?.LogPingPong($"Showing reconnect popup - connection unstable");
+                    uiController?.ShowReconnectPopup();
+                }
+
+                // Show disconnect popup at 15 missed pings (max)
                 if (missedPongs >= MaxMissedPongs)
                 {
                     gameManager?.LogPingPong($"Connection lost - max pongs missed");
-                    uiController?.ShowDisconnectPopup();
+                    uiController?.ShowDisconnectPopup(); // This will auto-close reconnect popup
                     break;
                 }
             }

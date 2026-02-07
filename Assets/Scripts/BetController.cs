@@ -15,8 +15,8 @@ public class BetController : MonoBehaviour
     [SerializeField] private GameObject ChipSelector_Panel;
     [SerializeField] private GameObject ChipSelector_BlackBG;
     [SerializeField] private Transform ChipOptions_Container;
-    [SerializeField] private RectTransform ChipAreaPanel; 
-    [SerializeField] private RectTransform TotalStakePanel; 
+    [SerializeField] private RectTransform ChipAreaPanel;
+    [SerializeField] private RectTransform TotalStakePanel;
 
     [Header("Chip Prefabs")]
     [SerializeField] private GameObject chipSelectorPrefab;
@@ -69,14 +69,14 @@ public class BetController : MonoBehaviour
     private List<double> currentChipValues = new List<double>();
     private Dictionary<double, Sprite> chipValueToSprite = new Dictionary<double, Sprite>();
     private List<Chip> existingChips = new List<Chip>();
-    private List<Vector3> originalChipPositions = new List<Vector3>(); 
+    private List<Vector3> originalChipPositions = new List<Vector3>();
     private Vector3 centerPosition;
     private int selectedChipIndex = 0;
     private double currentTotalBet = 0;
     private bool isBettingEnabled = false;
     private bool isChipSelectorOpen = false;
     private Dictionary<string, double> areaBets = new Dictionary<string, double>();
-    private List<BetAction> betHistory = new List<BetAction>(); 
+    private List<BetAction> betHistory = new List<BetAction>();
     private Wagers wagerData = null;
     private string currentLevel = "";
     private double minBetAmount = 0;
@@ -341,7 +341,7 @@ public class BetController : MonoBehaviour
     {
         isBettingEnabled = true;
         hasPlacedBetThisRound = false;
-        AnimateBetUnlocked(); 
+        AnimateBetUnlocked();
 
         // Show repeat panel if user bet in previous round
         if (placedBetInPreviousRound)
@@ -473,12 +473,53 @@ public class BetController : MonoBehaviour
             }
         }
     }
+    /// <summary>
+    /// FIXED: Clear all win highlights without clearing bets
+    /// Called when new round starts to hide previous round's winning areas
+    /// </summary>
+    internal void ClearAllWinHighlights()
+    {
+        // Clear main areas
+        SetAreaHighlight(SmallArea, false);
+        SetAreaHighlight(BigArea, false);
+        SetAreaHighlight(OddArea, false);
+        SetAreaHighlight(EvenArea, false);
+
+        // Clear triple dice areas
+        foreach (var area in TripleDiceAreas)
+        {
+            if (area != null) area.SetHighlight(false);
+        }
+
+        // Clear single dice areas
+        foreach (var area in SingleDiceAreas)
+        {
+            if (area != null) area.SetHighlight(false);
+        }
+
+        // Clear sum areas
+        foreach (var area in SumAreas)
+        {
+            if (area != null) area.SetHighlight(false);
+        }
+
+        Debug.Log("[BET] All win highlights cleared");
+    }
     #endregion
 
     #region Private Methods - Bet Placement
     private void OnBetAreaClicked(string betOption)
     {
-        if (!isBettingEnabled || currentChipValues.Count == 0) return;
+        if (!isBettingEnabled)
+        {
+            if (uiController != null)
+            {
+                uiController.ShowInGamePopup("Betting is locked. Wait for next round.");
+            }
+            return;
+        }
+
+        if (currentChipValues.Count == 0) return;
 
         double betAmount = currentChipValues[selectedChipIndex];
         Sprite chipSprite = GetChipSprite(betAmount);
@@ -495,7 +536,16 @@ public class BetController : MonoBehaviour
 
     private void OnTripleDiceAreaClicked(int diceNum)
     {
-        if (!isBettingEnabled || currentChipValues.Count == 0) return;
+        if (!isBettingEnabled)
+        {
+            if (uiController != null)
+            {
+                uiController.ShowInGamePopup("Betting is locked. Wait for next round.");
+            }
+            return;
+        }
+
+        if (currentChipValues.Count == 0) return;
 
         string betOption = $"specific_3";
         double betAmount = currentChipValues[selectedChipIndex];
@@ -518,7 +568,16 @@ public class BetController : MonoBehaviour
 
     private void OnSingleDiceAreaClicked(int diceNum)
     {
-        if (!isBettingEnabled || currentChipValues.Count == 0) return;
+        if (!isBettingEnabled)
+        {
+            if (uiController != null)
+            {
+                uiController.ShowInGamePopup("Betting is locked. Wait for next round.");
+            }
+            return;
+        }
+
+        if (currentChipValues.Count == 0) return;
 
         string betOption = $"single_{diceNum}";
         double betAmount = currentChipValues[selectedChipIndex];
@@ -603,7 +662,7 @@ public class BetController : MonoBehaviour
             string message = $"Maximum bet for this area is {FormatChipAmount(areaMaxBet)}";
             if (uiController != null)
             {
-                uiController.ShowErrorPopup(message);
+                uiController.ShowInGamePopup(message);
             }
             else
             {
@@ -618,7 +677,7 @@ public class BetController : MonoBehaviour
             string message = $"Maximum total bet is {FormatChipAmount(maxBetAmount)}";
             if (uiController != null)
             {
-                uiController.ShowErrorPopup(message);
+                uiController.ShowInGamePopup(message);
             }
             else
             {
@@ -822,13 +881,31 @@ public class BetController : MonoBehaviour
         return chipSprites.Length > 0 ? chipSprites[0] : null;
     }
 
+    /// <summary>
+    /// FIXED: Format chip amount preserving decimals
+    /// Shows 0.5 as "0.5" not "1", and rounds appropriately for larger values
+    /// </summary>
     private string FormatChipAmount(double amount)
     {
         if (amount >= 1000)
         {
             return $"{(amount / 1000):F1}K";
         }
-        return amount.ToString("F0");
+
+        // Show decimals for values < 1
+        if (amount < 1)
+        {
+            return amount.ToString("F2"); // 0.50
+        }
+
+        // Show 1 decimal place for values with decimals
+        if (amount % 1 != 0)
+        {
+            return amount.ToString("F1"); // 1.5, 2.5, etc
+        }
+
+        // Show whole numbers without decimals
+        return amount.ToString("F0"); // 1, 2, 10, etc
     }
     #endregion
 
@@ -952,7 +1029,7 @@ public class BetController : MonoBehaviour
     {
         if (TotalBet_Text) TotalBet_Text.text = $"{currentTotalBet:F2}";
 
-     
+
     }
 
     private void HideBetPanels()
@@ -1126,11 +1203,41 @@ public class SimpleBetArea
         if (PlayerBetContainer == null || prefab == null) return;
 
         GameObject chipObj = Object.Instantiate(prefab, PlayerBetContainer);
+
+        // FIXED: Set both sprite AND text
         Image chipImage = chipObj.GetComponent<Image>();
         if (chipImage) chipImage.sprite = chipSprite;
 
+        // Set the chip amount text
+        Chip chipComponent = chipObj.GetComponent<Chip>();
+        if (chipComponent != null && chipComponent.chipText != null)
+        {
+            chipComponent.chipText.text = FormatChipAmount(amount);
+        }
+
         playerChips.Add(chipObj);
         playerBetAmount += amount;
+    }
+
+    // Helper to format chip amounts (shared with BetController)
+    private string FormatChipAmount(double amount)
+    {
+        if (amount >= 1000)
+        {
+            return $"{(amount / 1000):F1}K";
+        }
+
+        if (amount < 1)
+        {
+            return amount.ToString("F2");
+        }
+
+        if (amount % 1 != 0)
+        {
+            return amount.ToString("F1");
+        }
+
+        return amount.ToString("F0");
     }
 
     public void AddOpponentBet(double amount, Sprite chipSprite)
@@ -1165,7 +1272,8 @@ public class SimpleBetArea
 
         playerBetAmount = 0;
         opponentBetAmount = 0;
-        SetHighlight(false);
+        // FIXED: Don't clear highlights here - they should stay until next round starts
+        // SetHighlight(false); // REMOVED - use ClearAllWinHighlights() instead
     }
 
     public void SetHighlight(bool highlight)
@@ -1188,10 +1296,40 @@ public class TripleSameDiceArea
         if (PlayerBetContainer == null || prefab == null) return;
 
         GameObject chipObj = Object.Instantiate(prefab, PlayerBetContainer);
+
+        // FIXED: Set both sprite AND text
         Image chipImage = chipObj.GetComponent<Image>();
         if (chipImage) chipImage.sprite = chipSprite;
 
+        // Set the chip amount text
+        Chip chipComponent = chipObj.GetComponent<Chip>();
+        if (chipComponent != null && chipComponent.chipText != null)
+        {
+            chipComponent.chipText.text = FormatChipAmount(amount);
+        }
+
         playerChips.Add(chipObj);
+    }
+
+    // Helper to format chip amounts
+    private string FormatChipAmount(double amount)
+    {
+        if (amount >= 1000)
+        {
+            return $"{(amount / 1000):F1}K";
+        }
+
+        if (amount < 1)
+        {
+            return amount.ToString("F2");
+        }
+
+        if (amount % 1 != 0)
+        {
+            return amount.ToString("F1");
+        }
+
+        return amount.ToString("F0");
     }
 
     public void ClearBets()
@@ -1201,7 +1339,8 @@ public class TripleSameDiceArea
             if (chip != null) Object.Destroy(chip);
         }
         playerChips.Clear();
-        SetHighlight(false);
+        // FIXED: Don't clear highlights here - they should stay until next round starts
+        // SetHighlight(false); // REMOVED - use ClearAllWinHighlights() instead
     }
 
     public void SetHighlight(bool highlight)
@@ -1225,10 +1364,40 @@ public class SingleDiceArea
         if (PlayerBetContainer == null || prefab == null) return;
 
         GameObject chipObj = Object.Instantiate(prefab, PlayerBetContainer);
+
+        // FIXED: Set both sprite AND text
         Image chipImage = chipObj.GetComponent<Image>();
         if (chipImage) chipImage.sprite = chipSprite;
 
+        // Set the chip amount text
+        Chip chipComponent = chipObj.GetComponent<Chip>();
+        if (chipComponent != null && chipComponent.chipText != null)
+        {
+            chipComponent.chipText.text = FormatChipAmount(amount);
+        }
+
         playerChips.Add(chipObj);
+    }
+
+    // Helper to format chip amounts
+    private string FormatChipAmount(double amount)
+    {
+        if (amount >= 1000)
+        {
+            return $"{(amount / 1000):F1}K";
+        }
+
+        if (amount < 1)
+        {
+            return amount.ToString("F2");
+        }
+
+        if (amount % 1 != 0)
+        {
+            return amount.ToString("F1");
+        }
+
+        return amount.ToString("F0");
     }
 
     public void AddOpponentBet(double amount, Sprite chipSprite)
@@ -1259,7 +1428,8 @@ public class SingleDiceArea
             opponentChip = null;
         }
 
-        SetHighlight(false);
+        // FIXED: Don't clear highlights here - they should stay until next round starts
+        // SetHighlight(false); // REMOVED - use ClearAllWinHighlights() instead
     }
 
     public void SetHighlight(bool highlight)
@@ -1289,10 +1459,40 @@ public class SumArea
         if (PlayerBetContainer == null || prefab == null) return;
 
         GameObject chipObj = Object.Instantiate(prefab, PlayerBetContainer);
+
+        // FIXED: Set both sprite AND text
         Image chipImage = chipObj.GetComponent<Image>();
         if (chipImage) chipImage.sprite = chipSprite;
 
+        // Set the chip amount text
+        Chip chipComponent = chipObj.GetComponent<Chip>();
+        if (chipComponent != null && chipComponent.chipText != null)
+        {
+            chipComponent.chipText.text = FormatChipAmount(amount);
+        }
+
         playerChips.Add(chipObj);
+    }
+
+    // Helper to format chip amounts
+    private string FormatChipAmount(double amount)
+    {
+        if (amount >= 1000)
+        {
+            return $"{(amount / 1000):F1}K";
+        }
+
+        if (amount < 1)
+        {
+            return amount.ToString("F2");
+        }
+
+        if (amount % 1 != 0)
+        {
+            return amount.ToString("F1");
+        }
+
+        return amount.ToString("F0");
     }
 
     public void AddOpponentBet(double amount, Sprite chipSprite)
@@ -1323,7 +1523,7 @@ public class SumArea
             opponentChip = null;
         }
 
-        SetHighlight(false);
+      
     }
 
     public void SetHighlight(bool highlight)

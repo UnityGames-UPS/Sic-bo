@@ -1,9 +1,10 @@
+using DG.Tweening;
+using DG.Tweening.Core.Easing;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using DG.Tweening;
 
 public class UIController : MonoBehaviour
 {
@@ -52,21 +53,28 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text ThirdPlace_Name;
     [SerializeField] private TMP_Text ThirdPlace_Balance;
 
-    [Header("Popups")]
-    [SerializeField] private GameObject PopupContainer;
-    [SerializeField] private GameObject ReconnectPopup;
-    [SerializeField] private GameObject DisconnectPopup;
-    [SerializeField] private GameObject QuitPopup;
+    [Header("Error Popup - Separate Parent")]
+    [SerializeField] private GameObject ErrorPopupParent;
     [SerializeField] private GameObject ErrorPopup;
-    [SerializeField] private GameObject NotificationPopup;
-    [SerializeField] private GameObject AnotherDevicePopup;
-
-    [Header("Popup Elements")]
     [SerializeField] private TMP_Text ErrorTitle_Text;
     [SerializeField] private TMP_Text ErrorMessage_Text;
-    [SerializeField] private TMP_Text Notification_Text;
     [SerializeField] private Button ErrorOK_Button;
+
+    [Header("In-Game Popup - Separate Parent")]
+    [SerializeField] private GameObject InGamePopupParent;
+    [SerializeField] private GameObject InGamePopup;
+    [SerializeField] private TMP_Text InGameMessage_Text;
+
+    [Header("Other Popups - Separate Parents")]
+    [SerializeField] private GameObject ReconnectPopupParent;
+    [SerializeField] private GameObject ReconnectPopup;
+
+    [SerializeField] private GameObject DisconnectPopupParent;
+    [SerializeField] private GameObject DisconnectPopup;
     [SerializeField] private Button DisconnectOK_Button;
+
+    [SerializeField] private GameObject QuitPopupParent;
+    [SerializeField] private GameObject QuitPopup;
     [SerializeField] private Button QuitYes_Button;
     [SerializeField] private Button QuitNo_Button;
 
@@ -78,6 +86,11 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text BonusNotification_Text;
     [SerializeField] private GameObject BonusPanel;
 
+    [Header("Animation Settings")]
+    [SerializeField] private float slideDistance = 1000f; // Distance to slide from off-screen
+    [SerializeField] private float slideDuration = 0.3f; // Animation duration
+    [SerializeField] private float inGamePopupDisplayTime = 1f; // How long in-game popup shows
+
     [Header("Controllers")]
     [SerializeField] private GameManager gameManager;
     [SerializeField] private MenuController menuController;
@@ -87,6 +100,8 @@ public class UIController : MonoBehaviour
     #region Private Fields
     private Tween winTween;
     private Tween bonusTween;
+    private Tween currentPopupTween;
+    private Coroutine inGamePopupCoroutine;
     private string playerName;
     private Wagers gameWagers;
     private Bets gameBets;
@@ -97,7 +112,16 @@ public class UIController : MonoBehaviour
     {
         SetupButtonListeners();
         ShowHomeScreen();
-        CloseAllPopups();
+        InitializePopups();
+    }
+
+    private void OnDestroy()
+    {
+        // Clean up all tweens
+        winTween?.Kill();
+        bonusTween?.Kill();
+        currentPopupTween?.Kill();
+        if (inGamePopupCoroutine != null) StopCoroutine(inGamePopupCoroutine);
     }
     #endregion
 
@@ -112,14 +136,24 @@ public class UIController : MonoBehaviour
         if (SettingsHome_Button) SettingsHome_Button.onClick.AddListener(OpenInfoFromHome);
         if (ExitHome_Button) ExitHome_Button.onClick.AddListener(ShowQuitPopup);
 
-        if (ExitGame_Button) ExitGame_Button.onClick.AddListener(ShowQuitPopup);
+        if (ExitGame_Button) ExitGame_Button.onClick.AddListener(() => { gameManager.LeaveRoom(); });
         if (HistoryGame_Button) HistoryGame_Button.onClick.AddListener(OpenHistoryFromGame);
         if (SettingsGame_Button) SettingsGame_Button.onClick.AddListener(OpenInfoFromGame);
 
-        if (ErrorOK_Button) ErrorOK_Button.onClick.AddListener(CloseAllPopups);
-        if (DisconnectOK_Button) DisconnectOK_Button.onClick.AddListener(() => gameManager.ExitGame());
-        if (QuitYes_Button) QuitYes_Button.onClick.AddListener(() => { CloseAllPopups(); gameManager.LeaveRoom(); });
-        if (QuitNo_Button) QuitNo_Button.onClick.AddListener(CloseAllPopups);
+        if (ErrorOK_Button) ErrorOK_Button.onClick.AddListener(CloseErrorPopup);
+        if (DisconnectOK_Button) DisconnectOK_Button.onClick.AddListener(() => { CloseDisconnectPopup(); gameManager.ExitGame(); });
+        if (QuitYes_Button) QuitYes_Button.onClick.AddListener(() => { CloseQuitPopup(); gameManager.ExitGame(); });
+        if (QuitNo_Button) QuitNo_Button.onClick.AddListener(CloseQuitPopup);
+    }
+
+    private void InitializePopups()
+    {
+        // Hide all popups and their parents on start
+        HidePopupImmediate(ErrorPopupParent, ErrorPopup);
+        HidePopupImmediate(InGamePopupParent, InGamePopup);
+        HidePopupImmediate(ReconnectPopupParent, ReconnectPopup);
+        HidePopupImmediate(DisconnectPopupParent, DisconnectPopup);
+        HidePopupImmediate(QuitPopupParent, QuitPopup);
     }
 
     internal void SetupInitialData(string name, double balance, Leaderboards leaderboards, Wagers wagers, Bets bets)
@@ -164,72 +198,198 @@ public class UIController : MonoBehaviour
     }
     #endregion
 
-    #region Popup Management
-    private void CloseAllPopups()
+    #region Popup Helper Methods
+    private void HidePopupImmediate(GameObject parent, GameObject popup)
     {
-        if (ReconnectPopup) ReconnectPopup.SetActive(false);
-        if (DisconnectPopup) DisconnectPopup.SetActive(false);
-        if (QuitPopup) QuitPopup.SetActive(false);
-        if (ErrorPopup) ErrorPopup.SetActive(false);
-        if (NotificationPopup) NotificationPopup.SetActive(false);
-        if (AnotherDevicePopup) AnotherDevicePopup.SetActive(false);
-        if (PopupContainer) PopupContainer.SetActive(false);
+        if (parent) parent.SetActive(false);
+        if (popup) popup.SetActive(false);
     }
 
+    private void SlideInPopup(GameObject parent, GameObject popup)
+    {
+        if (!parent || !popup) return;
+
+        currentPopupTween?.Kill();
+
+        // Activate parent and popup
+        parent.SetActive(true);
+        popup.SetActive(true);
+
+        // Start position: off-screen to the left
+        RectTransform rectTransform = popup.GetComponent<RectTransform>();
+        if (rectTransform == null) return;
+
+        Vector3 startPos = rectTransform.anchoredPosition;
+        startPos.x = -slideDistance;
+        rectTransform.anchoredPosition = startPos;
+
+        // Animate to center (x = 0)
+        Vector3 endPos = startPos;
+        endPos.x = 0;
+
+        currentPopupTween = rectTransform.DOAnchorPos(endPos, slideDuration)
+            .SetEase(Ease.OutCubic);
+    }
+
+    private void SlideOutPopup(GameObject parent, GameObject popup, System.Action onComplete = null)
+    {
+        if (!parent || !popup) return;
+
+        currentPopupTween?.Kill();
+
+        RectTransform rectTransform = popup.GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            HidePopupImmediate(parent, popup);
+            onComplete?.Invoke();
+            return;
+        }
+
+        // Animate to right off-screen
+        Vector3 endPos = rectTransform.anchoredPosition;
+        endPos.x = slideDistance;
+
+        currentPopupTween = rectTransform.DOAnchorPos(endPos, slideDuration)
+            .SetEase(Ease.InCubic)
+            .OnComplete(() =>
+            {
+                HidePopupImmediate(parent, popup);
+                onComplete?.Invoke();
+            });
+    }
+    #endregion
+
+    #region Error Popup (For Network/General Errors Only)
+    /// <summary>
+    /// Show error popup for ERRORS ONLY:
+    /// - Request failed, Response fail
+    /// - Network errors
+    /// - Internal errors
+    /// - Another device login (will also close game)
+    /// </summary>
+    internal void ShowErrorPopup(string message, string title = "Error")
+    {
+        if (ErrorTitle_Text) ErrorTitle_Text.text = title;
+        if (ErrorMessage_Text) ErrorMessage_Text.text = message;
+
+        SlideInPopup(ErrorPopupParent, ErrorPopup);
+        Debug.Log($"[UI] Error popup shown: {title} - {message}");
+    }
+
+    private void CloseErrorPopup()
+    {
+        SlideOutPopup(ErrorPopupParent, ErrorPopup);
+    }
+    #endregion
+
+    #region In-Game Popup (For Game Events Only)
+    /// <summary>
+    /// Show in-game popup for GAME EVENTS ONLY:
+    /// - Max bet reached (for specific button or entire board)
+    /// - Bet locked (no more bets, wait for next round)
+    /// - Insufficient balance
+    /// Auto-closes after 1 second
+    /// </summary>
+    internal void ShowInGamePopup(string message)
+    {
+        // Stop any existing coroutine
+        if (inGamePopupCoroutine != null)
+        {
+            StopCoroutine(inGamePopupCoroutine);
+        }
+
+        if (InGameMessage_Text) InGameMessage_Text.text = message;
+
+        SlideInPopup(InGamePopupParent, InGamePopup);
+
+        // Auto-close after delay
+        inGamePopupCoroutine = StartCoroutine(CloseInGamePopupAfterDelay());
+
+        Debug.Log($"[UI] In-Game popup shown: {message}");
+    }
+
+    private IEnumerator CloseInGamePopupAfterDelay()
+    {
+        yield return new WaitForSeconds(inGamePopupDisplayTime);
+        SlideOutPopup(InGamePopupParent, InGamePopup);
+        inGamePopupCoroutine = null;
+    }
+    #endregion
+
+    #region Reconnect Popup
+    /// <summary>
+    /// Show reconnect popup when 2 pings are missed
+    /// Stays visible until connection is restored (ping received)
+    /// If 15 pings are missed, this closes automatically and disconnect popup shows
+    /// </summary>
     internal void ShowReconnectPopup()
     {
-        CloseAllPopups();
-        if (PopupContainer) PopupContainer.SetActive(true);
-        if (ReconnectPopup) ReconnectPopup.SetActive(true);
+        SlideInPopup(ReconnectPopupParent, ReconnectPopup);
     }
 
     internal void CloseReconnectPopup()
     {
-        if (ReconnectPopup) ReconnectPopup.SetActive(false);
-        if (PopupContainer) PopupContainer.SetActive(false);
+        SlideOutPopup(ReconnectPopupParent, ReconnectPopup);
     }
+    #endregion
 
+    #region Disconnect Popup
+    /// <summary>
+    /// Show disconnect popup when 15 pings are missed (max missed pings)
+    /// OK button closes the game (close socket, send OnExit to platform, enable raycast)
+    /// </summary>
     internal void ShowDisconnectPopup()
     {
-        CloseAllPopups();
-        if (PopupContainer) PopupContainer.SetActive(true);
-        if (DisconnectPopup) DisconnectPopup.SetActive(true);
+        // Close reconnect popup first if it's showing
+        if (ReconnectPopupParent && ReconnectPopupParent.activeSelf)
+        {
+            SlideOutPopup(ReconnectPopupParent, ReconnectPopup);
+        }
+
+        SlideInPopup(DisconnectPopupParent, DisconnectPopup);
     }
 
+    private void CloseDisconnectPopup()
+    {
+        SlideOutPopup(DisconnectPopupParent, DisconnectPopup);
+    }
+    #endregion
+
+    #region Quit Popup
+    /// <summary>
+    /// Show quit popup when Home screen Exit button is pressed
+    /// YES button: closes the game (close socket, send OnExit to platform, enable raycast)
+    /// NO button: just closes the popup
+    /// </summary>
     private void ShowQuitPopup()
     {
-        if (PopupContainer) PopupContainer.SetActive(true);
-        if (QuitPopup) QuitPopup.SetActive(true);
+        SlideInPopup(QuitPopupParent, QuitPopup);
     }
 
-    internal void ShowErrorPopup(string message, string title = "Error")
+    private void CloseQuitPopup()
     {
-        CloseAllPopups();
-        if (ErrorTitle_Text) ErrorTitle_Text.text = title;
-        if (ErrorMessage_Text) ErrorMessage_Text.text = message;
-        if (PopupContainer) PopupContainer.SetActive(true);
-        if (ErrorPopup) ErrorPopup.SetActive(true);
+        SlideOutPopup(QuitPopupParent, QuitPopup);
     }
+    #endregion
 
-    internal void ShowNotification(string message)
-    {
-        if (Notification_Text) Notification_Text.text = message;
-        if (NotificationPopup) NotificationPopup.SetActive(true);
-
-        StartCoroutine(HideNotificationAfterDelay(3f));
-    }
-
+    #region Another Device Popup
+    /// <summary>
+    /// Show when another device logs in with same credentials
+    /// This will close the current game (close socket, send OnExit, enable raycast)
+    /// </summary>
     internal void ShowAnotherDevicePopup()
     {
-        CloseAllPopups();
-        if (PopupContainer) PopupContainer.SetActive(true);
-        if (AnotherDevicePopup) AnotherDevicePopup.SetActive(true);
+        // Show as error popup
+        ShowErrorPopup("Another device has logged in with your account.", "Session Ended");
+
+        // Close game after showing error
+        StartCoroutine(CloseGameAfterDelay(2f));
     }
 
-    private IEnumerator HideNotificationAfterDelay(float delay)
+    private IEnumerator CloseGameAfterDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
-        if (NotificationPopup) NotificationPopup.SetActive(false);
+        gameManager.ExitGame();
     }
     #endregion
 
