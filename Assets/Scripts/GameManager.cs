@@ -339,7 +339,10 @@ public class GameManager : MonoBehaviour
             return "main_bets";
         }
 
-        if (betOption.StartsWith("single_") || betOption == "specific_2" || betOption == "specific_3")
+        // NEW: Handle specific_3_X (specific_3_1, specific_3_2, etc.)
+        if (betOption.StartsWith("single_") ||
+            betOption == "specific_2" ||
+            betOption.StartsWith("specific_3_"))
         {
             return "side_bets";
         }
@@ -351,5 +354,6 @@ public class GameManager : MonoBehaviour
 
         return "main_bets";
     }
+
     #endregion
 }

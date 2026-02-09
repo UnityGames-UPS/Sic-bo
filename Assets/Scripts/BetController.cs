@@ -81,7 +81,6 @@ public class BetController : MonoBehaviour
     private double currentTotalBet = 0;
     private bool isBettingEnabled = false;
     private bool isChipSelectorOpen = false;
-    private int lastSelectedTripleDice;
 
     // Bet tracking
     private Dictionary<string, double> areaBets = new Dictionary<string, double>();
@@ -792,14 +791,15 @@ public class BetController : MonoBehaviour
         {
             EvenArea.RemoveLastBet();
         }
-        else if (betOption == "specific_3")
+        else if (betOption.StartsWith("specific_3_"))
         {
-            foreach (var area in TripleDiceAreas)
+            // NEW: Handle specific triple dice (specific_3_1 to specific_3_6)
+            if (int.TryParse(betOption.Replace("specific_3_", ""), out int diceNum))
             {
-                if (area != null && area.HasBets())
+                int index = diceNum - 1;
+                if (index >= 0 && index < TripleDiceAreas.Count && TripleDiceAreas[index] != null)
                 {
-                    area.RemoveLastBet();
-                    break;
+                    TripleDiceAreas[index].RemoveLastBet();
                 }
             }
         }
@@ -895,21 +895,20 @@ public class BetController : MonoBehaviour
 
         if (currentChipValues.Count == 0) return;
 
-        string betOption = "specific_3";
+        // NEW: Generate specific bet option for this triple (e.g., "specific_3_1", "specific_3_2", etc.)
+        string betOption = $"specific_3_{diceNum}";
         double betAmount = currentChipValues[selectedChipIndex];
 
         if (!CanPlaceBet(betOption, betAmount)) return;
-
-        // Store the dice number for later use (like repeat bets)
-        lastSelectedTripleDice = diceNum;
 
         int areaIndex = diceNum - 1;
         if (areaIndex >= 0 && areaIndex < TripleDiceAreas.Count && TripleDiceAreas[areaIndex] != null)
         {
             TripleDiceAreas[areaIndex].AddBet(betAmount, selectedChipIndex);
-            RecordBet(betOption, betAmount, selectedChipIndex);
+            RecordBet(betOption, betAmount, selectedChipIndex, diceNum);  // Pass diceNum
         }
 
+        // NEW: Send the specific bet option to server
         gameManager.PlaceBet(betOption, selectedChipIndex);
         CloseChipSelector();
         ShowBetActionsPanelAnimated();
@@ -980,42 +979,26 @@ public class BetController : MonoBehaviour
         }
         else if (betOption.StartsWith("single_"))
         {
-            // FIX: Handle single dice bets (single_1 to single_6)
+            // Handle single dice bets (single_1 to single_6)
             if (int.TryParse(betOption.Replace("single_", ""), out int diceNum))
             {
                 int index = diceNum - 1;
                 if (index >= 0 && index < SingleDiceAreas.Count && SingleDiceAreas[index] != null)
                 {
                     SingleDiceAreas[index].AddBet(betAmount, chipIndex);
-                    Debug.Log($"[BET] Added single dice bet to area {diceNum}: {betAmount}");
-                }
-                else
-                {
-                    Debug.LogWarning($"[BET] SingleDiceArea index {index} out of range or null");
                 }
             }
         }
-        else if (betOption == "specific_3")
+        else if (betOption.StartsWith("specific_3_"))
         {
-     
-            int diceNum = lastSelectedTripleDice;
-
-            if (diceNum > 0 && diceNum <= 6)
+            // NEW: Handle specific triple dice bets (specific_3_1 to specific_3_6)
+            if (int.TryParse(betOption.Replace("specific_3_", ""), out int diceNum))
             {
                 int index = diceNum - 1;
                 if (index >= 0 && index < TripleDiceAreas.Count && TripleDiceAreas[index] != null)
                 {
                     TripleDiceAreas[index].AddBet(betAmount, chipIndex);
-                    Debug.Log($"[BET] Added triple dice bet to area {diceNum}: {betAmount}");
                 }
-                else
-                {
-                    Debug.LogWarning($"[BET] TripleDiceArea index {index} out of range or null");
-                }
-            }
-            else
-            {
-                Debug.LogWarning($"[BET] specific_3 broadcast but lastSelectedTripleDice={diceNum}. Cannot determine which triple area to use.");
             }
         }
         else
@@ -1086,8 +1069,9 @@ public class BetController : MonoBehaviour
         {
             wager = wagerData.side_bets?.single_match_1;
         }
-        else if (betOption == "specific_3")
+        else if (betOption.StartsWith("specific_3_"))
         {
+            // NEW: All specific triple dice bets use the same wager data
             wager = wagerData.side_bets?.specific_3;
         }
         else if (betOption.StartsWith("sum_"))
@@ -1098,9 +1082,13 @@ public class BetController : MonoBehaviour
             }
         }
 
-        return wager?.GetMaxBet(currentLevel) ?? maxBetAmount;
-    }
+        if (wager != null)
+        {
+            return wager.GetMaxBet(currentLevel);
+        }
 
+        return maxBetAmount;
+    }
     private int GetChipIndexForAmount(double amount)
     {
         for (int i = 0; i < currentChipValues.Count; i++)
