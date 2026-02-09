@@ -2,17 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// FIXED GameManager - Properly handles bet_placed broadcasts for current player during bet actions
-/// 
-/// KEY FIX: OnBetPlaced() now forwards ALL broadcasts to BetController.OnBetPlacedBroadcast()
-/// This allows REPEAT/UNDO/CANCEL/DOUBLE to process each broadcast individually
-/// 
-/// CHANGE LOG:
-/// - Line 227-240: Added check for bet action broadcasts from current player
-/// - Now calls betController.OnBetPlacedBroadcast() for own player during bet actions
-/// - Still calls ShowOtherPlayerBet() only for other players with positive amounts
-/// </summary>
 public class GameManager : MonoBehaviour
 {
     #region Serialized References
@@ -43,7 +32,7 @@ public class GameManager : MonoBehaviour
     #region Unity Lifecycle
     private void Start()
     {
-        LogInfo("🎮 Game Manager Initialized");
+        LogInfo("Game Manager Initialized");
     }
     #endregion
 
@@ -116,7 +105,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        LogSuccess($"✅ Init received - Player: {socketManager.PlayerData.username}, Balance: {socketManager.PlayerData.balance:F2}");
+        LogSuccess($"Init received - Player: {socketManager.PlayerData.username}, Balance: {socketManager.PlayerData.balance:F2}");
 
         CurrentBalance = socketManager.PlayerData.balance;
 
@@ -152,7 +141,7 @@ public class GameManager : MonoBehaviour
     {
         if (payload == null) return;
 
-        LogSuccess($"🚪 Room joined: {payload.level}, Players: {payload.playerCount}");
+        LogSuccess($"Room joined: {payload.level}, Players: {payload.playerCount}");
 
         uiController.UpdatePlayerCount(payload.playerCount);
 
@@ -183,7 +172,7 @@ public class GameManager : MonoBehaviour
         int timeRemaining = CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
         LogBroadcast("ROUND_START", $"Round: {data.roundId}, Betting Time: {timeRemaining}s, Players: {data.playerCount}");
-        LogInfo($"📊 Timestamps - Start: {data.startedAt}, End: {data.bettingEndTime}, Server: {data.serverTime}");
+        LogInfo($"Timestamps - Start: {data.startedAt}, End: {data.bettingEndTime}, Server: {data.serverTime}");
 
         uiController.UpdatePlayerCount(data.playerCount);
         uiController.ShowBettingPhase(timeRemaining);
@@ -218,7 +207,7 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        LogBroadcast("DICE_RESULT", $"🎲 [{data.dice1}, {data.dice2}, {data.dice3}] = {data.sum} ({data.matchSide.ToUpper()})");
+        LogBroadcast("DICE_RESULT", $"[{data.dice1}, {data.dice2}, {data.dice3}] = {data.sum} ({data.matchSide.ToUpper()})");
 
         betController.DisableBetting();
 
@@ -231,12 +220,6 @@ public class GameManager : MonoBehaviour
         betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
     }
 
-    /// <summary>
-    /// CRITICAL FIX: Handle ALL bet_placed broadcasts - both from current player and others
-    /// 
-    /// BEFORE: Only processed broadcasts from other players
-    /// AFTER: Also processes own player's broadcasts during bet actions (REPEAT/UNDO/CANCEL/DOUBLE)
-    /// </summary>
     internal void OnBetPlaced(BetPlacedData data)
     {
         if (data == null) return;
@@ -245,9 +228,7 @@ public class GameManager : MonoBehaviour
 
         if (isOwnPlayer)
         {
-            // CRITICAL: Forward OWN broadcasts to BetController for bet action processing
-            // This allows REPEAT/UNDO/CANCEL/DOUBLE to handle each broadcast individually
-            LogInfo($"🎯 Own bet broadcast: {data.betOption} amount={data.amount:F2} (action in progress)");
+            LogInfo($"Own bet broadcast: {data.betOption} amount={data.amount:F2} (action in progress)");
             betController.OnBetPlacedBroadcast(data);
         }
         else
@@ -255,7 +236,7 @@ public class GameManager : MonoBehaviour
            /* // Show other player bets (only positive amounts)
             if (data.amount > 0)
             {
-                LogInfo($"👤 Other player bet: {data.username} on {data.betOption} = {data.amount:F2}");
+                LogInfo($"Other player bet: {data.username} on {data.betOption} = {data.amount:F2}");
                 betController.ShowOtherPlayerBet(data);
             }*/
         }
@@ -265,7 +246,7 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        LogBroadcast("CASHOUT", "💰 Processing payouts");
+        LogBroadcast("CASHOUT", "Processing payouts");
 
         if (data.leaderboards != null)
         {
@@ -283,12 +264,12 @@ public class GameManager : MonoBehaviour
 
                     if (payout.win > 0)
                     {
-                        LogSuccess($"🎉 WON: +{payout.win:F2}, New Balance: {CurrentBalance:F2}");
+                        LogSuccess($"WON: +{payout.win:F2}, New Balance: {CurrentBalance:F2}");
                         uiController.ShowWinAnimation(payout.win);
                     }
                     else
-                    {
-                        LogInfo($"❌ LOST - Balance: {CurrentBalance:F2}");
+                    { 
+                        LogInfo($"LOST - Balance: {CurrentBalance:F2}");
                     }
                 }
             }
@@ -303,7 +284,7 @@ public class GameManager : MonoBehaviour
 
         int secondsUntilNextRound = CalculateTimeRemaining(data.nextRoundStartTime, data.serverTime);
 
-        LogBroadcast("ROUND_END", $"⏱️ Next round in {secondsUntilNextRound}s");
+        LogBroadcast("ROUND_END", $"Next round in {secondsUntilNextRound}s");
         LogInfo($"Cashout interval: {data.cashoutInterval}ms");
             
         uiController.ShowNextRound(secondsUntilNextRound);
@@ -327,7 +308,7 @@ public class GameManager : MonoBehaviour
 
     internal void OnBalanceUpdated(double newBalance)
     {
-        LogInfo($"💵 Balance updated: {CurrentBalance:F2} → {newBalance:F2}");
+        LogInfo($"Balance updated: {CurrentBalance:F2} → {newBalance:F2}");
         CurrentBalance = newBalance;
         uiController.UpdateBalance(CurrentBalance);
     }
@@ -336,7 +317,7 @@ public class GameManager : MonoBehaviour
     {
         if (historyController != null)
         {
-            LogInfo($"📜 History received: Page {meta.page}/{meta.pages}, Entries: {history.Count}");
+            LogInfo($"History received: Page {meta.page}/{meta.pages}, Entries: {history.Count}");
             historyController.UpdateHistoryData(history, meta);
         }
     }
@@ -356,7 +337,7 @@ public class GameManager : MonoBehaviour
 
         if (response.success)
         {
-            LogSuccess($"✅ Bet action success: {response.payload?.message}");
+            LogSuccess($"Bet action success: {response.payload?.message}");
 
             // Update balance
             if (response.payload != null)
@@ -370,7 +351,7 @@ public class GameManager : MonoBehaviour
         else
         {
             string errorMsg = response.payload?.message ?? "Bet action failed";
-            LogError($"❌ Bet action failed: {errorMsg}");
+            LogError($"Bet action failed: {errorMsg}");
             uiController.ShowErrorPopup(errorMsg);
 
             // Reset processing flag

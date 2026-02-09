@@ -5,26 +5,6 @@ using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 
-/// <summary>
-/// COMPLETE BetController with PlayerBetComponent Object Pooling System
-/// 
-/// READY TO USE - Direct copy-paste replacement for your existing BetController.cs
-/// 
-/// NEW FEATURES:
-/// - Dynamic PlayerBetComponent pooling (spawns at start, reuses across rounds)
-/// - Zero GC during gameplay (no instantiate/destroy)
-/// - Better memory management
-/// - All original functionality preserved
-/// 
-/// SETUP REQUIRED IN INSPECTOR:
-/// 1. Assign "Player Bet Component Prefab" field
-/// 2. Set "Pool Initial Size" to 30 (default)
-/// 3. Leave "Pool Container" empty (auto-creates)
-/// 
-/// CHANGES TO AREA CLASSES:
-/// - playerBetComponent is now [HideInInspector] (assigned at runtime)
-/// - Remove from inspector, will be assigned automatically
-/// </summary>
 public class BetController : MonoBehaviour
 {
     #region Serialized Fields
@@ -43,9 +23,7 @@ public class BetController : MonoBehaviour
     [SerializeField] private Sprite[] chipSprites;
 
     [Header("PlayerBetComponent Pool - NEW")]
-    [SerializeField] private PlayerBetComponent playerBetComponentPrefab; // ASSIGN IN INSPECTOR
-    [SerializeField] private Transform poolContainer; // Auto-creates if null
-    [SerializeField] private int poolInitialSize = 30; // Total bet areas (4 main + 6 triple + 6 single + 14 sum)
+    [SerializeField] private PlayerBetComponent playerBetComponentPrefab; 
 
     [Header("Bet Areas - Main")]
     [SerializeField] private SimpleBetArea SmallArea;
@@ -147,7 +125,7 @@ public class BetController : MonoBehaviour
         InitializeExistingChips();
 
         // NEW: Assign components from pool to areas
-        AssignComponentsToAreas();
+        // Components already spawned in areas, no assignment needed
 
         DisableBetting();
     }
@@ -167,6 +145,10 @@ public class BetController : MonoBehaviour
     /// Initialize object pool - spawn all PlayerBetComponents at start
     /// All components start disabled and ready to be assigned
     /// </summary>
+    /// <summary>
+    /// Initialize object pool - spawn PlayerBetComponents directly in each bet area
+    /// Components stay in their bet areas permanently (no reparenting)
+    /// </summary>
     private void InitializePool()
     {
         if (isPoolInitialized)
@@ -181,120 +163,129 @@ public class BetController : MonoBehaviour
             return;
         }
 
-        // Create pool container if not assigned
-        if (poolContainer == null)
+        Debug.Log($"[BET POOL] Spawning PlayerBetComponents in each bet area...");
+
+        int spawnedCount = 0;
+
+        // Spawn in Main areas
+        spawnedCount += SpawnComponentInArea(SmallArea, "small");
+        spawnedCount += SpawnComponentInArea(BigArea, "big");
+        spawnedCount += SpawnComponentInArea(OddArea, "odd");
+        spawnedCount += SpawnComponentInArea(EvenArea, "even");
+
+        // Spawn in Triple dice areas
+        for (int i = 0; i < TripleDiceAreas.Count; i++)
         {
-            GameObject poolObj = new GameObject("PlayerBetComponent_Pool");
-            poolObj.transform.SetParent(transform);
-            poolContainer = poolObj.transform;
+            spawnedCount += SpawnComponentInArea(TripleDiceAreas[i], $"triple_{i + 1}");
         }
 
-        Debug.Log($"[BET POOL] Initializing pool with {poolInitialSize} components...");
-
-        // Spawn all components
-        for (int i = 0; i < poolInitialSize; i++)
+        // Spawn in Single dice areas
+        for (int i = 0; i < SingleDiceAreas.Count; i++)
         {
-            PlayerBetComponent component = Instantiate(playerBetComponentPrefab, poolContainer);
-            component.name = $"PlayerBetComponent_{i:D2}";
-            component.gameObject.SetActive(false); // Start disabled
+            spawnedCount += SpawnComponentInArea(SingleDiceAreas[i], $"single_{i + 1}");
+        }
 
-            // Initialize with chip sprites
-            component.Initialize(chipSprites);
-
-            componentPool.Add(component);
+        // Spawn in Sum areas
+        for (int i = 0; i < SumAreas.Count; i++)
+        {
+            spawnedCount += SpawnComponentInArea(SumAreas[i], $"sum_{i + 4}");
         }
 
         isPoolInitialized = true;
-        Debug.Log($"[BET POOL] ✅ Pool initialized with {componentPool.Count} components");
+        Debug.Log($"[BET POOL] Spawned {spawnedCount} components in bet areas");
     }
 
     /// <summary>
-    /// Get a component from the pool for a specific area
-    /// Automatically activates and parents to the area's container
+    /// Spawn PlayerBetComponent in SimpleBetArea
     /// </summary>
-    private PlayerBetComponent GetComponentFromPool(string areaId, Transform parentContainer)
+    private int SpawnComponentInArea(SimpleBetArea area, string areaId)
     {
-        // Check if already has an active component
-        if (activeComponents.ContainsKey(areaId))
-        {
-            return activeComponents[areaId];
-        }
+        if (area == null || area.PlayerBetContainer == null) return 0;
 
-        // Find first available component in pool
-        PlayerBetComponent availableComponent = null;
-        foreach (var component in componentPool)
-        {
-            if (!component.gameObject.activeInHierarchy)
-            {
-                availableComponent = component;
-                break;
-            }
-        }
+        PlayerBetComponent component = Instantiate(playerBetComponentPrefab, area.PlayerBetContainer);
+        component.name = $"PlayerBetComponent_{areaId}";
+        component.transform.localPosition = Vector3.zero;
+        component.transform.localScale = Vector3.one;
+        component.gameObject.SetActive(false);
 
-        if (availableComponent == null)
-        {
-            Debug.LogError($"[BET POOL] No available components! Pool exhausted. Increase poolInitialSize in Inspector.");
-            return null;
-        }
+        component.Initialize(chipSprites);
 
-        // Assign to area
-        availableComponent.transform.SetParent(parentContainer);
-        availableComponent.transform.localPosition = Vector3.zero;
-        availableComponent.transform.localScale = Vector3.one;
-        availableComponent.gameObject.SetActive(true);
+        area.playerBetComponent = component;
+        componentPool.Add(component);
+        activeComponents[areaId] = component;
 
-        // Track as active
-        activeComponents[areaId] = availableComponent;
-
-        return availableComponent;
+        return 1;
     }
 
     /// <summary>
-    /// Return component to pool - reset and disable
-    /// Called when clearing bets or resetting round
+    /// Spawn PlayerBetComponent in TripleSameDiceArea
     /// </summary>
-    private void ReturnComponentToPool(string areaId)
+    private int SpawnComponentInArea(TripleSameDiceArea area, string areaId)
     {
-        if (!activeComponents.ContainsKey(areaId))
-        {
-            return; // Already returned or never assigned
-        }
+        if (area == null || area.PlayerBetContainer == null) return 0;
 
-        PlayerBetComponent component = activeComponents[areaId];
+        PlayerBetComponent component = Instantiate(playerBetComponentPrefab, area.PlayerBetContainer);
+        component.name = $"PlayerBetComponent_{areaId}";
+        component.transform.localPosition = Vector3.zero;
+        component.transform.localScale = Vector3.one;
+        component.gameObject.SetActive(false);
 
-        if (component != null)
-        {
-            // Reset component state
-            component.Clear();
+        component.Initialize(chipSprites);
 
-            // Return to pool parent
-            component.transform.SetParent(poolContainer);
-            component.gameObject.SetActive(false);
-        }
+        area.playerBetComponent = component;
+        componentPool.Add(component);
+        activeComponents[areaId] = component;
 
-        // Remove from active tracking
-        activeComponents.Remove(areaId);
+        return 1;
     }
 
     /// <summary>
-    /// Return all active components to pool
-    /// Called at round end or when resetting game
+    /// Spawn PlayerBetComponent in SingleDiceArea
     /// </summary>
-    private void ReturnAllComponentsToPool()
+    private int SpawnComponentInArea(SingleDiceArea area, string areaId)
     {
-        if (activeComponents.Count == 0) return;
+        if (area == null || area.PlayerBetContainer == null) return 0;
 
-        Debug.Log($"[BET POOL] Returning {activeComponents.Count} active components to pool...");
+        PlayerBetComponent component = Instantiate(playerBetComponentPrefab, area.PlayerBetContainer);
+        component.name = $"PlayerBetComponent_{areaId}";
+        component.transform.localPosition = Vector3.zero;
+        component.transform.localScale = Vector3.one;
+        component.gameObject.SetActive(false);
 
-        List<string> areaIds = new List<string>(activeComponents.Keys);
+        component.Initialize(chipSprites);
 
-        foreach (string areaId in areaIds)
-        {
-            ReturnComponentToPool(areaId);
-        }
+        area.playerBetComponent = component;
+        componentPool.Add(component);
+        activeComponents[areaId] = component;
 
-        Debug.Log("[BET POOL] ✅ All components returned to pool");
+        return 1;
     }
+
+    /// <summary>
+    /// Spawn PlayerBetComponent in SumArea
+    /// </summary>
+    private int SpawnComponentInArea(SumArea area, string areaId)
+    {
+        if (area == null || area.PlayerBetContainer == null) return 0;
+
+        PlayerBetComponent component = Instantiate(playerBetComponentPrefab, area.PlayerBetContainer);
+        component.name = $"PlayerBetComponent_{areaId}";
+        component.transform.localPosition = Vector3.zero;
+        component.transform.localScale = Vector3.one;
+        component.gameObject.SetActive(false);
+
+        component.Initialize(chipSprites);
+
+        area.playerBetComponent = component;
+        componentPool.Add(component);
+        activeComponents[areaId] = component;
+
+        return 1;
+    }
+
+    // NOTE: GetComponentFromPool, ReturnComponentToPool, and AssignComponentsToAreas 
+    // are no longer needed since components are spawned directly in their areas
+    // Keeping CleanupPool for destroying components on exit
 
     /// <summary>
     /// Cleanup pool - destroy all components
@@ -319,95 +310,14 @@ public class BetController : MonoBehaviour
         componentPool.Clear();
         isPoolInitialized = false;
 
-        Debug.Log("[BET POOL] ✅ Pool cleanup complete");
+        Debug.Log("[BET POOL] Pool cleanup complete");
     }
     #endregion
 
-    #region Pool System - Area Assignment (NEW)
-    /// <summary>
-    /// Assign PlayerBetComponents from pool to all bet areas
-    /// Called once during initialization and when resetting for new round
-    /// </summary>
-    private void AssignComponentsToAreas()
-    {
-        if (!isPoolInitialized)
-        {
-            Debug.LogError("[BET POOL] Cannot assign components - pool not initialized!");
-            return;
-        }
-
-        Debug.Log("[BET POOL] Assigning components to all bet areas...");
-
-        int assignedCount = 0;
-
-        // Main areas
-        if (SmallArea != null && SmallArea.PlayerBetContainer != null)
-        {
-            SmallArea.playerBetComponent = GetComponentFromPool("small", SmallArea.PlayerBetContainer);
-            if (SmallArea.playerBetComponent != null) assignedCount++;
-        }
-
-        if (BigArea != null && BigArea.PlayerBetContainer != null)
-        {
-            BigArea.playerBetComponent = GetComponentFromPool("big", BigArea.PlayerBetContainer);
-            if (BigArea.playerBetComponent != null) assignedCount++;
-        }
-
-        if (OddArea != null && OddArea.PlayerBetContainer != null)
-        {
-            OddArea.playerBetComponent = GetComponentFromPool("odd", OddArea.PlayerBetContainer);
-            if (OddArea.playerBetComponent != null) assignedCount++;
-        }
-
-        if (EvenArea != null && EvenArea.PlayerBetContainer != null)
-        {
-            EvenArea.playerBetComponent = GetComponentFromPool("even", EvenArea.PlayerBetContainer);
-            if (EvenArea.playerBetComponent != null) assignedCount++;
-        }
-
-        // Triple dice areas
-        for (int i = 0; i < TripleDiceAreas.Count; i++)
-        {
-            var area = TripleDiceAreas[i];
-            if (area != null && area.PlayerBetContainer != null)
-            {
-                string areaId = $"triple_{i + 1}";
-                area.playerBetComponent = GetComponentFromPool(areaId, area.PlayerBetContainer);
-                if (area.playerBetComponent != null) assignedCount++;
-            }
-        }
-
-        // Single dice areas
-        for (int i = 0; i < SingleDiceAreas.Count; i++)
-        {
-            var area = SingleDiceAreas[i];
-            if (area != null && area.PlayerBetContainer != null)
-            {
-                string areaId = $"single_{i + 1}";
-                area.playerBetComponent = GetComponentFromPool(areaId, area.PlayerBetContainer);
-                if (area.playerBetComponent != null) assignedCount++;
-            }
-        }
-
-        // Sum areas
-        for (int i = 0; i < SumAreas.Count; i++)
-        {
-            var area = SumAreas[i];
-            if (area != null && area.PlayerBetContainer != null)
-            {
-                string areaId = $"sum_{i + 4}";
-                area.playerBetComponent = GetComponentFromPool(areaId, area.PlayerBetContainer);
-                if (area.playerBetComponent != null) assignedCount++;
-            }
-        }
-
-        Debug.Log($"[BET POOL] ✅ Assigned {assignedCount} components to bet areas");
-
-        // Initially disable all (they'll be shown when bets are placed)
-        ReturnAllComponentsToPool();
-    }
+    #region Pool System - Area Assignment (NOT NEEDED ANYMORE)
+    // Components are already spawned in their areas, no assignment needed
+    // This region is kept empty for compatibility
     #endregion
-
     #region Public API - Round Management (NEW)
     /// <summary>
     /// Called when a new round starts - reset all bets and reassign components
@@ -418,8 +328,6 @@ public class BetController : MonoBehaviour
         Debug.Log("[BET] Round start - resetting all bets and reassigning components");
 
         ClearAllBets();
-        ReturnAllComponentsToPool();
-        AssignComponentsToAreas();
     }
 
     /// <summary>
@@ -443,7 +351,6 @@ public class BetController : MonoBehaviour
         Debug.Log("[BET] Resetting all components immediately");
 
         ClearAllBets();
-        ReturnAllComponentsToPool();
     }
     #endregion
 
@@ -1236,6 +1143,11 @@ public class BetController : MonoBehaviour
             Transform chipTransform = existingChips[i].transform;
             Vector3 targetPos = originalChipPositions[i];
 
+            // START: Set initial position to (0,0,0) before animating
+            chipTransform.localPosition = Vector3.zero;
+            chipTransform.localRotation = Quaternion.identity;
+
+            // Animate from (0,0,0) to original position
             Tween moveTween = chipTransform.DOLocalMove(targetPos, CHIP_OPEN_DURATION)
                 .SetEase(Ease.OutBack);
 
@@ -1262,7 +1174,8 @@ public class BetController : MonoBehaviour
 
             Transform chipTransform = existingChips[i].transform;
 
-            Tween moveTween = chipTransform.DOLocalMove(centerPosition, CHIP_CLOSE_DURATION)
+            // Animate from current position back to (0,0,0)
+            Tween moveTween = chipTransform.DOLocalMove(Vector3.zero, CHIP_CLOSE_DURATION)
                 .SetEase(Ease.InBack);
 
             Tween rotateTween = chipTransform.DOLocalRotate(new Vector3(0, 0, -360), CHIP_CLOSE_DURATION, RotateMode.FastBeyond360)
@@ -1279,7 +1192,6 @@ public class BetController : MonoBehaviour
 
         chipAnimationSequence.Play();
     }
-
     private void OnChipSelected(int index)
     {
         SelectChipAt(index);
@@ -1314,12 +1226,12 @@ public class BetController : MonoBehaviour
     {
         if (amount >= 1000)
         {
-            return $"{(amount / 1000):F1}K";
+            return $"{(amount / 1000)}K";
         }
 
         if (amount < 1)
         {
-            return amount.ToString("F2");
+            return amount.ToString("F1");
         }
 
         if (amount % 1 != 0)
