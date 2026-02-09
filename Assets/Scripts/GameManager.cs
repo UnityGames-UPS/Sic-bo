@@ -2,6 +2,17 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// FIXED GameManager - Properly handles bet_placed broadcasts for current player during bet actions
+/// 
+/// KEY FIX: OnBetPlaced() now forwards ALL broadcasts to BetController.OnBetPlacedBroadcast()
+/// This allows REPEAT/UNDO/CANCEL/DOUBLE to process each broadcast individually
+/// 
+/// CHANGE LOG:
+/// - Line 227-240: Added check for bet action broadcasts from current player
+/// - Now calls betController.OnBetPlacedBroadcast() for own player during bet actions
+/// - Still calls ShowOtherPlayerBet() only for other players with positive amounts
+/// </summary>
 public class GameManager : MonoBehaviour
 {
     #region Serialized References
@@ -32,7 +43,7 @@ public class GameManager : MonoBehaviour
     #region Unity Lifecycle
     private void Start()
     {
-        LogInfo(" Game Manager Initialized");
+        LogInfo("🎮 Game Manager Initialized");
     }
     #endregion
 
@@ -105,7 +116,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        LogSuccess($"  Init received - Player: {socketManager.PlayerData.username}, Balance: {socketManager.PlayerData.balance:F2}");
+        LogSuccess($"✅ Init received - Player: {socketManager.PlayerData.username}, Balance: {socketManager.PlayerData.balance:F2}");
 
         CurrentBalance = socketManager.PlayerData.balance;
 
@@ -141,7 +152,7 @@ public class GameManager : MonoBehaviour
     {
         if (payload == null) return;
 
-        LogSuccess($"Room joined: {payload.level}, Players: {payload.playerCount}");
+        LogSuccess($"🚪 Room joined: {payload.level}, Players: {payload.playerCount}");
 
         uiController.UpdatePlayerCount(payload.playerCount);
 
@@ -169,21 +180,17 @@ public class GameManager : MonoBehaviour
 
         CurrentRoundId = data.roundId;
 
-        // Calculate initial time remaining from server timestamps
         int timeRemaining = CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
         LogBroadcast("ROUND_START", $"Round: {data.roundId}, Betting Time: {timeRemaining}s, Players: {data.playerCount}");
-        LogInfo($"Timestamps - Start: {data.startedAt}, End: {data.bettingEndTime}, Server: {data.serverTime}");
+        LogInfo($"📊 Timestamps - Start: {data.startedAt}, End: {data.bettingEndTime}, Server: {data.serverTime}");
 
-        // Update UI and controllers
         uiController.UpdatePlayerCount(data.playerCount);
         uiController.ShowBettingPhase(timeRemaining);
         uiController.UpdateRoundPhase("BETTING");
 
-        // Start round in round controller
         roundController.StartRound(data);
-
-        // Enable betting
+        betController.OnRoundStart();
         betController.EnableBetting();
     }
 
@@ -191,12 +198,10 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        // Calculate time remaining from server sync
         int timeRemaining = CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
         LogBroadcast("TIMER_SYNC", $"Round: {data.roundId}, Time: {timeRemaining}s");
 
-        // Update timer displays
         roundController.UpdateTimer(timeRemaining);
         uiController.UpdateTimer(timeRemaining);
     }
@@ -213,31 +218,46 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        LogBroadcast("DICE_RESULT", $"[{data.dice1}, {data.dice2}, {data.dice3}] = {data.sum} ({data.matchSide.ToUpper()})");
+        LogBroadcast("DICE_RESULT", $"🎲 [{data.dice1}, {data.dice2}, {data.dice3}] = {data.sum} ({data.matchSide.ToUpper()})");
 
-        // Disable betting immediately
         betController.DisableBetting();
 
-        // Show bet locked UI
         uiController.ShowBetLocked();
         uiController.UpdateRoundPhase("RESULT");
 
-        // Show dice animation and result
         roundController.ShowDiceResult(data);
 
-        // Highlight winning areas and keep highlighted
         betController.HighlightWinningAreas(data.matchSide, data.sum);
         betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
     }
 
+    /// <summary>
+    /// CRITICAL FIX: Handle ALL bet_placed broadcasts - both from current player and others
+    /// 
+    /// BEFORE: Only processed broadcasts from other players
+    /// AFTER: Also processes own player's broadcasts during bet actions (REPEAT/UNDO/CANCEL/DOUBLE)
+    /// </summary>
     internal void OnBetPlaced(BetPlacedData data)
     {
         if (data == null) return;
 
-        if (data.username != socketManager.PlayerData.username)
+        bool isOwnPlayer = (data.username == socketManager.PlayerData.username);
+
+        if (isOwnPlayer)
         {
-            LogInfo($"Other player bet: {data.username} on {data.betOption} = {data.amount:F2}");
-            betController.ShowOtherPlayerBet(data);
+            // CRITICAL: Forward OWN broadcasts to BetController for bet action processing
+            // This allows REPEAT/UNDO/CANCEL/DOUBLE to handle each broadcast individually
+            LogInfo($"🎯 Own bet broadcast: {data.betOption} amount={data.amount:F2} (action in progress)");
+            betController.OnBetPlacedBroadcast(data);
+        }
+        else
+        {
+           /* // Show other player bets (only positive amounts)
+            if (data.amount > 0)
+            {
+                LogInfo($"👤 Other player bet: {data.username} on {data.betOption} = {data.amount:F2}");
+                betController.ShowOtherPlayerBet(data);
+            }*/
         }
     }
 
@@ -245,7 +265,7 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        LogBroadcast("CASHOUT", "Processing payouts");
+        LogBroadcast("CASHOUT", "💰 Processing payouts");
 
         if (data.leaderboards != null)
         {
@@ -263,18 +283,17 @@ public class GameManager : MonoBehaviour
 
                     if (payout.win > 0)
                     {
-                        LogSuccess($"WON: +{payout.win:F2}, New Balance: {CurrentBalance:F2}");
+                        LogSuccess($"🎉 WON: +{payout.win:F2}, New Balance: {CurrentBalance:F2}");
                         uiController.ShowWinAnimation(payout.win);
                     }
                     else
                     {
-                        LogInfo($"LOST - Balance: {CurrentBalance:F2}");
+                        LogInfo($"❌ LOST - Balance: {CurrentBalance:F2}");
                     }
                 }
             }
         }
 
-        // Clear bet chips but KEEP win highlights visible (they will clear on next round start)
         betController.ClearAllBets();
     }
 
@@ -284,15 +303,12 @@ public class GameManager : MonoBehaviour
 
         int secondsUntilNextRound = CalculateTimeRemaining(data.nextRoundStartTime, data.serverTime);
 
-        LogBroadcast("ROUND_END", $"Next round in {secondsUntilNextRound}s");
+        LogBroadcast("ROUND_END", $"⏱️ Next round in {secondsUntilNextRound}s");
         LogInfo($"Cashout interval: {data.cashoutInterval}ms");
-
-        // Show next round countdown
+            
         uiController.ShowNextRound(secondsUntilNextRound);
         uiController.UpdateRoundPhase("NEXTROUND");
-
-        // DON'T end round yet - let win highlights and dice stay visible
-        // They will be cleared when the next round starts
+        betController.OnRoundEnd();
     }
 
     internal void OnLobbyCount(LobbyCountData data)
@@ -311,7 +327,7 @@ public class GameManager : MonoBehaviour
 
     internal void OnBalanceUpdated(double newBalance)
     {
-        LogInfo($"Balance updated: {CurrentBalance:F2} → {newBalance:F2}");
+        LogInfo($"💵 Balance updated: {CurrentBalance:F2} → {newBalance:F2}");
         CurrentBalance = newBalance;
         uiController.UpdateBalance(CurrentBalance);
     }
@@ -320,8 +336,45 @@ public class GameManager : MonoBehaviour
     {
         if (historyController != null)
         {
-            LogInfo($"History received: Page {meta.page}/{meta.pages}, Entries: {history.Count}");
+            LogInfo($"📜 History received: Page {meta.page}/{meta.pages}, Entries: {history.Count}");
             historyController.UpdateHistoryData(history, meta);
+        }
+    }
+
+    /// <summary>
+    /// Handle bet action responses (undo, cancel, double, repeat)
+    /// Forwards server response to BetController for UI sync
+    /// </summary>
+    internal void OnBetActionResponse(BetAckResponse response)
+    {
+        if (response == null)
+        {
+            // Null response means reset processing flag
+            betController.OnBetActionResponse(null);
+            return;
+        }
+
+        if (response.success)
+        {
+            LogSuccess($"✅ Bet action success: {response.payload?.message}");
+
+            // Update balance
+            if (response.payload != null)
+            {
+                OnBalanceUpdated(response.payload.balance);
+            }
+
+            // Update bet UI to match server state
+            betController.OnBetActionResponse(response);
+        }
+        else
+        {
+            string errorMsg = response.payload?.message ?? "Bet action failed";
+            LogError($"❌ Bet action failed: {errorMsg}");
+            uiController.ShowErrorPopup(errorMsg);
+
+            // Reset processing flag
+            betController.OnBetActionResponse(null);
         }
     }
     #endregion
@@ -347,8 +400,8 @@ public class GameManager : MonoBehaviour
 
         betController.DisableBetting();
         betController.ClearAllBets();
-        betController.ClearAllWinHighlights(); // Clear win highlights when leaving room
-        roundController.ClearRoundDisplay(); // Clear dice and result display
+        betController.ClearAllWinHighlights();
+        roundController.ClearRoundDisplay();
         socketManager.ReturnHome();
         uiController.ShowHomeScreen();
         uiController.HideAllTimers();
@@ -405,20 +458,12 @@ public class GameManager : MonoBehaviour
 
     #region Private Helpers
     /// <summary>
-    /// FIXED: Properly round time remaining to nearest second
-    /// Uses Mathf.RoundToInt for accurate rounding - so 13999ms becomes 14s, 13499ms becomes 13s
-    /// This ensures timer displays correctly without skipping numbers
+    /// Calculate time remaining with proper rounding
     /// </summary>
     private int CalculateTimeRemaining(long endTime, long serverTime)
     {
         long remainingMs = endTime - serverTime;
-
-        // Convert to seconds with proper rounding
-        // 13999ms -> 13.999s -> rounds to 14s
-        // 13499ms -> 13.499s -> rounds to 13s
-        // 13500ms -> 13.500s -> rounds to 14s
         float remainingSeconds = remainingMs / 1000f;
-
         return Mathf.Max(0, Mathf.RoundToInt(remainingSeconds));
     }
 

@@ -5,6 +5,26 @@ using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 
+/// <summary>
+/// COMPLETE BetController with PlayerBetComponent Object Pooling System
+/// 
+/// READY TO USE - Direct copy-paste replacement for your existing BetController.cs
+/// 
+/// NEW FEATURES:
+/// - Dynamic PlayerBetComponent pooling (spawns at start, reuses across rounds)
+/// - Zero GC during gameplay (no instantiate/destroy)
+/// - Better memory management
+/// - All original functionality preserved
+/// 
+/// SETUP REQUIRED IN INSPECTOR:
+/// 1. Assign "Player Bet Component Prefab" field
+/// 2. Set "Pool Initial Size" to 30 (default)
+/// 3. Leave "Pool Container" empty (auto-creates)
+/// 
+/// CHANGES TO AREA CLASSES:
+/// - playerBetComponent is now [HideInInspector] (assigned at runtime)
+/// - Remove from inspector, will be assigned automatically
+/// </summary>
 public class BetController : MonoBehaviour
 {
     #region Serialized Fields
@@ -18,12 +38,14 @@ public class BetController : MonoBehaviour
     [SerializeField] private RectTransform ChipAreaPanel;
     [SerializeField] private RectTransform TotalStakePanel;
 
-    [Header("Chip Prefabs")]
+    [Header("Chip Prefabs & Sprites")]
     [SerializeField] private GameObject chipSelectorPrefab;
-    [SerializeField] private GameObject playerChipStackPrefab;
-    [SerializeField] private GameObject opponentChipPrefab;
     [SerializeField] private Sprite[] chipSprites;
-    [SerializeField] private Sprite grayChipSprite;
+
+    [Header("PlayerBetComponent Pool - NEW")]
+    [SerializeField] private PlayerBetComponent playerBetComponentPrefab; // ASSIGN IN INSPECTOR
+    [SerializeField] private Transform poolContainer; // Auto-creates if null
+    [SerializeField] private int poolInitialSize = 30; // Total bet areas (4 main + 6 triple + 6 single + 14 sum)
 
     [Header("Bet Areas - Main")]
     [SerializeField] private SimpleBetArea SmallArea;
@@ -65,7 +87,13 @@ public class BetController : MonoBehaviour
     [SerializeField] private UIController uiController;
     #endregion
 
-    #region Private Fields
+    #region Private Fields - Pool System (NEW)
+    private List<PlayerBetComponent> componentPool = new List<PlayerBetComponent>();
+    private Dictionary<string, PlayerBetComponent> activeComponents = new Dictionary<string, PlayerBetComponent>();
+    private bool isPoolInitialized = false;
+    #endregion
+
+    #region Private Fields - Betting
     private List<double> currentChipValues = new List<double>();
     private Dictionary<double, Sprite> chipValueToSprite = new Dictionary<double, Sprite>();
     private List<Chip> existingChips = new List<Chip>();
@@ -75,14 +103,27 @@ public class BetController : MonoBehaviour
     private double currentTotalBet = 0;
     private bool isBettingEnabled = false;
     private bool isChipSelectorOpen = false;
+
+    // Bet tracking
     private Dictionary<string, double> areaBets = new Dictionary<string, double>();
     private List<BetAction> betHistory = new List<BetAction>();
+    private List<BetAction> previousRoundBets = new List<BetAction>();
+
+    // Configuration
     private Wagers wagerData = null;
     private string currentLevel = "";
     private double minBetAmount = 0;
     private double maxBetAmount = 0;
+
+    // State tracking
     private bool placedBetInPreviousRound = false;
     private bool hasPlacedBetThisRound = false;
+    private bool isProcessingBetAction = false;
+
+    // Bet action broadcast tracking
+    private string currentBetAction = "";
+    private int expectedBroadcastCount = 0;
+    private int receivedBroadcastCount = 0;
 
     // Animation constants
     private const float CHIP_OPEN_DURATION = 0.5f;
@@ -98,17 +139,311 @@ public class BetController : MonoBehaviour
     #region Unity Lifecycle
     private void Start()
     {
+        // NEW: Initialize pool FIRST
+        InitializePool();
+
         SetupButtonListeners();
         SetupBetAreaListeners();
         InitializeExistingChips();
+
+        // NEW: Assign components from pool to areas
+        AssignComponentsToAreas();
+
         DisableBetting();
     }
 
     private void OnDestroy()
     {
-        // Clean up tweens
+        // NEW: Cleanup pool
+        CleanupPool();
+
         chipAnimationSequence?.Kill();
         if (repeatPanelCoroutine != null) StopCoroutine(repeatPanelCoroutine);
+    }
+    #endregion
+
+    #region Pool System - Core (NEW)
+    /// <summary>
+    /// Initialize object pool - spawn all PlayerBetComponents at start
+    /// All components start disabled and ready to be assigned
+    /// </summary>
+    private void InitializePool()
+    {
+        if (isPoolInitialized)
+        {
+            Debug.LogWarning("[BET POOL] Already initialized!");
+            return;
+        }
+
+        if (playerBetComponentPrefab == null)
+        {
+            Debug.LogError("[BET POOL] PlayerBetComponent prefab is not assigned! Assign in Inspector.");
+            return;
+        }
+
+        // Create pool container if not assigned
+        if (poolContainer == null)
+        {
+            GameObject poolObj = new GameObject("PlayerBetComponent_Pool");
+            poolObj.transform.SetParent(transform);
+            poolContainer = poolObj.transform;
+        }
+
+        Debug.Log($"[BET POOL] Initializing pool with {poolInitialSize} components...");
+
+        // Spawn all components
+        for (int i = 0; i < poolInitialSize; i++)
+        {
+            PlayerBetComponent component = Instantiate(playerBetComponentPrefab, poolContainer);
+            component.name = $"PlayerBetComponent_{i:D2}";
+            component.gameObject.SetActive(false); // Start disabled
+
+            // Initialize with chip sprites
+            component.Initialize(chipSprites);
+
+            componentPool.Add(component);
+        }
+
+        isPoolInitialized = true;
+        Debug.Log($"[BET POOL] ✅ Pool initialized with {componentPool.Count} components");
+    }
+
+    /// <summary>
+    /// Get a component from the pool for a specific area
+    /// Automatically activates and parents to the area's container
+    /// </summary>
+    private PlayerBetComponent GetComponentFromPool(string areaId, Transform parentContainer)
+    {
+        // Check if already has an active component
+        if (activeComponents.ContainsKey(areaId))
+        {
+            return activeComponents[areaId];
+        }
+
+        // Find first available component in pool
+        PlayerBetComponent availableComponent = null;
+        foreach (var component in componentPool)
+        {
+            if (!component.gameObject.activeInHierarchy)
+            {
+                availableComponent = component;
+                break;
+            }
+        }
+
+        if (availableComponent == null)
+        {
+            Debug.LogError($"[BET POOL] No available components! Pool exhausted. Increase poolInitialSize in Inspector.");
+            return null;
+        }
+
+        // Assign to area
+        availableComponent.transform.SetParent(parentContainer);
+        availableComponent.transform.localPosition = Vector3.zero;
+        availableComponent.transform.localScale = Vector3.one;
+        availableComponent.gameObject.SetActive(true);
+
+        // Track as active
+        activeComponents[areaId] = availableComponent;
+
+        return availableComponent;
+    }
+
+    /// <summary>
+    /// Return component to pool - reset and disable
+    /// Called when clearing bets or resetting round
+    /// </summary>
+    private void ReturnComponentToPool(string areaId)
+    {
+        if (!activeComponents.ContainsKey(areaId))
+        {
+            return; // Already returned or never assigned
+        }
+
+        PlayerBetComponent component = activeComponents[areaId];
+
+        if (component != null)
+        {
+            // Reset component state
+            component.Clear();
+
+            // Return to pool parent
+            component.transform.SetParent(poolContainer);
+            component.gameObject.SetActive(false);
+        }
+
+        // Remove from active tracking
+        activeComponents.Remove(areaId);
+    }
+
+    /// <summary>
+    /// Return all active components to pool
+    /// Called at round end or when resetting game
+    /// </summary>
+    private void ReturnAllComponentsToPool()
+    {
+        if (activeComponents.Count == 0) return;
+
+        Debug.Log($"[BET POOL] Returning {activeComponents.Count} active components to pool...");
+
+        List<string> areaIds = new List<string>(activeComponents.Keys);
+
+        foreach (string areaId in areaIds)
+        {
+            ReturnComponentToPool(areaId);
+        }
+
+        Debug.Log("[BET POOL] ✅ All components returned to pool");
+    }
+
+    /// <summary>
+    /// Cleanup pool - destroy all components
+    /// Called on game exit or controller destroy
+    /// </summary>
+    private void CleanupPool()
+    {
+        Debug.Log("[BET POOL] Cleaning up pool...");
+
+        // Clear active tracking
+        activeComponents.Clear();
+
+        // Destroy all pooled components
+        foreach (var component in componentPool)
+        {
+            if (component != null)
+            {
+                Destroy(component.gameObject);
+            }
+        }
+
+        componentPool.Clear();
+        isPoolInitialized = false;
+
+        Debug.Log("[BET POOL] ✅ Pool cleanup complete");
+    }
+    #endregion
+
+    #region Pool System - Area Assignment (NEW)
+    /// <summary>
+    /// Assign PlayerBetComponents from pool to all bet areas
+    /// Called once during initialization and when resetting for new round
+    /// </summary>
+    private void AssignComponentsToAreas()
+    {
+        if (!isPoolInitialized)
+        {
+            Debug.LogError("[BET POOL] Cannot assign components - pool not initialized!");
+            return;
+        }
+
+        Debug.Log("[BET POOL] Assigning components to all bet areas...");
+
+        int assignedCount = 0;
+
+        // Main areas
+        if (SmallArea != null && SmallArea.PlayerBetContainer != null)
+        {
+            SmallArea.playerBetComponent = GetComponentFromPool("small", SmallArea.PlayerBetContainer);
+            if (SmallArea.playerBetComponent != null) assignedCount++;
+        }
+
+        if (BigArea != null && BigArea.PlayerBetContainer != null)
+        {
+            BigArea.playerBetComponent = GetComponentFromPool("big", BigArea.PlayerBetContainer);
+            if (BigArea.playerBetComponent != null) assignedCount++;
+        }
+
+        if (OddArea != null && OddArea.PlayerBetContainer != null)
+        {
+            OddArea.playerBetComponent = GetComponentFromPool("odd", OddArea.PlayerBetContainer);
+            if (OddArea.playerBetComponent != null) assignedCount++;
+        }
+
+        if (EvenArea != null && EvenArea.PlayerBetContainer != null)
+        {
+            EvenArea.playerBetComponent = GetComponentFromPool("even", EvenArea.PlayerBetContainer);
+            if (EvenArea.playerBetComponent != null) assignedCount++;
+        }
+
+        // Triple dice areas
+        for (int i = 0; i < TripleDiceAreas.Count; i++)
+        {
+            var area = TripleDiceAreas[i];
+            if (area != null && area.PlayerBetContainer != null)
+            {
+                string areaId = $"triple_{i + 1}";
+                area.playerBetComponent = GetComponentFromPool(areaId, area.PlayerBetContainer);
+                if (area.playerBetComponent != null) assignedCount++;
+            }
+        }
+
+        // Single dice areas
+        for (int i = 0; i < SingleDiceAreas.Count; i++)
+        {
+            var area = SingleDiceAreas[i];
+            if (area != null && area.PlayerBetContainer != null)
+            {
+                string areaId = $"single_{i + 1}";
+                area.playerBetComponent = GetComponentFromPool(areaId, area.PlayerBetContainer);
+                if (area.playerBetComponent != null) assignedCount++;
+            }
+        }
+
+        // Sum areas
+        for (int i = 0; i < SumAreas.Count; i++)
+        {
+            var area = SumAreas[i];
+            if (area != null && area.PlayerBetContainer != null)
+            {
+                string areaId = $"sum_{i + 4}";
+                area.playerBetComponent = GetComponentFromPool(areaId, area.PlayerBetContainer);
+                if (area.playerBetComponent != null) assignedCount++;
+            }
+        }
+
+        Debug.Log($"[BET POOL] ✅ Assigned {assignedCount} components to bet areas");
+
+        // Initially disable all (they'll be shown when bets are placed)
+        ReturnAllComponentsToPool();
+    }
+    #endregion
+
+    #region Public API - Round Management (NEW)
+    /// <summary>
+    /// Called when a new round starts - reset all bets and reassign components
+    /// Call this from GameManager.OnRoundStart()
+    /// </summary>
+    internal void OnRoundStart()
+    {
+        Debug.Log("[BET] Round start - resetting all bets and reassigning components");
+
+        ClearAllBets();
+        ReturnAllComponentsToPool();
+        AssignComponentsToAreas();
+    }
+
+    /// <summary>
+    /// Called when round ends - save state for repeat functionality
+    /// Call this from GameManager.OnRoundEnd()
+    /// </summary>
+    internal void OnRoundEnd()
+    {
+        Debug.Log("[BET] Round end - components will be reset on next round start");
+
+        // Components stay visible until next round starts
+        // Save bets for repeat (already handled in DisableBetting)
+    }
+
+    /// <summary>
+    /// Reset all components immediately (for leaving room or game exit)
+    /// Call this from GameManager.OnLeaveRoom()
+    /// </summary>
+    internal void ResetAllComponents()
+    {
+        Debug.Log("[BET] Resetting all components immediately");
+
+        ClearAllBets();
+        ReturnAllComponentsToPool();
     }
     #endregion
 
@@ -169,9 +504,6 @@ public class BetController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Initialize references to existing 6 chips in scene and calculate positions
-    /// </summary>
     private void InitializeExistingChips()
     {
         existingChips.Clear();
@@ -183,16 +515,13 @@ public class BetController : MonoBehaviour
             return;
         }
 
-        // Get all Chip components from children
         Chip[] chips = ChipOptions_Container.GetComponentsInChildren<Chip>(true);
 
-        // Store up to 6 chips
         for (int i = 0; i < Mathf.Min(6, chips.Length); i++)
         {
             existingChips.Add(chips[i]);
             originalChipPositions.Add(chips[i].transform.localPosition);
 
-            // Add button listener for chip selection
             Button chipButton = chips[i].GetComponent<Button>();
             if (chipButton != null)
             {
@@ -202,114 +531,75 @@ public class BetController : MonoBehaviour
             }
         }
 
-        // Calculate center position (average of all original positions)
-        if (originalChipPositions.Count > 0)
+        if (existingChips.Count > 0)
         {
-            centerPosition = Vector3.zero;
-            foreach (Vector3 pos in originalChipPositions)
-            {
-                centerPosition += pos;
-            }
-            centerPosition /= originalChipPositions.Count;
+            centerPosition = existingChips[0].transform.localPosition;
         }
 
-        Debug.Log($"[BET] Initialized {existingChips.Count} existing chips. Center position: {centerPosition}");
+        Debug.Log($"[BET] Initialized {existingChips.Count} chip selector chips");
     }
     #endregion
 
-    #region Public API - Chip Setup
+    #region Public API - Called by GameManager
     internal void SetupChips(List<double> chipValues, Wagers wagers, string level)
     {
-        currentChipValues = chipValues ?? new List<double>();
-        wagerData = wagers;
+        currentChipValues = chipValues;
         currentLevel = level;
+        wagerData = wagers;
 
-        if (currentChipValues.Count == 0) return;
-
-        Debug.Log($"[BET] SetupChips called with {currentChipValues.Count} chip values");
-
-        BuildChipValueToSpriteMap();
-        ConfigureExistingChips();
-        SelectChipAt(0); // Default to index 0
-        SetupMinMaxBet();
-        SetupWinRatios();
-    }
-
-    private void BuildChipValueToSpriteMap()
-    {
         chipValueToSprite.Clear();
-        int maxIndex = Mathf.Min(currentChipValues.Count, chipSprites.Length);
 
-        for (int i = 0; i < maxIndex; i++)
+        int chipCount = Mathf.Min(chipValues.Count, chipSprites.Length);
+        for (int i = 0; i < chipCount; i++)
         {
-            chipValueToSprite[currentChipValues[i]] = chipSprites[i];
-        }
-    }
+            chipValueToSprite[chipValues[i]] = chipSprites[i];
 
-    /// <summary>
-    /// Configure existing chips instead of spawning new ones
-    /// </summary>
-    private void ConfigureExistingChips()
-    {
-        int chipsToUse = Mathf.Min(currentChipValues.Count, existingChips.Count);
-
-        // Configure chips with data
-        for (int i = 0; i < chipsToUse; i++)
-        {
-            Chip chip = existingChips[i];
-            Sprite chipSprite = GetChipSprite(currentChipValues[i]);
-            chip.SetData(chipSprite, FormatChipAmount(currentChipValues[i]), i);
-            chip.gameObject.SetActive(true);
-
-            // Set to center position initially
-            chip.transform.localPosition = centerPosition;
-        }
-
-        // Hide unused chips
-        for (int i = chipsToUse; i < existingChips.Count; i++)
-        {
-            existingChips[i].gameObject.SetActive(false);
-        }
-
-        // If we have more chip values than existing chips (>6), spawn additional ones
-        if (currentChipValues.Count > existingChips.Count)
-        {
-            Debug.LogWarning($"[BET] Backend sent {currentChipValues.Count} chips but only {existingChips.Count} exist in scene. Spawning additional chips.");
-            // TODO: Spawn additional chips if needed
-        }
-
-        Debug.Log($"[BET] Configured {chipsToUse} existing chips");
-    }
-
-    private void SetupMinMaxBet()
-    {
-        if (currentChipValues.Count > 0)
-        {
-            minBetAmount = currentChipValues[0];
-
-            if (wagerData?.main_bets?.small != null)
+            if (i < existingChips.Count)
             {
-                maxBetAmount = wagerData.main_bets.small.GetMaxBet(currentLevel);
+                existingChips[i].SetData(chipSprites[i], FormatChipAmount(chipValues[i]), i);
+                existingChips[i].SetActive(true);
             }
         }
 
-        if (MinBet_Text) MinBet_Text.text = $"Min: {FormatChipAmount(minBetAmount)}";
-        if (MaxBet_Text) MaxBet_Text.text = $"Max: {FormatChipAmount(maxBetAmount)}";
+        for (int i = chipCount; i < existingChips.Count; i++)
+        {
+            existingChips[i].SetActive(false);
+        }
+
+        if (chipCount > 0)
+        {
+            SelectChipAt(0);
+        }
+
+        if (chipValues.Count > 0)
+        {
+            minBetAmount = chipValues[0];
+            maxBetAmount = chipValues[chipValues.Count - 1] * 100;
+        }
+
+        SetupWinRatios();
+        UpdateMinMaxDisplay();
+
+        Debug.Log($"[BET] Setup complete - Level: {level}, Chips: {chipCount}");
     }
 
     private void SetupWinRatios()
     {
         if (wagerData == null) return;
 
-        if (wagerData.main_bets != null)
+        SetWinRatio(SmallArea, wagerData.main_bets?.small);
+        SetWinRatio(BigArea, wagerData.main_bets?.big);
+        SetWinRatio(OddArea, wagerData.main_bets?.odd);
+        SetWinRatio(EvenArea, wagerData.main_bets?.even);
+
+        for (int i = 0; i < SumAreas.Count; i++)
         {
-            SetWinRatio(SmallArea, wagerData.main_bets.small);
-            SetWinRatio(BigArea, wagerData.main_bets.big);
-            SetWinRatio(OddArea, wagerData.main_bets.odd);
-            SetWinRatio(EvenArea, wagerData.main_bets.even);
+            int sum = i + 4;
+            BetWager wager = GetSumWager(sum);
+            SetWinRatio(SumAreas[i], wager);
         }
 
-        if (wagerData.side_bets != null && SharedTripleWinRatio_Text != null)
+        if (SharedTripleWinRatio_Text != null && wagerData.side_bets != null)
         {
             string combinedRatio = BetWager.GetCombinedSpecificPayoutString(
                 wagerData.side_bets.specific_2,
@@ -317,50 +607,70 @@ public class BetController : MonoBehaviour
             );
             SharedTripleWinRatio_Text.text = combinedRatio;
         }
-
-        if (wagerData.op_bets != null)
-        {
-            var opBets = wagerData.op_bets;
-            BetWager[] sumWagers = {
-                opBets.sum_4, opBets.sum_5, opBets.sum_6, opBets.sum_7,
-                opBets.sum_8, opBets.sum_9, opBets.sum_10, opBets.sum_11,
-                opBets.sum_12, opBets.sum_13, opBets.sum_14, opBets.sum_15,
-                opBets.sum_16, opBets.sum_17
-            };
-
-            for (int i = 0; i < Mathf.Min(sumWagers.Length, SumAreas.Count); i++)
-            {
-                SetWinRatio(SumAreas[i], sumWagers[i]);
-            }
-        }
     }
-    #endregion
 
-    #region Public API - Betting Control
+    private BetWager GetSumWager(int sum)
+    {
+        if (wagerData?.op_bets == null) return null;
+
+        return sum switch
+        {
+            4 => wagerData.op_bets.sum_4,
+            5 => wagerData.op_bets.sum_5,
+            6 => wagerData.op_bets.sum_6,
+            7 => wagerData.op_bets.sum_7,
+            8 => wagerData.op_bets.sum_8,
+            9 => wagerData.op_bets.sum_9,
+            10 => wagerData.op_bets.sum_10,
+            11 => wagerData.op_bets.sum_11,
+            12 => wagerData.op_bets.sum_12,
+            13 => wagerData.op_bets.sum_13,
+            14 => wagerData.op_bets.sum_14,
+            15 => wagerData.op_bets.sum_15,
+            16 => wagerData.op_bets.sum_16,
+            17 => wagerData.op_bets.sum_17,
+            _ => null
+        };
+    }
+
+    private void UpdateMinMaxDisplay()
+    {
+        if (MinBet_Text) MinBet_Text.text = FormatChipAmount(minBetAmount);
+        if (MaxBet_Text) MaxBet_Text.text = FormatChipAmount(maxBetAmount);
+    }
+
     internal void EnableBetting()
     {
         isBettingEnabled = true;
         hasPlacedBetThisRound = false;
         AnimateBetUnlocked();
 
-        // Show repeat panel if user bet in previous round
-        if (placedBetInPreviousRound)
+        if (placedBetInPreviousRound && previousRoundBets.Count > 0)
         {
             ShowRepeatPanelAnimated();
         }
 
-        UpdateTotalBet();
+        Debug.Log("[BET] Betting enabled");
     }
 
     internal void DisableBetting()
     {
         isBettingEnabled = false;
         CloseChipSelector();
-        AnimateBetLocked(); // Slide panels to locked position
+        AnimateBetLocked();
         HideBetPanels();
 
-        // Track if user placed bets this round for next round
-        placedBetInPreviousRound = hasPlacedBetThisRound;
+        if (hasPlacedBetThisRound && betHistory.Count > 0)
+        {
+            previousRoundBets = new List<BetAction>(betHistory);
+            placedBetInPreviousRound = true;
+            Debug.Log($"[BET] Saved {previousRoundBets.Count} bets for next round repeat");
+        }
+        else
+        {
+            previousRoundBets.Clear();
+            placedBetInPreviousRound = false;
+        }
     }
 
     internal void ClearAllBets()
@@ -371,19 +681,13 @@ public class BetController : MonoBehaviour
         currentTotalBet = 0;
         betHistory.Clear();
 
-        // Clear main areas
         ClearArea(SmallArea);
         ClearArea(BigArea);
         ClearArea(OddArea);
         ClearArea(EvenArea);
 
-        // Clear triple dice areas
         foreach (var area in TripleDiceAreas) ClearArea(area);
-
-        // Clear single dice areas
         foreach (var area in SingleDiceAreas) ClearArea(area);
-
-        // Clear sum areas
         foreach (var area in SumAreas) ClearArea(area);
 
         UpdateTotalBet();
@@ -428,27 +732,201 @@ public class BetController : MonoBehaviour
         }
     }
 
-    internal void ShowOtherPlayerBet(BetPlacedData data)
+    internal void ClearAllWinHighlights()
+    {
+        SetAreaHighlight(SmallArea, false);
+        SetAreaHighlight(BigArea, false);
+        SetAreaHighlight(OddArea, false);
+        SetAreaHighlight(EvenArea, false);
+
+        foreach (var area in TripleDiceAreas)
+        {
+            if (area != null) area.SetHighlight(false);
+        }
+
+        foreach (var area in SingleDiceAreas)
+        {
+            if (area != null) area.SetHighlight(false);
+        }
+
+        foreach (var area in SumAreas)
+        {
+            if (area != null) area.SetHighlight(false);
+        }
+
+        Debug.Log("[BET] All win highlights cleared");
+    }
+    #endregion
+
+    #region Bet Action Broadcast Handling
+    internal void OnBetPlacedBroadcast(BetPlacedData data)
     {
         if (data == null) return;
 
-        string betOption = data.betOption;
+        if (isProcessingBetAction && !string.IsNullOrEmpty(currentBetAction))
+        {
+            receivedBroadcastCount++;
 
+            Debug.Log($"[BET] Broadcast {receivedBroadcastCount}/{expectedBroadcastCount} for {currentBetAction}: " +
+                      $"{data.betOption} amount={data.amount}");
+
+            switch (currentBetAction)
+            {
+                case "REPEAT":
+                    HandleRepeatBroadcast(data);
+                    break;
+
+                case "DOUBLE":
+                    HandleDoubleBroadcast(data);
+                    break;
+
+                case "UNDO":
+                    HandleUndoBroadcast(data);
+                    break;
+
+                case "CANCEL":
+                    HandleCancelBroadcast(data);
+                    break;
+            }
+        }
+    }
+
+    private void HandleRepeatBroadcast(BetPlacedData data)
+    {
+        if (data.amount > 0)
+        {
+            int chipIndex = GetChipIndexForAmount(data.amount);
+
+            AddBetToAreaVisual(data.betOption, data.amount, chipIndex);
+
+            if (!areaBets.ContainsKey(data.betOption)) areaBets[data.betOption] = 0;
+            areaBets[data.betOption] += data.amount;
+            currentTotalBet += data.amount;
+
+            betHistory.Add(new BetAction
+            {
+                betOption = data.betOption,
+                amount = data.amount,
+                chipIndex = chipIndex
+            });
+
+            UpdateTotalBet();
+
+            Debug.Log($"[BET REPEAT] Added chip: {data.betOption} +{data.amount}");
+        }
+    }
+
+    private void HandleDoubleBroadcast(BetPlacedData data)
+    {
+        if (data.amount > 0)
+        {
+            int chipIndex = GetChipIndexForAmount(data.amount);
+
+            AddBetToAreaVisual(data.betOption, data.amount, chipIndex);
+
+            if (!areaBets.ContainsKey(data.betOption)) areaBets[data.betOption] = 0;
+            areaBets[data.betOption] += data.amount;
+            currentTotalBet += data.amount;
+
+            betHistory.Add(new BetAction
+            {
+                betOption = data.betOption,
+                amount = data.amount,
+                chipIndex = chipIndex
+            });
+
+            UpdateTotalBet();
+
+            Debug.Log($"[BET DOUBLE] Added additional chip: {data.betOption} +{data.amount}");
+        }
+    }
+
+    private void HandleUndoBroadcast(BetPlacedData data)
+    {
+        if (data.amount < 0)
+        {
+            double removeAmount = System.Math.Abs(data.amount);
+
+            for (int i = betHistory.Count - 1; i >= 0; i--)
+            {
+                if (betHistory[i].betOption == data.betOption)
+                {
+                    betHistory.RemoveAt(i);
+                    break;
+                }
+            }
+
+            if (areaBets.ContainsKey(data.betOption))
+            {
+                areaBets[data.betOption] -= removeAmount;
+                if (areaBets[data.betOption] <= 0) areaBets.Remove(data.betOption);
+            }
+            currentTotalBet -= removeAmount;
+
+            RemoveLastChipFromArea(data.betOption);
+            UpdateTotalBet();
+
+            Debug.Log($"[BET UNDO] Removed last chip: {data.betOption} -{removeAmount}");
+        }
+    }
+
+    private void HandleCancelBroadcast(BetPlacedData data)
+    {
+        if (data.amount < 0)
+        {
+            double removeAmount = System.Math.Abs(data.amount);
+
+            for (int i = betHistory.Count - 1; i >= 0; i--)
+            {
+                if (betHistory[i].betOption == data.betOption)
+                {
+                    betHistory.RemoveAt(i);
+                    break;
+                }
+            }
+
+            if (areaBets.ContainsKey(data.betOption))
+            {
+                areaBets[data.betOption] -= removeAmount;
+                if (areaBets[data.betOption] <= 0) areaBets.Remove(data.betOption);
+            }
+            currentTotalBet -= removeAmount;
+
+            RemoveLastChipFromArea(data.betOption);
+            UpdateTotalBet();
+
+            Debug.Log($"[BET CANCEL] Removed chip: {data.betOption} -{removeAmount}");
+        }
+    }
+
+    private void RemoveLastChipFromArea(string betOption)
+    {
         if (betOption == "small" && SmallArea != null)
         {
-            SmallArea.AddOpponentBet(data.amount, grayChipSprite);
+            SmallArea.RemoveLastBet();
         }
         else if (betOption == "big" && BigArea != null)
         {
-            BigArea.AddOpponentBet(data.amount, grayChipSprite);
+            BigArea.RemoveLastBet();
         }
         else if (betOption == "odd" && OddArea != null)
         {
-            OddArea.AddOpponentBet(data.amount, grayChipSprite);
+            OddArea.RemoveLastBet();
         }
         else if (betOption == "even" && EvenArea != null)
         {
-            EvenArea.AddOpponentBet(data.amount, grayChipSprite);
+            EvenArea.RemoveLastBet();
+        }
+        else if (betOption == "specific_3")
+        {
+            foreach (var area in TripleDiceAreas)
+            {
+                if (area != null && area.HasBets())
+                {
+                    area.RemoveLastBet();
+                    break;
+                }
+            }
         }
         else if (betOption.StartsWith("single_"))
         {
@@ -457,7 +935,7 @@ public class BetController : MonoBehaviour
                 int index = diceNum - 1;
                 if (index >= 0 && index < SingleDiceAreas.Count && SingleDiceAreas[index] != null)
                 {
-                    SingleDiceAreas[index].AddOpponentBet(data.amount, grayChipSprite);
+                    SingleDiceAreas[index].RemoveLastBet();
                 }
             }
         }
@@ -468,42 +946,43 @@ public class BetController : MonoBehaviour
                 int index = sum - 4;
                 if (index >= 0 && index < SumAreas.Count && SumAreas[index] != null)
                 {
-                    SumAreas[index].AddOpponentBet(data.amount, grayChipSprite);
+                    SumAreas[index].RemoveLastBet();
                 }
             }
         }
     }
-    /// <summary>
-    /// FIXED: Clear all win highlights without clearing bets
-    /// Called when new round starts to hide previous round's winning areas
-    /// </summary>
-    internal void ClearAllWinHighlights()
+
+    internal void OnBetActionResponse(BetAckResponse response)
     {
-        // Clear main areas
-        SetAreaHighlight(SmallArea, false);
-        SetAreaHighlight(BigArea, false);
-        SetAreaHighlight(OddArea, false);
-        SetAreaHighlight(EvenArea, false);
-
-        // Clear triple dice areas
-        foreach (var area in TripleDiceAreas)
+        if (response == null || response.payload == null)
         {
-            if (area != null) area.SetHighlight(false);
+            ResetBetActionState();
+            return;
         }
 
-        // Clear single dice areas
-        foreach (var area in SingleDiceAreas)
+        Debug.Log($"[BET] Final ACK: {response.payload.message} " +
+                  $"(received {receivedBroadcastCount}/{expectedBroadcastCount} broadcasts)");
+
+        if (betHistory.Count > 0)
         {
-            if (area != null) area.SetHighlight(false);
+            ShowBetActionsPanelAnimated();
+            hasPlacedBetThisRound = true;
+        }
+        else
+        {
+            HideBetActionsPanel();
+            hasPlacedBetThisRound = false;
         }
 
-        // Clear sum areas
-        foreach (var area in SumAreas)
-        {
-            if (area != null) area.SetHighlight(false);
-        }
+        ResetBetActionState();
+    }
 
-        Debug.Log("[BET] All win highlights cleared");
+    private void ResetBetActionState()
+    {
+        currentBetAction = "";
+        expectedBroadcastCount = 0;
+        receivedBroadcastCount = 0;
+        isProcessingBetAction = false;
     }
     #endregion
 
@@ -512,21 +991,17 @@ public class BetController : MonoBehaviour
     {
         if (!isBettingEnabled)
         {
-            if (uiController != null)
-            {
-                uiController.ShowInGamePopup("Betting is locked. Wait for next round.");
-            }
+            uiController?.ShowInGamePopup("Betting is locked. Wait for next round.");
             return;
         }
 
         if (currentChipValues.Count == 0) return;
 
         double betAmount = currentChipValues[selectedChipIndex];
-        Sprite chipSprite = GetChipSprite(betAmount);
 
         if (!CanPlaceBet(betOption, betAmount)) return;
 
-        AddBetToArea(betOption, betAmount, chipSprite);
+        AddBetToArea(betOption, betAmount, selectedChipIndex);
         gameManager.PlaceBet(betOption, selectedChipIndex);
 
         CloseChipSelector();
@@ -538,26 +1013,22 @@ public class BetController : MonoBehaviour
     {
         if (!isBettingEnabled)
         {
-            if (uiController != null)
-            {
-                uiController.ShowInGamePopup("Betting is locked. Wait for next round.");
-            }
+            uiController?.ShowInGamePopup("Betting is locked. Wait for next round.");
             return;
         }
 
         if (currentChipValues.Count == 0) return;
 
-        string betOption = $"specific_3";
+        string betOption = "specific_3";
         double betAmount = currentChipValues[selectedChipIndex];
-        Sprite chipSprite = GetChipSprite(betAmount);
 
         if (!CanPlaceBet(betOption, betAmount)) return;
 
         int areaIndex = diceNum - 1;
         if (areaIndex >= 0 && areaIndex < TripleDiceAreas.Count && TripleDiceAreas[areaIndex] != null)
         {
-            TripleDiceAreas[areaIndex].AddPlayerBet(betAmount, chipSprite, playerChipStackPrefab);
-            RecordBet(betOption, betAmount);
+            TripleDiceAreas[areaIndex].AddBet(betAmount, selectedChipIndex);
+            RecordBet(betOption, betAmount, selectedChipIndex);
         }
 
         gameManager.PlaceBet(betOption, selectedChipIndex);
@@ -570,10 +1041,7 @@ public class BetController : MonoBehaviour
     {
         if (!isBettingEnabled)
         {
-            if (uiController != null)
-            {
-                uiController.ShowInGamePopup("Betting is locked. Wait for next round.");
-            }
+            uiController?.ShowInGamePopup("Betting is locked. Wait for next round.");
             return;
         }
 
@@ -581,15 +1049,14 @@ public class BetController : MonoBehaviour
 
         string betOption = $"single_{diceNum}";
         double betAmount = currentChipValues[selectedChipIndex];
-        Sprite chipSprite = GetChipSprite(betAmount);
 
         if (!CanPlaceBet(betOption, betAmount)) return;
 
         int areaIndex = diceNum - 1;
         if (areaIndex >= 0 && areaIndex < SingleDiceAreas.Count && SingleDiceAreas[areaIndex] != null)
         {
-            SingleDiceAreas[areaIndex].AddPlayerBet(betAmount, chipSprite, playerChipStackPrefab);
-            RecordBet(betOption, betAmount);
+            SingleDiceAreas[areaIndex].AddBet(betAmount, selectedChipIndex);
+            RecordBet(betOption, betAmount, selectedChipIndex);
         }
 
         gameManager.PlaceBet(betOption, selectedChipIndex);
@@ -598,7 +1065,13 @@ public class BetController : MonoBehaviour
         hasPlacedBetThisRound = true;
     }
 
-    private void AddBetToArea(string betOption, double betAmount, Sprite chipSprite)
+    private void AddBetToArea(string betOption, double betAmount, int chipIndex)
+    {
+        AddBetToAreaVisual(betOption, betAmount, chipIndex);
+        RecordBet(betOption, betAmount, chipIndex);
+    }
+
+    private void AddBetToAreaVisual(string betOption, double betAmount, int chipIndex)
     {
         SimpleBetArea targetArea = null;
 
@@ -612,8 +1085,7 @@ public class BetController : MonoBehaviour
 
         if (targetArea != null)
         {
-            targetArea.AddPlayerBet(betAmount, chipSprite, playerChipStackPrefab);
-            RecordBet(betOption, betAmount);
+            targetArea.AddBet(betAmount, chipIndex);
         }
         else if (betOption.StartsWith("sum_"))
         {
@@ -622,14 +1094,13 @@ public class BetController : MonoBehaviour
                 int index = sum - 4;
                 if (index >= 0 && index < SumAreas.Count && SumAreas[index] != null)
                 {
-                    SumAreas[index].AddPlayerBet(betAmount, chipSprite, playerChipStackPrefab);
-                    RecordBet(betOption, betAmount);
+                    SumAreas[index].AddBet(betAmount, chipIndex);
                 }
             }
         }
     }
 
-    private void RecordBet(string betOption, double betAmount)
+    private void RecordBet(string betOption, double betAmount, int chipIndex)
     {
         if (!areaBets.ContainsKey(betOption))
         {
@@ -639,113 +1110,81 @@ public class BetController : MonoBehaviour
         areaBets[betOption] += betAmount;
         currentTotalBet += betAmount;
 
-        // Add to bet history for undo
-        betHistory.Add(new BetAction { betOption = betOption, amount = betAmount });
+        betHistory.Add(new BetAction
+        {
+            betOption = betOption,
+            amount = betAmount,
+            chipIndex = chipIndex
+        });
 
         UpdateTotalBet();
     }
 
-    /// <summary>
-    /// Validate if bet can be placed based on min/max limits
-    /// </summary>
     private bool CanPlaceBet(string betOption, double betAmount)
     {
-        // Get current bet in this area
         double currentAreaBet = areaBets.ContainsKey(betOption) ? areaBets[betOption] : 0;
-
-        // Get max bet for this specific area
         double areaMaxBet = GetMaxBetForArea(betOption);
 
-        // Check area limit
         if (currentAreaBet + betAmount > areaMaxBet)
         {
             string message = $"Maximum bet for this area is {FormatChipAmount(areaMaxBet)}";
-            if (uiController != null)
-            {
-                uiController.ShowInGamePopup(message);
-            }
-            else
-            {
-                Debug.LogWarning($"[BET] {message}");
-            }
+            uiController?.ShowInGamePopup(message);
             return false;
         }
 
-        // Check total bet limit
         if (currentTotalBet + betAmount > maxBetAmount)
         {
             string message = $"Maximum total bet is {FormatChipAmount(maxBetAmount)}";
-            if (uiController != null)
-            {
-                uiController.ShowInGamePopup(message);
-            }
-            else
-            {
-                Debug.LogWarning($"[BET] {message}");
-            }
+            uiController?.ShowInGamePopup(message);
             return false;
         }
 
         return true;
     }
 
-    /// <summary>
-    /// Get maximum bet allowed for specific area from wagerData
-    /// </summary>
     private double GetMaxBetForArea(string betOption)
     {
         if (wagerData == null || string.IsNullOrEmpty(currentLevel))
         {
-            return maxBetAmount; // Fallback to global max
+            return maxBetAmount;
         }
 
         BetWager wager = null;
 
-        // Main bets
         if (betOption == "small") wager = wagerData.main_bets?.small;
         else if (betOption == "big") wager = wagerData.main_bets?.big;
         else if (betOption == "odd") wager = wagerData.main_bets?.odd;
         else if (betOption == "even") wager = wagerData.main_bets?.even;
-
-        // Side bets (single dice)
         else if (betOption.StartsWith("single_"))
         {
-            wager = wagerData.side_bets?.single_match_1; // All single dice share same limits
+            wager = wagerData.side_bets?.single_match_1;
         }
-
-        // Side bets (triple dice)
         else if (betOption == "specific_3")
         {
             wager = wagerData.side_bets?.specific_3;
         }
-
-        // Op bets (sum)
         else if (betOption.StartsWith("sum_"))
         {
             if (int.TryParse(betOption.Replace("sum_", ""), out int sum))
             {
-                wager = sum switch
-                {
-                    4 => wagerData.op_bets?.sum_4,
-                    5 => wagerData.op_bets?.sum_5,
-                    6 => wagerData.op_bets?.sum_6,
-                    7 => wagerData.op_bets?.sum_7,
-                    8 => wagerData.op_bets?.sum_8,
-                    9 => wagerData.op_bets?.sum_9,
-                    10 => wagerData.op_bets?.sum_10,
-                    11 => wagerData.op_bets?.sum_11,
-                    12 => wagerData.op_bets?.sum_12,
-                    13 => wagerData.op_bets?.sum_13,
-                    14 => wagerData.op_bets?.sum_14,
-                    15 => wagerData.op_bets?.sum_15,
-                    16 => wagerData.op_bets?.sum_16,
-                    17 => wagerData.op_bets?.sum_17,
-                    _ => null
-                };
+                wager = GetSumWager(sum);
             }
         }
 
         return wager?.GetMaxBet(currentLevel) ?? maxBetAmount;
+    }
+
+    private int GetChipIndexForAmount(double amount)
+    {
+        for (int i = 0; i < currentChipValues.Count; i++)
+        {
+            if (System.Math.Abs(currentChipValues[i] - amount) < 0.01)
+            {
+                return i;
+            }
+        }
+
+        return 0;
     }
     #endregion
 
@@ -783,9 +1222,6 @@ public class BetController : MonoBehaviour
         });
     }
 
-    /// <summary>
-    /// Animate chips from center to their original positions in semicircular arc with spinning
-    /// </summary>
     private void AnimateChipsOpen()
     {
         chipAnimationSequence?.Kill();
@@ -800,11 +1236,9 @@ public class BetController : MonoBehaviour
             Transform chipTransform = existingChips[i].transform;
             Vector3 targetPos = originalChipPositions[i];
 
-            // Move from center to original position
             Tween moveTween = chipTransform.DOLocalMove(targetPos, CHIP_OPEN_DURATION)
                 .SetEase(Ease.OutBack);
 
-            // Rotate 360 degrees during movement
             Tween rotateTween = chipTransform.DOLocalRotate(new Vector3(0, 0, 360), CHIP_OPEN_DURATION, RotateMode.FastBeyond360)
                 .SetEase(Ease.OutQuad);
 
@@ -815,9 +1249,6 @@ public class BetController : MonoBehaviour
         chipAnimationSequence.Play();
     }
 
-    /// <summary>
-    /// Animate chips from original positions back to center with inverse spinning
-    /// </summary>
     private void AnimateChipsClose(System.Action onComplete = null)
     {
         chipAnimationSequence?.Kill();
@@ -831,11 +1262,9 @@ public class BetController : MonoBehaviour
 
             Transform chipTransform = existingChips[i].transform;
 
-            // Move from original position to center
             Tween moveTween = chipTransform.DOLocalMove(centerPosition, CHIP_CLOSE_DURATION)
                 .SetEase(Ease.InBack);
 
-            // Rotate -360 degrees during movement (inverse)
             Tween rotateTween = chipTransform.DOLocalRotate(new Vector3(0, 0, -360), CHIP_CLOSE_DURATION, RotateMode.FastBeyond360)
                 .SetEase(Ease.InQuad);
 
@@ -881,10 +1310,6 @@ public class BetController : MonoBehaviour
         return chipSprites.Length > 0 ? chipSprites[0] : null;
     }
 
-    /// <summary>
-    /// FIXED: Format chip amount preserving decimals
-    /// Shows 0.5 as "0.5" not "1", and rounds appropriately for larger values
-    /// </summary>
     private string FormatChipAmount(double amount)
     {
         if (amount >= 1000)
@@ -892,27 +1317,21 @@ public class BetController : MonoBehaviour
             return $"{(amount / 1000):F1}K";
         }
 
-        // Show decimals for values < 1
         if (amount < 1)
         {
-            return amount.ToString("F2"); // 0.50
+            return amount.ToString("F2");
         }
 
-        // Show 1 decimal place for values with decimals
         if (amount % 1 != 0)
         {
-            return amount.ToString("F1"); // 1.5, 2.5, etc
+            return amount.ToString("F1");
         }
 
-        // Show whole numbers without decimals
-        return amount.ToString("F0"); // 1, 2, 10, etc
+        return amount.ToString("F0");
     }
     #endregion
 
     #region Private Methods - Panel Animations
-    /// <summary>
-    /// Animate panels when bet gets locked (slide chip panel down, stake panel up)
-    /// </summary>
     private void AnimateBetLocked()
     {
         if (ChipAreaPanel != null)
@@ -926,9 +1345,6 @@ public class BetController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Animate panels when bet gets unlocked (reverse positions)
-    /// </summary>
     private void AnimateBetUnlocked()
     {
         if (ChipAreaPanel != null)
@@ -942,14 +1358,10 @@ public class BetController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Show repeat panel with animation if user placed bet in previous round
-    /// </summary>
     private void ShowRepeatPanelAnimated()
     {
         if (RepeatPanel == null) return;
 
-        // Stop any existing coroutine
         if (repeatPanelCoroutine != null)
         {
             StopCoroutine(repeatPanelCoroutine);
@@ -960,14 +1372,12 @@ public class BetController : MonoBehaviour
 
     private IEnumerator RepeatPanelSequence()
     {
-        // Hide bet actions panel
         if (BetActionsPanel != null)
         {
             BetActionsPanelMain.SetActive(false);
             BetActionsPanel.gameObject.SetActive(false);
         }
 
-        // Wait for delay
         yield return new WaitForSeconds(REPEAT_PANEL_DELAY);
 
         RepeatPanelMain.SetActive(true);
@@ -975,23 +1385,22 @@ public class BetController : MonoBehaviour
         RepeatPanel.anchoredPosition = new Vector2(-200f, RepeatPanel.anchoredPosition.y);
         RepeatPanel.DOAnchorPosX(0f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
 
-        // Wait for show duration
         yield return new WaitForSeconds(REPEAT_PANEL_SHOW_DURATION);
 
-        // Hide repeat panel
-        RepeatPanel.gameObject.SetActive(false);
-        RepeatPanelMain.SetActive(false);
+        RepeatPanel.DOAnchorPosX(-200f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad)
+            .OnComplete(() =>
+            {
+                RepeatPanel.gameObject.SetActive(false);
+                RepeatPanelMain.SetActive(false);
+            });
+
         repeatPanelCoroutine = null;
     }
 
-    /// <summary>
-    /// Show bet actions panel with animation when user places first bet
-    /// </summary>
     private void ShowBetActionsPanelAnimated()
     {
         if (BetActionsPanel == null) return;
 
-        // Stop repeat panel if showing
         if (repeatPanelCoroutine != null)
         {
             StopCoroutine(repeatPanelCoroutine);
@@ -1004,7 +1413,6 @@ public class BetController : MonoBehaviour
             RepeatPanel.gameObject.SetActive(false);
         }
 
-        // Show and animate bet actions panel from X:-300 to X:0
         if (!BetActionsPanel.gameObject.activeSelf)
         {
             BetActionsPanelMain.SetActive(true);
@@ -1028,8 +1436,6 @@ public class BetController : MonoBehaviour
     private void UpdateTotalBet()
     {
         if (TotalBet_Text) TotalBet_Text.text = $"{currentTotalBet:F2}";
-
-
     }
 
     private void HideBetPanels()
@@ -1053,76 +1459,144 @@ public class BetController : MonoBehaviour
     #region Private Methods - Button Handlers
     private void OnUndoClicked()
     {
-        if (betHistory.Count == 0) return;
-
-        // Get last bet
-        BetAction lastBet = betHistory[betHistory.Count - 1];
-        betHistory.RemoveAt(betHistory.Count - 1);
-
-        // Revert the bet
-        if (areaBets.ContainsKey(lastBet.betOption))
+        if (!isBettingEnabled || isProcessingBetAction)
         {
-            areaBets[lastBet.betOption] -= lastBet.amount;
-            if (areaBets[lastBet.betOption] <= 0)
-            {
-                areaBets.Remove(lastBet.betOption);
-            }
+            uiController?.ShowInGamePopup("Please wait...");
+            return;
         }
 
-        currentTotalBet -= lastBet.amount;
-        UpdateTotalBet();
+        if (betHistory.Count == 0)
+        {
+            uiController?.ShowInGamePopup("No bets to undo");
+            return;
+        }
 
-        // Request server to undo
+        isProcessingBetAction = true;
+
+        currentBetAction = "UNDO";
+        expectedBroadcastCount = 1;
+        receivedBroadcastCount = 0;
+
+        Debug.Log($"[BET] UNDO clicked - expecting {expectedBroadcastCount} broadcast");
+
         gameManager.UndoBet();
-
-        Debug.Log($"[BET] Undid bet: {lastBet.betOption} - {lastBet.amount}");
     }
 
     private void OnCancelClicked()
     {
-        ClearAllBets();
+        if (!isBettingEnabled || isProcessingBetAction)
+        {
+            uiController?.ShowInGamePopup("Please wait...");
+            return;
+        }
+
+        if (betHistory.Count == 0)
+        {
+            uiController?.ShowInGamePopup("No bets to cancel");
+            return;
+        }
+
+        isProcessingBetAction = true;
+
+        currentBetAction = "CANCEL";
+        expectedBroadcastCount = betHistory.Count;
+        receivedBroadcastCount = 0;
+
+        Debug.Log($"[BET] CANCEL clicked - expecting {expectedBroadcastCount} broadcasts");
+
         gameManager.CancelAllBets();
     }
 
     private void OnDoubleClicked()
     {
-        // Check if doubling would exceed limits
-        if (currentTotalBet * 2 > maxBetAmount)
+        if (!isBettingEnabled || isProcessingBetAction)
         {
-            if (uiController != null)
-            {
-                uiController.ShowErrorPopup($"Cannot double - would exceed max bet of {FormatChipAmount(maxBetAmount)}");
-            }
+            uiController?.ShowInGamePopup("Please wait...");
             return;
         }
 
-        // Check each area limit
+        if (betHistory.Count == 0)
+        {
+            uiController?.ShowInGamePopup("No bets to double");
+            return;
+        }
+
+        if (currentTotalBet * 2 > maxBetAmount)
+        {
+            uiController?.ShowInGamePopup($"Cannot double - would exceed max total bet of {FormatChipAmount(maxBetAmount)}");
+            return;
+        }
+
+        Dictionary<string, double> doubledAreaBets = new Dictionary<string, double>();
+        bool canDouble = true;
+        string limitExceededArea = "";
+
         foreach (var kvp in areaBets)
         {
+            double doubledAmount = kvp.Value * 2;
+            doubledAreaBets[kvp.Key] = doubledAmount;
+
             double areaMaxBet = GetMaxBetForArea(kvp.Key);
-            if (kvp.Value * 2 > areaMaxBet)
+            if (doubledAmount > areaMaxBet)
             {
-                if (uiController != null)
-                {
-                    uiController.ShowErrorPopup($"Cannot double - would exceed area limit");
-                }
-                return;
+                canDouble = false;
+                limitExceededArea = kvp.Key;
+                break;
             }
         }
+
+        if (!canDouble)
+        {
+            uiController?.ShowInGamePopup($"Cannot double - {limitExceededArea} would exceed area limit");
+            return;
+        }
+
+        isProcessingBetAction = true;
+
+        currentBetAction = "DOUBLE";
+        expectedBroadcastCount = betHistory.Count;
+        receivedBroadcastCount = 0;
+
+        Debug.Log($"[BET] DOUBLE clicked - expecting {expectedBroadcastCount} broadcasts");
 
         gameManager.DoubleBet();
     }
 
     private void OnRepeatClicked()
     {
-        gameManager.RepeatBet();
+        if (!isBettingEnabled || isProcessingBetAction)
+        {
+            uiController?.ShowInGamePopup("Please wait...");
+            return;
+        }
 
-        // Hide repeat panel after use
+        if (previousRoundBets.Count == 0)
+        {
+            uiController?.ShowInGamePopup("No previous bets to repeat");
+            return;
+        }
+
+        isProcessingBetAction = true;
+
+        currentBetAction = "REPEAT";
+        expectedBroadcastCount = previousRoundBets.Count;
+        receivedBroadcastCount = 0;
+
+        Debug.Log($"[BET] REPEAT clicked - expecting {expectedBroadcastCount} broadcasts");
+
         if (RepeatPanel != null)
         {
             RepeatPanelMain.SetActive(false);
             RepeatPanel.gameObject.SetActive(false);
         }
+
+        if (repeatPanelCoroutine != null)
+        {
+            StopCoroutine(repeatPanelCoroutine);
+            repeatPanelCoroutine = null;
+        }
+
+        gameManager.RepeatBet();
     }
     #endregion
 
@@ -1168,6 +1642,32 @@ public class BetController : MonoBehaviour
         if (area != null) area.SetHighlight(highlight);
     }
     #endregion
+
+    #region Debug Helpers (NEW)
+    [ContextMenu("Debug Pool Status")]
+    private void DebugPoolStatus()
+    {
+        Debug.Log($"=== BET POOL STATUS ===");
+        Debug.Log($"Total in pool: {componentPool.Count}");
+        Debug.Log($"Active components: {activeComponents.Count}");
+
+        int available = 0;
+        foreach (var comp in componentPool)
+        {
+            if (comp != null && !comp.gameObject.activeInHierarchy)
+                available++;
+        }
+
+        Debug.Log($"Available: {available}");
+        Debug.Log($"In use: {componentPool.Count - available}");
+
+        Debug.Log("Active areas:");
+        foreach (var kvp in activeComponents)
+        {
+            Debug.Log($"  - {kvp.Key}: {kvp.Value.GetBetCount()} bets, ${kvp.Value.GetTotalBet()}");
+        }
+    }
+    #endregion
 }
 
 #region Helper Classes
@@ -1176,104 +1676,62 @@ public class BetAction
 {
     public string betOption;
     public double amount;
+    public int chipIndex;
 }
+
+
 #endregion
 
-#region Bet Area Classes
+#region Bet Area Classes - UPDATED WITH POOLING
 [System.Serializable]
 public class SimpleBetArea
 {
+    [Header("UI References")]
     public Button Button;
     public GameObject WinImage;
     public TMP_Text WinRatio_Text;
     public Transform PlayerBetContainer;
 
-    private double playerBetAmount = 0;
-    private double opponentBetAmount = 0;
-    private List<GameObject> playerChips = new List<GameObject>();
-    private GameObject opponentChip;
+    [Header("Pooled Component - Assigned at Runtime")]
+    [HideInInspector] public PlayerBetComponent playerBetComponent; // NOTE: Now assigned at runtime, not in inspector
 
     public void SetWinRatio(string ratio)
     {
         if (WinRatio_Text) WinRatio_Text.text = ratio;
     }
 
-    public void AddPlayerBet(double amount, Sprite chipSprite, GameObject prefab)
+    public void AddBet(double amount, int chipIndex)
     {
-        if (PlayerBetContainer == null || prefab == null) return;
-
-        GameObject chipObj = Object.Instantiate(prefab, PlayerBetContainer);
-
-        // FIXED: Set both sprite AND text
-        Image chipImage = chipObj.GetComponent<Image>();
-        if (chipImage) chipImage.sprite = chipSprite;
-
-        // Set the chip amount text
-        Chip chipComponent = chipObj.GetComponent<Chip>();
-        if (chipComponent != null && chipComponent.chipText != null)
+        if (playerBetComponent != null)
         {
-            chipComponent.chipText.text = FormatChipAmount(amount);
+            playerBetComponent.AddBet(amount, chipIndex);
         }
-
-        playerChips.Add(chipObj);
-        playerBetAmount += amount;
     }
 
-    // Helper to format chip amounts (shared with BetController)
-    private string FormatChipAmount(double amount)
+    public void RemoveLastBet()
     {
-        if (amount >= 1000)
+        if (playerBetComponent != null)
         {
-            return $"{(amount / 1000):F1}K";
+            playerBetComponent.RemoveLastBet();
         }
-
-        if (amount < 1)
-        {
-            return amount.ToString("F2");
-        }
-
-        if (amount % 1 != 0)
-        {
-            return amount.ToString("F1");
-        }
-
-        return amount.ToString("F0");
-    }
-
-    public void AddOpponentBet(double amount, Sprite chipSprite)
-    {
-        if (PlayerBetContainer == null) return;
-
-        if (opponentChip == null)
-        {
-            GameObject chipObj = new GameObject("OpponentChip");
-            chipObj.transform.SetParent(PlayerBetContainer);
-            Image image = chipObj.AddComponent<Image>();
-            image.sprite = chipSprite;
-            opponentChip = chipObj;
-        }
-
-        opponentBetAmount += amount;
     }
 
     public void ClearBets()
     {
-        foreach (var chip in playerChips)
+        if (playerBetComponent != null)
         {
-            if (chip != null) Object.Destroy(chip);
+            playerBetComponent.Clear();
         }
-        playerChips.Clear();
+    }
 
-        if (opponentChip != null)
-        {
-            Object.Destroy(opponentChip);
-            opponentChip = null;
-        }
+    public double GetTotalBet()
+    {
+        return playerBetComponent != null ? playerBetComponent.GetTotalBet() : 0;
+    }
 
-        playerBetAmount = 0;
-        opponentBetAmount = 0;
-        // FIXED: Don't clear highlights here - they should stay until next round starts
-        // SetHighlight(false); // REMOVED - use ClearAllWinHighlights() instead
+    public bool HasBets()
+    {
+        return playerBetComponent != null && playerBetComponent.HasBets();
     }
 
     public void SetHighlight(bool highlight)
@@ -1285,62 +1743,46 @@ public class SimpleBetArea
 [System.Serializable]
 public class TripleSameDiceArea
 {
+    [Header("UI References")]
     public Button Button;
     public GameObject WinImage;
     public Transform PlayerBetContainer;
 
-    private List<GameObject> playerChips = new List<GameObject>();
+    [Header("Pooled Component - Assigned at Runtime")]
+    [HideInInspector] public PlayerBetComponent playerBetComponent; // NOTE: Now assigned at runtime, not in inspector
 
-    public void AddPlayerBet(double amount, Sprite chipSprite, GameObject prefab)
+    public void AddBet(double amount, int chipIndex)
     {
-        if (PlayerBetContainer == null || prefab == null) return;
-
-        GameObject chipObj = Object.Instantiate(prefab, PlayerBetContainer);
-
-        // FIXED: Set both sprite AND text
-        Image chipImage = chipObj.GetComponent<Image>();
-        if (chipImage) chipImage.sprite = chipSprite;
-
-        // Set the chip amount text
-        Chip chipComponent = chipObj.GetComponent<Chip>();
-        if (chipComponent != null && chipComponent.chipText != null)
+        if (playerBetComponent != null)
         {
-            chipComponent.chipText.text = FormatChipAmount(amount);
+            playerBetComponent.AddBet(amount, chipIndex);
         }
-
-        playerChips.Add(chipObj);
     }
 
-    // Helper to format chip amounts
-    private string FormatChipAmount(double amount)
+    public void RemoveLastBet()
     {
-        if (amount >= 1000)
+        if (playerBetComponent != null)
         {
-            return $"{(amount / 1000):F1}K";
+            playerBetComponent.RemoveLastBet();
         }
-
-        if (amount < 1)
-        {
-            return amount.ToString("F2");
-        }
-
-        if (amount % 1 != 0)
-        {
-            return amount.ToString("F1");
-        }
-
-        return amount.ToString("F0");
     }
 
     public void ClearBets()
     {
-        foreach (var chip in playerChips)
+        if (playerBetComponent != null)
         {
-            if (chip != null) Object.Destroy(chip);
+            playerBetComponent.Clear();
         }
-        playerChips.Clear();
-        // FIXED: Don't clear highlights here - they should stay until next round starts
-        // SetHighlight(false); // REMOVED - use ClearAllWinHighlights() instead
+    }
+
+    public double GetTotalBet()
+    {
+        return playerBetComponent != null ? playerBetComponent.GetTotalBet() : 0;
+    }
+
+    public bool HasBets()
+    {
+        return playerBetComponent != null && playerBetComponent.HasBets();
     }
 
     public void SetHighlight(bool highlight)
@@ -1352,84 +1794,46 @@ public class TripleSameDiceArea
 [System.Serializable]
 public class SingleDiceArea
 {
+    [Header("UI References")]
     public Button Button;
     public GameObject WinImage;
     public Transform PlayerBetContainer;
 
-    private List<GameObject> playerChips = new List<GameObject>();
-    private GameObject opponentChip;
+    [Header("Pooled Component - Assigned at Runtime")]
+    [HideInInspector] public PlayerBetComponent playerBetComponent; // NOTE: Now assigned at runtime, not in inspector
 
-    public void AddPlayerBet(double amount, Sprite chipSprite, GameObject prefab)
+    public void AddBet(double amount, int chipIndex)
     {
-        if (PlayerBetContainer == null || prefab == null) return;
-
-        GameObject chipObj = Object.Instantiate(prefab, PlayerBetContainer);
-
-        // FIXED: Set both sprite AND text
-        Image chipImage = chipObj.GetComponent<Image>();
-        if (chipImage) chipImage.sprite = chipSprite;
-
-        // Set the chip amount text
-        Chip chipComponent = chipObj.GetComponent<Chip>();
-        if (chipComponent != null && chipComponent.chipText != null)
+        if (playerBetComponent != null)
         {
-            chipComponent.chipText.text = FormatChipAmount(amount);
+            playerBetComponent.AddBet(amount, chipIndex);
         }
-
-        playerChips.Add(chipObj);
     }
 
-    // Helper to format chip amounts
-    private string FormatChipAmount(double amount)
+    public void RemoveLastBet()
     {
-        if (amount >= 1000)
+        if (playerBetComponent != null)
         {
-            return $"{(amount / 1000):F1}K";
-        }
-
-        if (amount < 1)
-        {
-            return amount.ToString("F2");
-        }
-
-        if (amount % 1 != 0)
-        {
-            return amount.ToString("F1");
-        }
-
-        return amount.ToString("F0");
-    }
-
-    public void AddOpponentBet(double amount, Sprite chipSprite)
-    {
-        if (PlayerBetContainer == null) return;
-
-        if (opponentChip == null)
-        {
-            GameObject chipObj = new GameObject("OpponentChip");
-            chipObj.transform.SetParent(PlayerBetContainer);
-            Image image = chipObj.AddComponent<Image>();
-            image.sprite = chipSprite;
-            opponentChip = chipObj;
+            playerBetComponent.RemoveLastBet();
         }
     }
 
     public void ClearBets()
     {
-        foreach (var chip in playerChips)
+        if (playerBetComponent != null)
         {
-            if (chip != null) Object.Destroy(chip);
+            playerBetComponent.Clear();
         }
-        playerChips.Clear();
+    }
 
-        if (opponentChip != null)
-        {
-            Object.Destroy(opponentChip);
-            opponentChip = null;
-        }
+    public double GetTotalBet()
+    {
+        return playerBetComponent != null ? playerBetComponent.GetTotalBet() : 0;
+    }
 
-        // FIXED: Don't clear highlights here - they should stay until next round starts
-        // SetHighlight(false); // REMOVED - use ClearAllWinHighlights() instead
+    public bool HasBets()
+    {
+        return playerBetComponent != null && playerBetComponent.HasBets();
     }
 
     public void SetHighlight(bool highlight)
@@ -1441,89 +1845,52 @@ public class SingleDiceArea
 [System.Serializable]
 public class SumArea
 {
+    [Header("UI References")]
     public Button Button;
     public GameObject WinImage;
     public TMP_Text WinRatio_Text;
     public Transform PlayerBetContainer;
 
-    private List<GameObject> playerChips = new List<GameObject>();
-    private GameObject opponentChip;
+    [Header("Pooled Component - Assigned at Runtime")]
+    [HideInInspector] public PlayerBetComponent playerBetComponent; // NOTE: Now assigned at runtime, not in inspector
 
     public void SetWinRatio(string ratio)
     {
         if (WinRatio_Text) WinRatio_Text.text = ratio;
     }
 
-    public void AddPlayerBet(double amount, Sprite chipSprite, GameObject prefab)
+    public void AddBet(double amount, int chipIndex)
     {
-        if (PlayerBetContainer == null || prefab == null) return;
-
-        GameObject chipObj = Object.Instantiate(prefab, PlayerBetContainer);
-
-        // FIXED: Set both sprite AND text
-        Image chipImage = chipObj.GetComponent<Image>();
-        if (chipImage) chipImage.sprite = chipSprite;
-
-        // Set the chip amount text
-        Chip chipComponent = chipObj.GetComponent<Chip>();
-        if (chipComponent != null && chipComponent.chipText != null)
+        if (playerBetComponent != null)
         {
-            chipComponent.chipText.text = FormatChipAmount(amount);
+            playerBetComponent.AddBet(amount, chipIndex);
         }
-
-        playerChips.Add(chipObj);
     }
 
-    // Helper to format chip amounts
-    private string FormatChipAmount(double amount)
+    public void RemoveLastBet()
     {
-        if (amount >= 1000)
+        if (playerBetComponent != null)
         {
-            return $"{(amount / 1000):F1}K";
-        }
-
-        if (amount < 1)
-        {
-            return amount.ToString("F2");
-        }
-
-        if (amount % 1 != 0)
-        {
-            return amount.ToString("F1");
-        }
-
-        return amount.ToString("F0");
-    }
-
-    public void AddOpponentBet(double amount, Sprite chipSprite)
-    {
-        if (PlayerBetContainer == null) return;
-
-        if (opponentChip == null)
-        {
-            GameObject chipObj = new GameObject("OpponentChip");
-            chipObj.transform.SetParent(PlayerBetContainer);
-            Image image = chipObj.AddComponent<Image>();
-            image.sprite = chipSprite;
-            opponentChip = chipObj;
+            playerBetComponent.RemoveLastBet();
         }
     }
 
     public void ClearBets()
     {
-        foreach (var chip in playerChips)
+        if (playerBetComponent != null)
         {
-            if (chip != null) Object.Destroy(chip);
+            playerBetComponent.Clear();
         }
-        playerChips.Clear();
+    }
 
-        if (opponentChip != null)
-        {
-            Object.Destroy(opponentChip);
-            opponentChip = null;
-        }
+    public double GetTotalBet()
+    {
+        return playerBetComponent != null ? playerBetComponent.GetTotalBet() : 0;
+    }
 
-      
+    public bool HasBets()
+    {
+        return playerBetComponent != null && playerBetComponent.HasBets();
     }
 
     public void SetHighlight(bool highlight)

@@ -1,13 +1,14 @@
 ﻿using System.Collections;
 using UnityEngine;
 using TMPro;
+using DG.Tweening;
 
 /// <summary>
 /// IMPROVED: Manages betting timer UI with correct phase flow
 /// - Shows betting time REMAINING during betting phase
 /// - Shows "BET LOCKED" while dice roll and result display
 /// - Shows "Next Round in X" countdown after round ends
-/// - Last 5 seconds indicator for betting urgency
+/// - Last 5 seconds: indicator + SINGLE POP animation per number change
 /// </summary>
 public class BetTimerController : MonoBehaviour
 {
@@ -23,6 +24,10 @@ public class BetTimerController : MonoBehaviour
     [Header("Next Round State")]
     [SerializeField] private GameObject nextRoundPanel;
     [SerializeField] private TMP_Text nextRoundTimer_Text;
+
+    [Header("Pop Animation Settings")]
+    [SerializeField] private float heartbeatScale = 1.3f;
+    [SerializeField] private float heartbeatDuration = 0.2f;
     #endregion
 
     #region Private Fields
@@ -48,6 +53,9 @@ public class BetTimerController : MonoBehaviour
         if (betLockedPanel) betLockedPanel.SetActive(false);
         if (nextRoundPanel) nextRoundPanel.SetActive(false);
 
+        // Reset timer text scale
+        if (bettingTimer_Text) bettingTimer_Text.transform.localScale = Vector3.one;
+
         // Update timer text
         UpdateBettingTimer(secondsRemaining);
 
@@ -56,6 +64,7 @@ public class BetTimerController : MonoBehaviour
 
     /// <summary>
     /// Update betting timer - called every second from server sync
+    /// Pops timer text during last 5 seconds (one pop per number change)
     /// </summary>
     internal void UpdateBettingTimer(int secondsRemaining)
     {
@@ -64,6 +73,12 @@ public class BetTimerController : MonoBehaviour
         if (bettingTimer_Text)
         {
             bettingTimer_Text.text = secondsRemaining.ToString();
+
+            // Pop animation on text during last 5 seconds
+            if (secondsRemaining <= 5 && secondsRemaining > 0)
+            {
+                PopTimerText();
+            }
         }
 
         // Show last 5 second indicator
@@ -72,7 +87,7 @@ public class BetTimerController : MonoBehaviour
             bool showIndicator = secondsRemaining <= 5 && secondsRemaining > 0;
             last5SecIndicator.SetActive(showIndicator);
 
-            if (showIndicator && secondsRemaining <= 5)
+            if (showIndicator)
             {
                 Debug.Log($"<color=yellow>[TIMER]</color> LAST {secondsRemaining} SECONDS!");
             }
@@ -155,7 +170,7 @@ public class BetTimerController : MonoBehaviour
     }
     #endregion
 
-    #region Private Methods
+    #region Private Methods - Countdown
     /// <summary>
     /// Client-side countdown for "Next Round" timer
     /// This provides smooth visual countdown while waiting for next round to start
@@ -185,10 +200,40 @@ public class BetTimerController : MonoBehaviour
             countdownCoroutine = null;
         }
     }
+    #endregion
 
+    #region Private Methods - Pop Animation
+    /// <summary>
+    /// Single pop animation on timer text - called once per second during last 5 seconds
+    /// </summary>
+    private void PopTimerText()
+    {
+        if (bettingTimer_Text == null) return;
+
+        // Kill any existing animation on this text
+        bettingTimer_Text.transform.DOKill();
+
+        // Reset scale first
+        bettingTimer_Text.transform.localScale = Vector3.one;
+
+        // Pop OUT then back IN - single pulse per number
+        bettingTimer_Text.transform.DOScale(heartbeatScale, heartbeatDuration)
+            .SetEase(Ease.OutBack)
+            .OnComplete(() =>
+            {
+                bettingTimer_Text.transform.DOScale(1f, heartbeatDuration)
+                    .SetEase(Ease.InBack);
+            });
+    }
+    #endregion
+
+    #region Unity Lifecycle
     private void OnDestroy()
     {
         StopCountdown();
+
+        // Kill any active tweens on timer text
+        if (bettingTimer_Text) bettingTimer_Text.transform.DOKill();
     }
     #endregion
 }
@@ -201,4 +246,4 @@ public enum BetTimerState
     Locked,     // Show "Bet Locked" during dice roll
     NextRound   // Show "Next Round in X" countdown
 }
-#endregion
+#endregion  

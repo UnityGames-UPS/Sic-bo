@@ -54,7 +54,10 @@ void Start()
 }
 	private void OnEnable()
 	{
-      if(StartonEnable) StartAnimation();
+		if (StartonEnable)
+		{ StartAnimation(); }
+
+
 	}
 
 	private void OnDisable()
@@ -83,7 +86,8 @@ void Start()
 
 	public void StartAnimation()
 	{
-		indexOfTexture = 0;
+        CancelInvoke(nameof(AnimationProcess));
+        indexOfTexture = 0;
 		if (currentAnimationState == ImageState.NONE)
 		{
 			RevertToInitialState();

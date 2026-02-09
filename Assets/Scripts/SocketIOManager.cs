@@ -572,7 +572,7 @@ public class SocketIOManager : MonoBehaviour
 
     internal void CancelBet()
     {
-        EmitSimpleRequest("CANCEL_BET", OnUndoBetAck);
+        EmitSimpleRequest("CANCEL_BET", OnCancelBetAck);
     }
 
     internal void RequestHistory(int page)
@@ -687,20 +687,15 @@ public class SocketIOManager : MonoBehaviour
         {
             BetAckResponse response = JsonConvert.DeserializeObject<BetAckResponse>(json);
 
-            if (response != null && response.success && response.payload != null)
-            {
-                PlayerData.balance = response.payload.balance;
-                gameManager.OnBalanceUpdated(response.payload.balance);
-            }
-            else if (response != null && !response.success)
-            {
-                string errorMsg = response.payload?.message ?? "Double bet failed";
-                uiController?.ShowErrorPopup(errorMsg);
-            }
+            // Forward complete response to GameManager for unified handling
+            gameManager.OnBetActionResponse(response);
         }
         catch (Exception e)
         {
             Debug.LogError($"<color=red>[ACK]</color> Double parse error: {e.Message}");
+
+            // On parse error, send null response to reset bet controller
+            gameManager.OnBetActionResponse(null);
         }
     }
 
@@ -714,23 +709,17 @@ public class SocketIOManager : MonoBehaviour
         {
             BetAckResponse response = JsonConvert.DeserializeObject<BetAckResponse>(json);
 
-            if (response != null && response.success && response.payload != null)
-            {
-                PlayerData.balance = response.payload.balance;
-                gameManager.OnBalanceUpdated(response.payload.balance);
-            }
-            else if (response != null && !response.success)
-            {
-                string errorMsg = response.payload?.message ?? "Repeat bet failed";
-                uiController?.ShowErrorPopup(errorMsg);
-            }
+            // Forward complete response to GameManager for unified handling
+            gameManager.OnBetActionResponse(response);
         }
         catch (Exception e)
         {
             Debug.LogError($"<color=red>[ACK]</color> Repeat parse error: {e.Message}");
+
+            // On parse error, send null response to reset bet controller
+            gameManager.OnBetActionResponse(null);
         }
     }
-
     private void OnUndoBetAck(string json)
     {
         if (isBeingDestroyed) return;
@@ -741,18 +730,17 @@ public class SocketIOManager : MonoBehaviour
         {
             BetAckResponse response = JsonConvert.DeserializeObject<BetAckResponse>(json);
 
-            if (response?.payload != null)
-            {
-                PlayerData.balance = response.payload.balance;
-                gameManager.OnBalanceUpdated(response.payload.balance);
-            }
+            // Forward complete response to GameManager for unified handling
+            gameManager.OnBetActionResponse(response);
         }
         catch (Exception e)
         {
             Debug.LogError($"<color=red>[ACK]</color> Undo parse error: {e.Message}");
+
+            // On parse error, send null response to reset bet controller
+            gameManager.OnBetActionResponse(null);
         }
     }
-
     private void OnHistoryAck(string json)
     {
         if (isBeingDestroyed) return;
@@ -771,6 +759,27 @@ public class SocketIOManager : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"<color=red>[ACK]</color> History parse error: {e.Message}");
+        }
+    }
+    private void OnCancelBetAck(string json)
+    {
+        if (isBeingDestroyed) return;
+
+        gameManager?.LogResponse("request", json);
+
+        try
+        {
+            BetAckResponse response = JsonConvert.DeserializeObject<BetAckResponse>(json);
+
+            // Forward complete response to GameManager for unified handling
+            gameManager.OnBetActionResponse(response);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"<color=red>[ACK]</color> Cancel parse error: {e.Message}");
+
+            // On parse error, send null response to reset bet controller
+            gameManager.OnBetActionResponse(null);
         }
     }
 
@@ -1005,6 +1014,8 @@ public class BetAckPayload
     public string message;
     public double balance;
     public double totalBet;
-    public List<BetInfo> bets;
+    public List<BetInfo> bets;      // Full list of current bets after action
+    public double refundAmount;     // For undo/cancel operations
+    public BetInfo bet;             // Single bet info (for undo)
 }
 #endregion

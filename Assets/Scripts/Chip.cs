@@ -15,7 +15,7 @@ public class Chip : MonoBehaviour
 
     internal int chipIndex { get; private set; }
 
-    /// <summary>
+    /// <summary>   
     /// Set chip data including sprite, amount text, and index
     /// </summary>
     internal void SetData(Sprite chip, string amount, int chipIndex)

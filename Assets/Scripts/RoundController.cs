@@ -33,11 +33,12 @@ public class RoundController : MonoBehaviour
     #region Private Fields
     private string currentRoundId;
     private bool isRoundActive = false;
+    private Coroutine finalCountdownCoroutine;
     #endregion
 
     #region Public API
     /// <summary>
-    /// FIXED: Start new round and clear previous round's results and highlights
+    /// Start new round and clear previous round's results and highlights
     /// </summary>
     internal void StartRound(RoundStartData data)
     {
@@ -48,10 +49,17 @@ public class RoundController : MonoBehaviour
         currentRoundId = data.roundId;
         isRoundActive = true;
 
+        // Stop any existing countdown
+        if (finalCountdownCoroutine != null)
+        {
+            StopCoroutine(finalCountdownCoroutine);
+            finalCountdownCoroutine = null;
+        }
+
         // Clear previous round results and highlights NOW
         HideDiceImmediate();
         HideResultImmediate();
-        betController?.ClearAllWinHighlights(); // Clear win highlights from previous round
+        betController?.ClearAllWinHighlights();
 
         // Update UI to betting phase
         uiController.UpdateRoundPhase("BETTING");
@@ -66,57 +74,75 @@ public class RoundController : MonoBehaviour
     }
 
     /// <summary>
-    /// FIXED: Update timer - skip showing 0 to prevent delay before "Bet Locked"
-    /// Server sends updates every second via game:betting_timer
+    /// FIXED: Update timer - when server sends 1, start client countdown to 0 then lock
+    /// Shows: 3-2-1-0-BET LOCKED (no delay)
     /// </summary>
     internal void UpdateTimer(int secondsRemaining)
     {
         if (!isRoundActive) return;
 
-        // FIXED: Don't show 0 - it causes a 1-2 second pause before dice result
-        // When timer reaches 0, betting is already over, so skip the update
-        if (secondsRemaining <= 0)
-        {
-            gameManager?.LogInfo("[ROUND] Betting time expired (0s) - skipping display");
-            // Don't call UpdateTimer(0) - it just delays the "Bet Locked" message
-            // The dice result will trigger ShowBetLocked directly
-            return;
-        }
-
-        // Update the display - timer sync comes from server
+        // Update the display
         uiController.UpdateTimer(secondsRemaining);
 
         // Log last 5 seconds
-        if (secondsRemaining <= 5)
+        if (secondsRemaining <= 5 && secondsRemaining > 0)
         {
             gameManager?.LogBroadcast("TIMER", $" {secondsRemaining}s remaining");
         }
+
+        // When server sends 1, start client-side countdown to 0 then lock
+        // Only start if not already running
+        if (secondsRemaining == 1 && finalCountdownCoroutine == null)
+        {
+            finalCountdownCoroutine = StartCoroutine(FinalCountdownToZero());
+        }
     }
 
+    /// <summary>
+    /// Client-side countdown from 1 to 0, then immediately lock betting
+    /// </summary>
+    private IEnumerator FinalCountdownToZero()
+    {
+        // Wait 1 second
+        yield return new WaitForSeconds(1f);
+
+        // Show 0 on timer
+        uiController.UpdateTimer(0);
+        gameManager?.LogBroadcast("TIMER", " 0s - Locking bets");
+
+        // Immediately lock betting and show bet locked
+        betController.DisableBetting();
+        uiController.ShowBetLocked();
+
+        gameManager?.LogSuccess("[ROUND] Betting locked at 0 - waiting for dice result");
+
+        finalCountdownCoroutine = null;
+    }
+
+    /// <summary>
+    /// Show dice result - betting is already locked at timer 0
+    /// </summary>
     internal void ShowDiceResult(DiceResultData data)
     {
         if (data == null) return;
 
-        gameManager?.LogInfo($"[ROUND] Result: [{data.dice1}, {data.dice2}, {data.dice3}] = {data.sum} ({data.matchSide})");
+        gameManager?.LogInfo($"[ROUND] Result received: [{data.dice1}, {data.dice2}, {data.dice3}] = {data.sum} ({data.matchSide})");
 
-        // Disable betting if not already disabled
+        // Ensure betting is disabled (should already be from timer 0)
         betController.DisableBetting();
         uiController.UpdateRoundPhase("RESULT");
 
-        // Start dice animation immediately
+        // Start dice animation
         StartCoroutine(AnimateDiceRoll(data));
     }
 
     /// <summary>
-    /// FIXED: Round end no longer clears results - they stay until next round starts
+    /// Round end - results stay visible until next round starts
     /// </summary>
     internal void EndRound()
     {
         gameManager?.LogInfo("[ROUND] Round ended - results will stay visible until next round");
         isRoundActive = false;
-
-        // DON'T hide results - they stay visible during next round countdown
-        // They will be hidden when StartRound() is called for the next round
     }
 
     /// <summary>

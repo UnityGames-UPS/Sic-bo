@@ -188,7 +188,7 @@ public class BetWager
         }
 
         return $"2 HIT PAYS 1 : {specific2Payout}   3 HIT PAYS 1 : {specific3Payout}";
-       
+
     }
 }
 
@@ -362,6 +362,7 @@ public class BetInfo
     public string betOption;
     public double amount;
     public double delta;
+    public int diceNumber; // For triple dice bets (specific_3) - which dice (1-6)
 }
 
 public class BetLimitInfo
