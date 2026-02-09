@@ -332,15 +332,78 @@ public class RoundEndPayload
 
 #region History
 [Serializable]
+public class HistoryResponse
+{
+    public bool success;
+    public HistoryPayload payload;
+}
+
+[Serializable]
+public class HistoryPayload
+{
+    public List<HistoryEntry> history;
+    public HistoryMeta meta;
+}
+
+[Serializable]
 public class HistoryEntry
 {
     public string round_id;
     public double bet_amount;
     public double win_amount;
+    public string level;
     public int dice_1;
     public int dice_2;
     public int dice_3;
     public string match_side;
+    public string created_at;  // ISO 8601 timestamp: "2026-02-07T05:55:07.595Z"
+    public List<BetDetail> bets;  // Detailed bet information
+
+    /// <summary>
+    /// Calculate Profit/Loss (P/L) for this round
+    /// P/L = Win Amount - Bet Amount
+    /// </summary>
+    public double GetProfitLoss()
+    {
+        return win_amount - bet_amount;
+    }
+
+    /// <summary>
+    /// Parse the created_at timestamp to DateTime
+    /// </summary>
+    public DateTime GetDateTime()
+    {
+        try
+        {
+            return DateTime.Parse(created_at);
+        }
+        catch
+        {
+            return DateTime.MinValue;
+        }
+    }
+
+    /// <summary>
+    /// Get formatted date and time string for display
+    /// Format: "07/02/2026 12:12 PM"
+    /// </summary>
+    public string GetFormattedDateTime()
+    {
+        DateTime dt = GetDateTime();
+        if (dt == DateTime.MinValue) return "Unknown";
+
+        return dt.ToString("dd/MM/yyyy hh:mm tt");
+    }
+}
+
+[Serializable]
+public class BetDetail
+{
+    public string bet_id;
+    public string bet_type;
+    public string bet_option;
+    public double bet_amount;
+    public double win_amount;
 }
 
 [Serializable]

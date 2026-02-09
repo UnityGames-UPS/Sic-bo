@@ -58,8 +58,6 @@ public class BetTimerController : MonoBehaviour
 
         // Update timer text
         UpdateBettingTimer(secondsRemaining);
-
-        Debug.Log($"<color=cyan>[TIMER]</color>Betting Phase - {secondsRemaining}s remaining");
     }
 
     /// <summary>
@@ -89,7 +87,6 @@ public class BetTimerController : MonoBehaviour
 
             if (showIndicator)
             {
-                Debug.Log($"<color=yellow>[TIMER]</color> LAST {secondsRemaining} SECONDS!");
             }
         }
     }
@@ -108,8 +105,6 @@ public class BetTimerController : MonoBehaviour
         if (betLockedPanel) betLockedPanel.SetActive(true);
         if (nextRoundPanel) nextRoundPanel.SetActive(false);
         if (last5SecIndicator) last5SecIndicator.SetActive(false);
-
-        Debug.Log($"<color=red>[TIMER]</color>BET LOCKED - Dice rolling");
     }
 
     /// <summary>
@@ -131,8 +126,6 @@ public class BetTimerController : MonoBehaviour
 
         // Start countdown coroutine
         countdownCoroutine = StartCoroutine(NextRoundCountdown());
-
-        Debug.Log($"<color=orange>[TIMER]</color>Next Round in {secondsUntilNextRound}s");
     }
 
     internal void UpdateNextRoundTimer(int seconds)
@@ -155,8 +148,6 @@ public class BetTimerController : MonoBehaviour
         if (betLockedPanel) betLockedPanel.SetActive(false);
         if (nextRoundPanel) nextRoundPanel.SetActive(false);
         if (last5SecIndicator) last5SecIndicator.SetActive(false);
-
-        Debug.Log($"<color=grey>[TIMER]</color> All timers hidden");
     }
 
     internal BetTimerState GetState()
@@ -186,7 +177,6 @@ public class BetTimerController : MonoBehaviour
 
         if (currentSeconds <= 0)
         {
-            Debug.Log($"<color=green>[TIMER]</color> Next round countdown complete");
         }
 
         countdownCoroutine = null;
@@ -246,4 +236,4 @@ public enum BetTimerState
     Locked,     // Show "Bet Locked" during dice roll
     NextRound   // Show "Next Round in X" countdown
 }
-#endregion  
+#endregion

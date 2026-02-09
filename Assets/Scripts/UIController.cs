@@ -187,14 +187,12 @@ public class UIController : MonoBehaviour
     {
         HideAllScreens();
         if (HomeScreen) HomeScreen.SetActive(true);
-        Debug.Log("[UI] Home screen shown");
     }
 
     internal void ShowGameScreen()
     {
         HideAllScreens();
         if (GameScreen) GameScreen.SetActive(true);
-        Debug.Log("[UI] Game screen shown");
     }
     #endregion
 
@@ -273,7 +271,6 @@ public class UIController : MonoBehaviour
         if (ErrorMessage_Text) ErrorMessage_Text.text = message;
 
         SlideInPopup(ErrorPopupParent, ErrorPopup);
-        Debug.Log($"[UI] Error popup shown: {title} - {message}");
     }
 
     private void CloseErrorPopup()
@@ -304,8 +301,6 @@ public class UIController : MonoBehaviour
 
         // Auto-close after delay
         inGamePopupCoroutine = StartCoroutine(CloseInGamePopupAfterDelay());
-
-        Debug.Log($"[UI] In-Game popup shown: {message}");
     }
 
     private IEnumerator CloseInGamePopupAfterDelay()

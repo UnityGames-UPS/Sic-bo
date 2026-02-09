@@ -23,7 +23,7 @@ public class BetController : MonoBehaviour
     [SerializeField] private Sprite[] chipSprites;
 
     [Header("PlayerBetComponent Pool - NEW")]
-    [SerializeField] private PlayerBetComponent playerBetComponentPrefab; 
+    [SerializeField] private PlayerBetComponent playerBetComponentPrefab;
 
     [Header("Bet Areas - Main")]
     [SerializeField] private SimpleBetArea SmallArea;
@@ -81,6 +81,7 @@ public class BetController : MonoBehaviour
     private double currentTotalBet = 0;
     private bool isBettingEnabled = false;
     private bool isChipSelectorOpen = false;
+    private int lastSelectedTripleDice;
 
     // Bet tracking
     private Dictionary<string, double> areaBets = new Dictionary<string, double>();
@@ -100,7 +101,6 @@ public class BetController : MonoBehaviour
 
     // Bet action broadcast tracking
     private string currentBetAction = "";
-    private int expectedBroadcastCount = 0;
     private int receivedBroadcastCount = 0;
 
     // Animation constants
@@ -153,17 +153,13 @@ public class BetController : MonoBehaviour
     {
         if (isPoolInitialized)
         {
-            Debug.LogWarning("[BET POOL] Already initialized!");
             return;
         }
 
         if (playerBetComponentPrefab == null)
         {
-            Debug.LogError("[BET POOL] PlayerBetComponent prefab is not assigned! Assign in Inspector.");
             return;
         }
-
-        Debug.Log($"[BET POOL] Spawning PlayerBetComponents in each bet area...");
 
         int spawnedCount = 0;
 
@@ -192,7 +188,6 @@ public class BetController : MonoBehaviour
         }
 
         isPoolInitialized = true;
-        Debug.Log($"[BET POOL] Spawned {spawnedCount} components in bet areas");
     }
 
     /// <summary>
@@ -293,7 +288,6 @@ public class BetController : MonoBehaviour
     /// </summary>
     private void CleanupPool()
     {
-        Debug.Log("[BET POOL] Cleaning up pool...");
 
         // Clear active tracking
         activeComponents.Clear();
@@ -309,8 +303,6 @@ public class BetController : MonoBehaviour
 
         componentPool.Clear();
         isPoolInitialized = false;
-
-        Debug.Log("[BET POOL] Pool cleanup complete");
     }
     #endregion
 
@@ -325,7 +317,6 @@ public class BetController : MonoBehaviour
     /// </summary>
     internal void OnRoundStart()
     {
-        Debug.Log("[BET] Round start - resetting all bets and reassigning components");
 
         ClearAllBets();
     }
@@ -336,7 +327,6 @@ public class BetController : MonoBehaviour
     /// </summary>
     internal void OnRoundEnd()
     {
-        Debug.Log("[BET] Round end - components will be reset on next round start");
 
         // Components stay visible until next round starts
         // Save bets for repeat (already handled in DisableBetting)
@@ -348,7 +338,6 @@ public class BetController : MonoBehaviour
     /// </summary>
     internal void ResetAllComponents()
     {
-        Debug.Log("[BET] Resetting all components immediately");
 
         ClearAllBets();
     }
@@ -418,7 +407,6 @@ public class BetController : MonoBehaviour
 
         if (ChipOptions_Container == null)
         {
-            Debug.LogError("[BET] ChipOptions_Container is null!");
             return;
         }
 
@@ -442,8 +430,6 @@ public class BetController : MonoBehaviour
         {
             centerPosition = existingChips[0].transform.localPosition;
         }
-
-        Debug.Log($"[BET] Initialized {existingChips.Count} chip selector chips");
     }
     #endregion
 
@@ -486,8 +472,6 @@ public class BetController : MonoBehaviour
 
         SetupWinRatios();
         UpdateMinMaxDisplay();
-
-        Debug.Log($"[BET] Setup complete - Level: {level}, Chips: {chipCount}");
     }
 
     private void SetupWinRatios()
@@ -556,8 +540,6 @@ public class BetController : MonoBehaviour
         {
             ShowRepeatPanelAnimated();
         }
-
-        Debug.Log("[BET] Betting enabled");
     }
 
     internal void DisableBetting()
@@ -571,7 +553,6 @@ public class BetController : MonoBehaviour
         {
             previousRoundBets = new List<BetAction>(betHistory);
             placedBetInPreviousRound = true;
-            Debug.Log($"[BET] Saved {previousRoundBets.Count} bets for next round repeat");
         }
         else
         {
@@ -582,7 +563,6 @@ public class BetController : MonoBehaviour
 
     internal void ClearAllBets()
     {
-        Debug.Log("[BET] Clearing all bets");
 
         areaBets.Clear();
         currentTotalBet = 0;
@@ -599,8 +579,6 @@ public class BetController : MonoBehaviour
 
         UpdateTotalBet();
         HideBetActionsPanel();
-
-        Debug.Log("[BET] All bets cleared");
     }
 
     internal void HighlightWinningAreas(string matchSide, int sum)
@@ -660,8 +638,6 @@ public class BetController : MonoBehaviour
         {
             if (area != null) area.SetHighlight(false);
         }
-
-        Debug.Log("[BET] All win highlights cleared");
     }
     #endregion
 
@@ -674,7 +650,7 @@ public class BetController : MonoBehaviour
         {
             receivedBroadcastCount++;
 
-            Debug.Log($"[BET] Broadcast {receivedBroadcastCount}/{expectedBroadcastCount} for {currentBetAction}: " +
+            Debug.Log($"[BET] Broadcast {receivedBroadcastCount} for {currentBetAction}: " +
                       $"{data.betOption} amount={data.amount}");
 
             switch (currentBetAction)
@@ -718,8 +694,6 @@ public class BetController : MonoBehaviour
             });
 
             UpdateTotalBet();
-
-            Debug.Log($"[BET REPEAT] Added chip: {data.betOption} +{data.amount}");
         }
     }
 
@@ -743,8 +717,6 @@ public class BetController : MonoBehaviour
             });
 
             UpdateTotalBet();
-
-            Debug.Log($"[BET DOUBLE] Added additional chip: {data.betOption} +{data.amount}");
         }
     }
 
@@ -772,8 +744,6 @@ public class BetController : MonoBehaviour
 
             RemoveLastChipFromArea(data.betOption);
             UpdateTotalBet();
-
-            Debug.Log($"[BET UNDO] Removed last chip: {data.betOption} -{removeAmount}");
         }
     }
 
@@ -801,8 +771,6 @@ public class BetController : MonoBehaviour
 
             RemoveLastChipFromArea(data.betOption);
             UpdateTotalBet();
-
-            Debug.Log($"[BET CANCEL] Removed chip: {data.betOption} -{removeAmount}");
         }
     }
 
@@ -867,8 +835,10 @@ public class BetController : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[BET] Final ACK: {response.payload.message} " +
-                  $"(received {receivedBroadcastCount}/{expectedBroadcastCount} broadcasts)");
+
+        // Log how many bets were received from server
+        int betCount = response.payload.bets != null ? response.payload.bets.Count : 0;
+        Debug.Log($"[BET] ACK received for {currentBetAction}: {betCount} bets received");
 
         if (betHistory.Count > 0)
         {
@@ -887,7 +857,6 @@ public class BetController : MonoBehaviour
     private void ResetBetActionState()
     {
         currentBetAction = "";
-        expectedBroadcastCount = 0;
         receivedBroadcastCount = 0;
         isProcessingBetAction = false;
     }
@@ -930,6 +899,9 @@ public class BetController : MonoBehaviour
         double betAmount = currentChipValues[selectedChipIndex];
 
         if (!CanPlaceBet(betOption, betAmount)) return;
+
+        // Store the dice number for later use (like repeat bets)
+        lastSelectedTripleDice = diceNum;
 
         int areaIndex = diceNum - 1;
         if (areaIndex >= 0 && areaIndex < TripleDiceAreas.Count && TripleDiceAreas[areaIndex] != null)
@@ -996,6 +968,7 @@ public class BetController : MonoBehaviour
         }
         else if (betOption.StartsWith("sum_"))
         {
+            // Handle sum bets (sum_4 to sum_17)
             if (int.TryParse(betOption.Replace("sum_", ""), out int sum))
             {
                 int index = sum - 4;
@@ -1005,9 +978,54 @@ public class BetController : MonoBehaviour
                 }
             }
         }
+        else if (betOption.StartsWith("single_"))
+        {
+            // FIX: Handle single dice bets (single_1 to single_6)
+            if (int.TryParse(betOption.Replace("single_", ""), out int diceNum))
+            {
+                int index = diceNum - 1;
+                if (index >= 0 && index < SingleDiceAreas.Count && SingleDiceAreas[index] != null)
+                {
+                    SingleDiceAreas[index].AddBet(betAmount, chipIndex);
+                    Debug.Log($"[BET] Added single dice bet to area {diceNum}: {betAmount}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[BET] SingleDiceArea index {index} out of range or null");
+                }
+            }
+        }
+        else if (betOption == "specific_3")
+        {
+     
+            int diceNum = lastSelectedTripleDice;
+
+            if (diceNum > 0 && diceNum <= 6)
+            {
+                int index = diceNum - 1;
+                if (index >= 0 && index < TripleDiceAreas.Count && TripleDiceAreas[index] != null)
+                {
+                    TripleDiceAreas[index].AddBet(betAmount, chipIndex);
+                    Debug.Log($"[BET] Added triple dice bet to area {diceNum}: {betAmount}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[BET] TripleDiceArea index {index} out of range or null");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[BET] specific_3 broadcast but lastSelectedTripleDice={diceNum}. Cannot determine which triple area to use.");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[BET] Unknown bet option in AddBetToAreaVisual: {betOption}");
+        }
     }
 
-    private void RecordBet(string betOption, double betAmount, int chipIndex)
+
+    private void RecordBet(string betOption, double betAmount, int chipIndex, int diceNumber = 0)
     {
         if (!areaBets.ContainsKey(betOption))
         {
@@ -1021,11 +1039,13 @@ public class BetController : MonoBehaviour
         {
             betOption = betOption,
             amount = betAmount,
-            chipIndex = chipIndex
+            chipIndex = chipIndex,
+            diceNumber = diceNumber  // ADD THIS FIELD to BetAction class
         });
 
         UpdateTotalBet();
     }
+
 
     private bool CanPlaceBet(string betOption, double betAmount)
     {
@@ -1208,8 +1228,6 @@ public class BetController : MonoBehaviour
 
         if (MainChip_Image) MainChip_Image.sprite = chipSprite;
         if (MainChip_Text) MainChip_Text.text = FormatChipAmount(chipValue);
-
-        Debug.Log($"[BET] Selected chip index {index} with value {chipValue}");
     }
 
     private Sprite GetChipSprite(double value)
@@ -1386,10 +1404,7 @@ public class BetController : MonoBehaviour
         isProcessingBetAction = true;
 
         currentBetAction = "UNDO";
-        expectedBroadcastCount = 1;
         receivedBroadcastCount = 0;
-
-        Debug.Log($"[BET] UNDO clicked - expecting {expectedBroadcastCount} broadcast");
 
         gameManager.UndoBet();
     }
@@ -1409,12 +1424,8 @@ public class BetController : MonoBehaviour
         }
 
         isProcessingBetAction = true;
-
-        currentBetAction = "CANCEL";
-        expectedBroadcastCount = betHistory.Count;
+        currentBetAction = "CANCEL";   
         receivedBroadcastCount = 0;
-
-        Debug.Log($"[BET] CANCEL clicked - expecting {expectedBroadcastCount} broadcasts");
 
         gameManager.CancelAllBets();
     }
@@ -1466,10 +1477,7 @@ public class BetController : MonoBehaviour
         isProcessingBetAction = true;
 
         currentBetAction = "DOUBLE";
-        expectedBroadcastCount = betHistory.Count;
         receivedBroadcastCount = 0;
-
-        Debug.Log($"[BET] DOUBLE clicked - expecting {expectedBroadcastCount} broadcasts");
 
         gameManager.DoubleBet();
     }
@@ -1491,10 +1499,7 @@ public class BetController : MonoBehaviour
         isProcessingBetAction = true;
 
         currentBetAction = "REPEAT";
-        expectedBroadcastCount = previousRoundBets.Count;
         receivedBroadcastCount = 0;
-
-        Debug.Log($"[BET] REPEAT clicked - expecting {expectedBroadcastCount} broadcasts");
 
         if (RepeatPanel != null)
         {
@@ -1559,9 +1564,6 @@ public class BetController : MonoBehaviour
     [ContextMenu("Debug Pool Status")]
     private void DebugPoolStatus()
     {
-        Debug.Log($"=== BET POOL STATUS ===");
-        Debug.Log($"Total in pool: {componentPool.Count}");
-        Debug.Log($"Active components: {activeComponents.Count}");
 
         int available = 0;
         foreach (var comp in componentPool)
@@ -1569,14 +1571,8 @@ public class BetController : MonoBehaviour
             if (comp != null && !comp.gameObject.activeInHierarchy)
                 available++;
         }
-
-        Debug.Log($"Available: {available}");
-        Debug.Log($"In use: {componentPool.Count - available}");
-
-        Debug.Log("Active areas:");
         foreach (var kvp in activeComponents)
         {
-            Debug.Log($"  - {kvp.Key}: {kvp.Value.GetBetCount()} bets, ${kvp.Value.GetTotalBet()}");
         }
     }
     #endregion
@@ -1589,6 +1585,7 @@ public class BetAction
     public string betOption;
     public double amount;
     public int chipIndex;
+    public int diceNumber;
 }
 
 

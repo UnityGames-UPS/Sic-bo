@@ -13,99 +13,18 @@ public class GameManager : MonoBehaviour
 
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
-
-    [Header("Debug Settings")]
-    [SerializeField] private bool enableDebugLogs = true;
-    [SerializeField] private bool showRequestData = true;
-    [SerializeField] private bool showResponseData = true;
-    [SerializeField] private bool showBroadcastCycle = true;
-    [SerializeField] private bool showPingPong = false;
     #endregion
 
     #region Public Properties
     internal string CurrentRoom { get; private set; }
     internal double CurrentBalance { get; private set; }
     internal string CurrentRoundId { get; private set; }
-    internal bool EnableDebugLogs => enableDebugLogs;
-    #endregion
-
-    #region Unity Lifecycle
-    private void Start()
-    {
-        LogInfo("Game Manager Initialized");
-    }
-    #endregion
-
-    #region Debug Logging
-    internal void LogInfo(string message)
-    {
-        if (!enableDebugLogs) return;
-        Debug.Log($"<color=cyan>[GAME]</color> {message}");
-    }
-
-    internal void LogSuccess(string message)
-    {
-        if (!enableDebugLogs) return;
-        Debug.Log($"<color=green>[GAME]</color> {message}");
-    }
-
-    internal void LogWarning(string message)
-    {
-        if (!enableDebugLogs) return;
-        Debug.LogWarning($"<color=yellow>[GAME]</color> {message}");
-    }
-
-    internal void LogError(string message)
-    {
-        if (!enableDebugLogs) return;
-        Debug.LogError($"<color=red>[GAME]</color> {message}");
-    }
-
-    internal void LogRequest(string action, object payload)
-    {
-        if (!enableDebugLogs || !showRequestData) return;
-        string json = payload != null ? Newtonsoft.Json.JsonConvert.SerializeObject(payload, Newtonsoft.Json.Formatting.Indented) : "{}";
-        Debug.Log($"<color=magenta>[REQUEST]</color> {action}\n{json}");
-    }
-
-    internal void LogResponse(string event_name, string data)
-    {
-        if (!enableDebugLogs || !showResponseData) return;
-        string formatted = data;
-        try
-        {
-            var parsed = Newtonsoft.Json.JsonConvert.DeserializeObject(data);
-            formatted = Newtonsoft.Json.JsonConvert.SerializeObject(parsed, Newtonsoft.Json.Formatting.Indented);
-        }
-        catch { }
-
-        Debug.Log($"<color=lime>[RESPONSE]</color> {event_name}\n{formatted}");
-    }
-
-    internal void LogBroadcast(string phase, string details = "")
-    {
-        if (!enableDebugLogs || !showBroadcastCycle) return;
-        string detailsStr = string.IsNullOrEmpty(details) ? "" : $" - {details}";
-        Debug.Log($"<color=orange>[BROADCAST]</color> {phase}{detailsStr}");
-    }
-
-    internal void LogPingPong(string message)
-    {
-        if (!enableDebugLogs || !showPingPong) return;
-        Debug.Log($"<color=grey>[PING-PONG]</color> {message}");
-    }
     #endregion
 
     #region Socket Callbacks - Init
     internal void OnInitDataReceived()
     {
-        if (socketManager.InitialData == null || socketManager.PlayerData == null)
-        {
-            LogError("Init data is null");
-            return;
-        }
-
-        LogSuccess($"Init received - Player: {socketManager.PlayerData.username}, Balance: {socketManager.PlayerData.balance:F2}");
+        if (socketManager.InitialData == null || socketManager.PlayerData == null) return;
 
         CurrentBalance = socketManager.PlayerData.balance;
 
@@ -132,7 +51,6 @@ public class GameManager : MonoBehaviour
 
     internal void OnDataRefreshed()
     {
-        LogInfo("Data refreshed from server");
     }
     #endregion
 
@@ -140,8 +58,6 @@ public class GameManager : MonoBehaviour
     internal void OnRoomJoinedWithData(RoomPayload payload)
     {
         if (payload == null) return;
-
-        LogSuccess($"Room joined: {payload.level}, Players: {payload.playerCount}");
 
         uiController.UpdatePlayerCount(payload.playerCount);
 
@@ -152,12 +68,7 @@ public class GameManager : MonoBehaviour
 
         if (payload.roundState == null)
         {
-            LogBroadcast("WAITING", "Waiting for next round to start");
             uiController.UpdateRoundPhase("WAITING");
-        }
-        else
-        {
-            LogBroadcast("IN_PROGRESS", $"Round in progress: {payload.roundState.phase}");
         }
     }
     #endregion
@@ -170,9 +81,6 @@ public class GameManager : MonoBehaviour
         CurrentRoundId = data.roundId;
 
         int timeRemaining = CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
-
-        LogBroadcast("ROUND_START", $"Round: {data.roundId}, Betting Time: {timeRemaining}s, Players: {data.playerCount}");
-        LogInfo($"Timestamps - Start: {data.startedAt}, End: {data.bettingEndTime}, Server: {data.serverTime}");
 
         uiController.UpdatePlayerCount(data.playerCount);
         uiController.ShowBettingPhase(timeRemaining);
@@ -189,8 +97,6 @@ public class GameManager : MonoBehaviour
 
         int timeRemaining = CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
-        LogBroadcast("TIMER_SYNC", $"Round: {data.roundId}, Time: {timeRemaining}s");
-
         roundController.UpdateTimer(timeRemaining);
         uiController.UpdateTimer(timeRemaining);
     }
@@ -199,15 +105,12 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        LogBroadcast("BONUS", $"Player {data.bonusPlayer} got x{data.bonusMultiplier} multiplier");
         uiController.ShowBonusNotification(data.bonusPlayer, data.bonusMultiplier);
     }
 
     internal void OnDiceResult(DiceResultData data)
     {
         if (data == null) return;
-
-        LogBroadcast("DICE_RESULT", $"[{data.dice1}, {data.dice2}, {data.dice3}] = {data.sum} ({data.matchSide.ToUpper()})");
 
         betController.DisableBetting();
 
@@ -228,25 +131,13 @@ public class GameManager : MonoBehaviour
 
         if (isOwnPlayer)
         {
-            LogInfo($"Own bet broadcast: {data.betOption} amount={data.amount:F2} (action in progress)");
             betController.OnBetPlacedBroadcast(data);
-        }
-        else
-        {
-           /* // Show other player bets (only positive amounts)
-            if (data.amount > 0)
-            {
-                LogInfo($"Other player bet: {data.username} on {data.betOption} = {data.amount:F2}");
-                betController.ShowOtherPlayerBet(data);
-            }*/
         }
     }
 
     internal void OnCashout(CashoutData data)
     {
         if (data == null) return;
-
-        LogBroadcast("CASHOUT", "Processing payouts");
 
         if (data.leaderboards != null)
         {
@@ -264,12 +155,7 @@ public class GameManager : MonoBehaviour
 
                     if (payout.win > 0)
                     {
-                        LogSuccess($"WON: +{payout.win:F2}, New Balance: {CurrentBalance:F2}");
                         uiController.ShowWinAnimation(payout.win);
-                    }
-                    else
-                    { 
-                        LogInfo($"LOST - Balance: {CurrentBalance:F2}");
                     }
                 }
             }
@@ -283,9 +169,6 @@ public class GameManager : MonoBehaviour
         if (data == null) return;
 
         int secondsUntilNextRound = CalculateTimeRemaining(data.nextRoundStartTime, data.serverTime);
-
-        LogBroadcast("ROUND_END", $"Next round in {secondsUntilNextRound}s");
-        LogInfo($"Cashout interval: {data.cashoutInterval}ms");
             
         uiController.ShowNextRound(secondsUntilNextRound);
         uiController.UpdateRoundPhase("NEXTROUND");
@@ -295,8 +178,6 @@ public class GameManager : MonoBehaviour
     internal void OnLobbyCount(LobbyCountData data)
     {
         if (data?.lobby == null) return;
-
-        LogBroadcast("LOBBY_UPDATE", $"Casual: {data.lobby.casual}, Novice: {data.lobby.novice}, Expert: {data.lobby.expert}, High: {data.lobby.high_roller}");
 
         uiController.UpdateLobbyPlayerCounts(
             data.lobby.casual,
@@ -308,7 +189,6 @@ public class GameManager : MonoBehaviour
 
     internal void OnBalanceUpdated(double newBalance)
     {
-        LogInfo($"Balance updated: {CurrentBalance:F2} → {newBalance:F2}");
         CurrentBalance = newBalance;
         uiController.UpdateBalance(CurrentBalance);
     }
@@ -317,44 +197,33 @@ public class GameManager : MonoBehaviour
     {
         if (historyController != null)
         {
-            LogInfo($"History received: Page {meta.page}/{meta.pages}, Entries: {history.Count}");
             historyController.UpdateHistoryData(history, meta);
+            print("Historyy...................");
         }
     }
 
-    /// <summary>
-    /// Handle bet action responses (undo, cancel, double, repeat)
-    /// Forwards server response to BetController for UI sync
-    /// </summary>
     internal void OnBetActionResponse(BetAckResponse response)
     {
         if (response == null)
         {
-            // Null response means reset processing flag
             betController.OnBetActionResponse(null);
             return;
         }
 
         if (response.success)
         {
-            LogSuccess($"Bet action success: {response.payload?.message}");
-
-            // Update balance
             if (response.payload != null)
             {
                 OnBalanceUpdated(response.payload.balance);
             }
 
-            // Update bet UI to match server state
             betController.OnBetActionResponse(response);
         }
         else
         {
             string errorMsg = response.payload?.message ?? "Bet action failed";
-            LogError($"Bet action failed: {errorMsg}");
             uiController.ShowErrorPopup(errorMsg);
 
-            // Reset processing flag
             betController.OnBetActionResponse(null);
         }
     }
@@ -363,8 +232,6 @@ public class GameManager : MonoBehaviour
     #region Public API - Called by UI
     internal void JoinRoom(string roomName)
     {
-        LogRequest("JOIN_ROOM", new { level = roomName });
-
         CurrentRoom = roomName;
 
         List<double> chipValues = GetChipValuesForRoom(roomName);
@@ -377,8 +244,6 @@ public class GameManager : MonoBehaviour
 
     internal void LeaveRoom()
     {
-        LogRequest("LEAVE_ROOM", null);
-
         betController.DisableBetting();
         betController.ClearAllBets();
         betController.ClearAllWinHighlights();
@@ -395,52 +260,41 @@ public class GameManager : MonoBehaviour
 
         string betType = GetBetType(betOption);
 
-        LogRequest("PLACE_BET", new { betType, betOption, chipIndex, room = CurrentRoom });
-
         socketManager.PlaceBet(betType, betOption, chipIndex, CurrentRoom);
     }
 
     internal void UndoBet()
     {
-        LogRequest("UNDO_BET", null);
         socketManager.UndoBet();
     }
 
     internal void CancelAllBets()
     {
-        LogRequest("CANCEL_BET", null);
         socketManager.CancelBet();
     }
 
     internal void DoubleBet()
     {
-        LogRequest("DOUBLE_BET", null);
         socketManager.DoubleBet(CurrentRoom);
     }
 
     internal void RepeatBet()
     {
-        LogRequest("REPEAT_BET", null);
         socketManager.RepeatBet();
     }
 
     internal void RequestHistory(int page)
     {
-        LogRequest("BET_HISTORY", new { page });
         socketManager.RequestHistory(page);
     }
 
     internal void ExitGame()
     {
-        LogInfo("Exiting game");
         StartCoroutine(socketManager.CloseSocket());
     }
     #endregion
 
     #region Private Helpers
-    /// <summary>
-    /// Calculate time remaining with proper rounding
-    /// </summary>
     private int CalculateTimeRemaining(long endTime, long serverTime)
     {
         long remainingMs = endTime - serverTime;

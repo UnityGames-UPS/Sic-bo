@@ -44,8 +44,6 @@ public class RoundController : MonoBehaviour
     {
         if (data == null) return;
 
-        gameManager?.LogInfo($"[ROUND] Starting: {data.roundId}");
-
         currentRoundId = data.roundId;
         isRoundActive = true;
 
@@ -67,7 +65,6 @@ public class RoundController : MonoBehaviour
         // Calculate initial time remaining from server data
         int timeRemaining = CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
-        gameManager?.LogInfo($"[ROUND] Betting time: {timeRemaining}s (End: {data.bettingEndTime}, Now: {data.serverTime})");
 
         // Update timer display immediately
         uiController.UpdateTimer(timeRemaining);
@@ -84,11 +81,6 @@ public class RoundController : MonoBehaviour
         // Update the display
         uiController.UpdateTimer(secondsRemaining);
 
-        // Log last 5 seconds
-        if (secondsRemaining <= 5 && secondsRemaining > 0)
-        {
-            gameManager?.LogBroadcast("TIMER", $" {secondsRemaining}s remaining");
-        }
 
         // When server sends 1, start client-side countdown to 0 then lock
         // Only start if not already running
@@ -108,13 +100,13 @@ public class RoundController : MonoBehaviour
 
         // Show 0 on timer
         uiController.UpdateTimer(0);
-        gameManager?.LogBroadcast("TIMER", " 0s - Locking bets");
+    
 
         // Immediately lock betting and show bet locked
         betController.DisableBetting();
         uiController.ShowBetLocked();
 
-        gameManager?.LogSuccess("[ROUND] Betting locked at 0 - waiting for dice result");
+    
 
         finalCountdownCoroutine = null;
     }
@@ -126,7 +118,7 @@ public class RoundController : MonoBehaviour
     {
         if (data == null) return;
 
-        gameManager?.LogInfo($"[ROUND] Result received: [{data.dice1}, {data.dice2}, {data.dice3}] = {data.sum} ({data.matchSide})");
+        
 
         // Ensure betting is disabled (should already be from timer 0)
         betController.DisableBetting();
@@ -136,14 +128,7 @@ public class RoundController : MonoBehaviour
         StartCoroutine(AnimateDiceRoll(data));
     }
 
-    /// <summary>
-    /// Round end - results stay visible until next round starts
-    /// </summary>
-    internal void EndRound()
-    {
-        gameManager?.LogInfo("[ROUND] Round ended - results will stay visible until next round");
-        isRoundActive = false;
-    }
+
 
     /// <summary>
     /// Clear all round displays (dice and results)
@@ -153,7 +138,7 @@ public class RoundController : MonoBehaviour
     {
         HideDiceImmediate();
         HideResultImmediate();
-        gameManager?.LogInfo("[ROUND] Display cleared");
+     
     }
     #endregion
 
@@ -170,7 +155,7 @@ public class RoundController : MonoBehaviour
         // Show dice container immediately
         if (DiceContainer) DiceContainer.SetActive(true);
 
-        gameManager?.LogInfo($"[ROUND] Starting dice animation ({rollDuration}s)");
+    
 
         // Animate rolling
         float elapsed = 0f;
@@ -192,7 +177,7 @@ public class RoundController : MonoBehaviour
         SetDiceFace(Dice2_Image, data.dice2 - 1);
         SetDiceFace(Dice3_Image, data.dice3 - 1);
 
-        gameManager?.LogSuccess($"[ROUND] Animation complete - showing result");
+  
 
         // Bounce animation
         if (DiceContainer)
@@ -219,7 +204,7 @@ public class RoundController : MonoBehaviour
         if (MatchSide_Text) MatchSide_Text.text = matchSide.ToUpper();
         if (ResultPanel) ResultPanel.SetActive(true);
 
-        gameManager?.LogInfo("[ROUND] Result panel displayed - will stay visible until next round");
+
     }
 
     private void HideResultImmediate()

@@ -37,7 +37,6 @@ public class PlayerBetComponent : MonoBehaviour
         // Validate chip pool
         if (chips.Count != 6)
         {
-            Debug.LogError($"[PLAYER BET] Expected 6 chips, found {chips.Count}!");
         }
 
         // Reset all chips to disabled state
@@ -45,7 +44,6 @@ public class PlayerBetComponent : MonoBehaviour
 
         if (showDebugLogs)
         {
-            Debug.Log($"[PLAYER BET] Initialized with {chips.Count} chips");
         }
     }
 
@@ -59,14 +57,12 @@ public class PlayerBetComponent : MonoBehaviour
     {
         if (bets.Count >= 6)
         {
-            Debug.LogWarning($"[PLAYER BET] {areaId} - Max 6 bets reached!");
             return;
         }
 
         // Validate chip index
         if (chipIndex < 0 || chipIndex >= chipSprites.Length)
         {
-            Debug.LogError($"[PLAYER BET] {areaId} - Invalid chip index: {chipIndex}");
             return;
         }
 
@@ -87,7 +83,6 @@ public class PlayerBetComponent : MonoBehaviour
 
             if (showDebugLogs)
             {
-                Debug.Log($"[PLAYER BET] {areaId} - Chip {chipSlot}: ${amount} (index {chipIndex})");
             }
         }
 
@@ -102,7 +97,6 @@ public class PlayerBetComponent : MonoBehaviour
 
         if (showDebugLogs)
         {
-            Debug.Log($"[PLAYER BET] {areaId} - Total bets: {bets.Count}, Amount: ${totalBetAmount}");
         }
     }
 
@@ -116,7 +110,6 @@ public class PlayerBetComponent : MonoBehaviour
         {
             if (showDebugLogs)
             {
-                Debug.LogWarning($"[PLAYER BET] {areaId} - No bets to remove!");
             }
             return;
         }
@@ -147,7 +140,6 @@ public class PlayerBetComponent : MonoBehaviour
 
         if (showDebugLogs)
         {
-            Debug.Log($"[PLAYER BET] {areaId} - Removed bet. Remaining: {bets.Count}, Total: ${totalBetAmount}");
         }
     }
 
@@ -178,7 +170,6 @@ public class PlayerBetComponent : MonoBehaviour
 
         if (showDebugLogs)
         {
-            Debug.Log($"[PLAYER BET] {areaId} - Reset complete");
         }
     }
 
@@ -270,7 +261,6 @@ public class PlayerBetComponent : MonoBehaviour
 
             if (chips.Count > 6)
             {
-                Debug.LogWarning($"[PLAYER BET] Found {chips.Count} chips, trimming to 6");
                 chips.RemoveRange(6, chips.Count - 6);
             }
         }

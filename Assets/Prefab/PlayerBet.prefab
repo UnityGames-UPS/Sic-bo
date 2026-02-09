@@ -1654,11 +1654,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   totalBetAmountText: {fileID: 988426897547336688}
   chips:
-  - {fileID: 562575847814840046}
   - {fileID: 9060092636311103641}
+  - {fileID: 562575847814840046}
   - {fileID: 7948492504132307508}
-  - {fileID: 6992851380085352226}
   - {fileID: 6224147060277934390}
+  - {fileID: 6992851380085352226}
   - {fileID: 8857183995349254273}
   showDebugLogs: 0
 --- !u!1 &9138753353062400486
