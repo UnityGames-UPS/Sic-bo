@@ -227,9 +227,9 @@ TextureImporter:
       name: Sic_bo_Btn_2_4
       rect:
         serializedVersion: 2
-        x: 16
+        x: 17
         y: 680
-        width: 81
+        width: 80
         height: 80
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
@@ -249,9 +249,9 @@ TextureImporter:
       name: Sic_bo_Btn_2_5
       rect:
         serializedVersion: 2
-        x: 132
+        x: 136
         y: 680
-        width: 84
+        width: 80
         height: 80
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
@@ -295,7 +295,7 @@ TextureImporter:
         serializedVersion: 2
         x: 373
         y: 680
-        width: 83
+        width: 80
         height: 80
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
