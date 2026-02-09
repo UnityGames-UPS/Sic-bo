@@ -250,7 +250,7 @@ public class PlayerBetComponent : MonoBehaviour
     }
 
     #endregion
-
+        
     #region Validation
     private void OnValidate()
     {

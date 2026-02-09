@@ -204,7 +204,6 @@ public class RoundController : MonoBehaviour
         if (MatchSide_Text) MatchSide_Text.text = matchSide.ToUpper();
         if (ResultPanel) ResultPanel.SetActive(true);
 
-
     }
 
     private void HideResultImmediate()
