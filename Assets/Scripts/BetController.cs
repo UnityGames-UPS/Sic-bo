@@ -406,18 +406,67 @@ public class BetController : MonoBehaviour
         if (chipValues.Count > 0)
         {
             minBetAmount = chipValues[0];
-            maxBetAmount = chipValues[chipValues.Count - 1] * 100;
+            maxBetAmount = CalculateMaxBetForAllOptions();
         }
-
-        // UPGRADED: push chip values into all spawned PlayerBetComponents so they
-        // can use FindChipCombination() when AddBetFromServer() is called via
-        // HandleRepeatBroadcast / HandleDoubleBroadcast.
+ 
         UpdateAllComponentChipValues();
 
         SetupWinRatios();
         UpdateMinMaxDisplay();
     }
+    private double CalculateMaxBetForAllOptions()
+    {
+        if (wagerData == null || string.IsNullOrEmpty(currentLevel))
+            return 0;
 
+        double highestMax = 0;
+
+        // Check Main Bets
+        if (wagerData.main_bets != null)
+        {
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.main_bets.small));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.main_bets.big));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.main_bets.odd));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.main_bets.even));
+        }
+
+        // Check Side Bets
+        if (wagerData.side_bets != null)
+        {
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.side_bets.single_match_1));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.side_bets.single_match_2));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.side_bets.single_match_3));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.side_bets.specific_2));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.side_bets.specific_3));
+        }
+
+        // Check Op Bets (Sum 4-17)
+        if (wagerData.op_bets != null)
+        {
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_4));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_5));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_6));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_7));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_8));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_9));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_10));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_11));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_12));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_13));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_14));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_15));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_16));
+            highestMax = Mathf.Max((float)highestMax, (float)GetMaxFromWager(wagerData.op_bets.sum_17));
+        }
+
+        return highestMax;
+    }
+
+    private double GetMaxFromWager(BetWager wager)
+    {
+        if (wager == null) return 0;
+        return wager.GetMaxBet(currentLevel);
+    }
     /// <summary>
     /// UPGRADED (from V2): Pushes the latest chip values into every active
     /// PlayerBetComponent so FindChipCombination has the correct denominations.

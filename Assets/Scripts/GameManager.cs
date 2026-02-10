@@ -10,6 +10,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private BetController betController;
     [SerializeField] private RoundController roundController;
     [SerializeField] private HistoryController historyController;
+    [SerializeField] private BetLimitManager betLimitManager;  // NEW: Added BetLimitManager reference
 
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
@@ -248,6 +249,17 @@ public class GameManager : MonoBehaviour
         Wagers wagers = socketManager.InitialData?.wagers;
 
         betController.SetupChips(chipValues, wagers, roomName);
+
+        // NEW: Initialize BetLimitManager with game data
+        if (betLimitManager != null && socketManager.InitialData != null)
+        {
+            betLimitManager.Initialize(
+                socketManager.InitialData.wagers,
+                socketManager.InitialData.bets,
+                roomName,
+                socketManager.InitialData.betOptions
+            );
+        }
 
         socketManager.JoinLevel(roomName);
         uiController.ShowGameScreen();
