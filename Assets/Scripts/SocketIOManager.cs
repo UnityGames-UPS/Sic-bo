@@ -1012,7 +1012,6 @@ public class BetAckPayload
     public double balance;
     public double totalBet;
     public List<BetInfo> bets;
-    public double amount;
     public double refundAmount;
     public BetInfo bet;
 }
