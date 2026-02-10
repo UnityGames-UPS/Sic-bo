@@ -44,7 +44,8 @@ public class ImageAnimation : MonoBehaviour
 			Instance = this;
 		}
 		if(StartOnAwake){
-			StartAnimation();
+            
+            StartAnimation();
 		}
 	}
 
@@ -55,7 +56,10 @@ void Start()
 	private void OnEnable()
 	{
 		if (StartonEnable)
-		{ StartAnimation(); }
+		{
+          
+            StartAnimation(); 
+		}
 
 
 	}
@@ -85,7 +89,7 @@ void Start()
 	}
 
 	public void StartAnimation()
-	{
+	{	
         CancelInvoke(nameof(AnimationProcess));
         indexOfTexture = 0;
 		if (currentAnimationState == ImageState.NONE)
