@@ -599,7 +599,7 @@ public class SocketIOManager : MonoBehaviour
 
     internal void ReturnHome()
     {
-        EmitSimpleRequest("RETURN_HOME", OnHomeAck);
+        EmitSimpleRequest("HOME", OnHomeAck);
     }
 
     internal IEnumerator CloseSocket()

@@ -41,9 +41,23 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text GameBalance_Text;
     [SerializeField] private TMP_Text PlayerCount_Text;
     [SerializeField] private TMP_Text RoundPhase_Text;
+    [SerializeField] private Button SideMenuOpen_Button;
+
+    [Header("Side Menu Elements")]
+    [SerializeField] private Button SideMenuClose_Button;
     [SerializeField] private Button ExitGame_Button;
     [SerializeField] private Button HistoryGame_Button;
     [SerializeField] private Button SettingsGame_Button;
+    [SerializeField] private Toggle Sound_button;
+    [SerializeField] private Toggle Music_button;
+    [SerializeField] private GameObject MenuPanel_Object;
+    [SerializeField] private GameObject MenuPanelContainer_Object;
+
+    [Header("Side Menu Animation Settings")]
+    [SerializeField] private float panelSlideDuration = 0.3f;
+    [SerializeField] private float buttonDropDuration = 0.5f;
+    [SerializeField] private float buttonDropDelay = 0.1f;
+    [SerializeField] private float panelSlideDistance = 500f; // Distance panel slides from
 
     [Header("Leaderboard - Top 3 Players")]
     [SerializeField] private TMP_Text FirstPlace_Name;
@@ -105,6 +119,12 @@ public class UIController : MonoBehaviour
     private string playerName;
     private Wagers gameWagers;
     private Bets gameBets;
+
+    // Side Menu Animation Fields
+    private RectTransform[] menuButtonRects;
+    private Vector2[] menuButtonOriginalPositions;
+    private RectTransform menuPanelContainerRect;
+    private Vector2 panelOriginalPosition;
     #endregion
 
     #region Unity Lifecycle
@@ -113,6 +133,7 @@ public class UIController : MonoBehaviour
         SetupButtonListeners();
         ShowHomeScreen();
         InitializePopups();
+        InitializeSideMenuAnimation();
     }
 
     private void OnDestroy()
@@ -136,6 +157,8 @@ public class UIController : MonoBehaviour
         if (SettingsHome_Button) SettingsHome_Button.onClick.AddListener(OpenInfoFromHome);
         if (ExitHome_Button) ExitHome_Button.onClick.AddListener(ShowQuitPopup);
 
+        if (SideMenuOpen_Button) SideMenuOpen_Button.onClick.AddListener(OpenSideMenu);
+        if (SideMenuClose_Button) SideMenuClose_Button.onClick.AddListener(CloseSideMenu);
         if (ExitGame_Button) ExitGame_Button.onClick.AddListener(() => { gameManager.LeaveRoom(); });
         if (HistoryGame_Button) HistoryGame_Button.onClick.AddListener(OpenHistoryFromGame);
         if (SettingsGame_Button) SettingsGame_Button.onClick.AddListener(OpenInfoFromGame);
@@ -173,6 +196,129 @@ public class UIController : MonoBehaviour
         }
 
         UpdateLobbyMinMaxDisplay();
+    }
+    #endregion
+
+    #region Side Menu Animation
+    private void InitializeSideMenuAnimation()
+    {
+        // Get panel container rect and store original position
+        if (MenuPanelContainer_Object)
+        {
+            menuPanelContainerRect = MenuPanelContainer_Object.GetComponent<RectTransform>();
+            if (menuPanelContainerRect != null)
+            {
+                panelOriginalPosition = menuPanelContainerRect.anchoredPosition;
+            }
+        }
+
+        // Collect all menu buttons
+        List<RectTransform> tempRects = new List<RectTransform>();
+
+        if (HistoryGame_Button) tempRects.Add(HistoryGame_Button.GetComponent<RectTransform>());
+        if (SettingsGame_Button) tempRects.Add(SettingsGame_Button.GetComponent<RectTransform>());
+        if (Sound_button) tempRects.Add(Sound_button.GetComponent<RectTransform>());
+        if (Music_button) tempRects.Add(Music_button.GetComponent<RectTransform>());
+        if (ExitGame_Button) tempRects.Add(ExitGame_Button.GetComponent<RectTransform>());
+
+        menuButtonRects = tempRects.ToArray();
+        menuButtonOriginalPositions = new Vector2[menuButtonRects.Length];
+
+        // Store original positions
+        for (int i = 0; i < menuButtonRects.Length; i++)
+        {
+            menuButtonOriginalPositions[i] = menuButtonRects[i].anchoredPosition;
+        }
+
+        // Hide menu initially
+        if (MenuPanel_Object) MenuPanel_Object.SetActive(false);
+    }
+
+    private void OpenSideMenu()
+    {
+        print("Opening side menu..........");
+
+        // Enable menu panel
+        if (MenuPanel_Object) MenuPanel_Object.SetActive(true);
+
+        // Get close button position
+        Vector2 closeButtonPos = Vector2.zero;
+        if (SideMenuClose_Button)
+        {
+            RectTransform closeButtonRect = SideMenuClose_Button.GetComponent<RectTransform>();
+            if (closeButtonRect != null)
+            {
+                closeButtonPos = closeButtonRect.anchoredPosition;
+            }
+        }
+
+        // Slide panel container in from outside canvas
+        if (menuPanelContainerRect != null)
+        {
+            Vector2 startPos = panelOriginalPosition;
+            startPos.x += panelSlideDistance; // Start from right side outside canvas
+            menuPanelContainerRect.anchoredPosition = startPos;
+
+            menuPanelContainerRect.DOAnchorPos(panelOriginalPosition, panelSlideDuration)
+                .SetEase(Ease.OutCubic);
+        }
+
+        // Animate buttons dropping from close button position
+        for (int i = 0; i < menuButtonRects.Length; i++)
+        {
+            // Set initial position to close button
+            menuButtonRects[i].anchoredPosition = closeButtonPos;
+
+            float delay = i * buttonDropDelay;
+
+            // Drop to original position with elastic/bounce effect
+            menuButtonRects[i].DOAnchorPos(menuButtonOriginalPositions[i], buttonDropDuration)
+                .SetEase(Ease.OutBounce)
+                .SetDelay(delay);
+        }
+    }
+
+    private void CloseSideMenu()
+    {
+        // Get close button position
+        Vector2 closeButtonPos = Vector2.zero;
+        if (SideMenuClose_Button)
+        {
+            RectTransform closeButtonRect = SideMenuClose_Button.GetComponent<RectTransform>();
+            if (closeButtonRect != null)
+            {
+                closeButtonPos = closeButtonRect.anchoredPosition;
+            }
+        }
+
+        // Animate buttons back to close button position in reverse order
+        for (int i = 0; i < menuButtonRects.Length; i++)
+        {
+            int reverseIndex = menuButtonRects.Length - 1 - i;
+            float delay = i * buttonDropDelay;
+
+            menuButtonRects[reverseIndex].DOAnchorPos(closeButtonPos, buttonDropDuration * 0.7f)
+                .SetEase(Ease.InBack)
+                .SetDelay(delay);
+        }
+
+        // Slide panel container out
+        if (menuPanelContainerRect != null)
+        {
+            Vector2 endPos = panelOriginalPosition;
+            endPos.x += panelSlideDistance; // Slide to right outside canvas
+
+            float totalButtonAnimTime = menuButtonRects.Length * buttonDropDelay + buttonDropDuration * 0.7f;
+
+            menuPanelContainerRect.DOAnchorPos(endPos, panelSlideDuration)
+                .SetEase(Ease.InCubic)
+                .SetDelay(totalButtonAnimTime)
+                .OnComplete(() =>
+                {
+                    // Disable menu panel after animation completes
+                    if (MenuPanel_Object) MenuPanel_Object.SetActive(false);
+                });
+        }
     }
     #endregion
 
