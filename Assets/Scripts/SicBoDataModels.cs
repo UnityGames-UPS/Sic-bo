@@ -445,4 +445,14 @@ public class BetLimitInfo
         return (CurrentBetOnArea + betAmount) > MaxBet;
     }
 }
+
+[System.Serializable]
+public class PendingBet
+{
+    public string betOption;
+    public double amount;
+    public int chipIndex;
+    public int diceNumber;
+    public System.DateTime timestamp;
+}
 #endregion
