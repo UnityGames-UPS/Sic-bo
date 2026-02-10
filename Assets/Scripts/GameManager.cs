@@ -13,6 +13,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
+
     #endregion
 
     #region Public Properties
@@ -169,7 +170,7 @@ public class GameManager : MonoBehaviour
         if (data == null) return;
 
         int secondsUntilNextRound = CalculateTimeRemaining(data.nextRoundStartTime, data.serverTime);
-            
+
         uiController.ShowNextRound(secondsUntilNextRound);
         uiController.UpdateRoundPhase("NEXTROUND");
         betController.OnRoundEnd();
@@ -222,7 +223,16 @@ public class GameManager : MonoBehaviour
         else
         {
             string errorMsg = response.payload?.message ?? "Bet action failed";
-            uiController.ShowErrorPopup(errorMsg);
+
+            // "Limit reached" — show area max limit popup (no chips spawned)
+            if (errorMsg == "Limit reached")
+            {
+                betController.OnBetLimitReached();
+            }
+            else
+            {
+                uiController.ShowErrorPopup(errorMsg);
+            }
 
             betController.OnBetActionResponse(null);
         }
@@ -238,6 +248,7 @@ public class GameManager : MonoBehaviour
         Wagers wagers = socketManager.InitialData?.wagers;
 
         betController.SetupChips(chipValues, wagers, roomName);
+
         socketManager.JoinLevel(roomName);
         uiController.ShowGameScreen();
     }

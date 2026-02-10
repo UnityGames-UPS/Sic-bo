@@ -98,6 +98,9 @@ public class BetController : MonoBehaviour
     private bool hasPlacedBetThisRound = false;
     private bool isProcessingBetAction = false;
 
+    // Tracks the betOption of the in-flight single PLACE_BET (used for limit popup)
+    private string pendingBetOption = "";
+
     // Bet action broadcast tracking
     private string currentBetAction = "";
     private int receivedBroadcastCount = 0;
@@ -604,6 +607,45 @@ public class BetController : MonoBehaviour
                     break;
             }
         }
+        else
+        {
+            // Normal single PLACE_BET confirmed by server — use actual server amount
+            HandleSingleBetBroadcast(data);
+        }
+    }
+
+    /// <summary>
+    /// Called when game:bet_placed arrives for a normal single bet.
+    /// Spawns chips based on the SERVER-confirmed amount (chip combination decomposition).
+    /// </summary>
+    private void HandleSingleBetBroadcast(BetPlacedData data)
+    {
+        if (data == null || data.amount <= 0) return;
+
+        Debug.Log($"[BET] Single bet confirmed: {data.betOption} amount={data.amount}");
+
+        // Spawn chips using server amount — PlayerBetComponent.AddBetFromServer()
+        // will decompose e.g. 13 into 10+3 chips automatically.
+        AddBetToAreaFromServer(data.betOption, data.amount);
+
+        // Record actual server-confirmed amount for undo/cancel/double tracking
+        if (!areaBets.ContainsKey(data.betOption)) areaBets[data.betOption] = 0;
+        areaBets[data.betOption] += data.amount;
+        currentTotalBet += data.amount;
+
+        int chipIndex = GetChipIndexForAmount(data.amount);
+        betHistory.Add(new BetAction
+        {
+            betOption = data.betOption,
+            amount = data.amount,
+            chipIndex = chipIndex
+        });
+
+        hasPlacedBetThisRound = true;
+        pendingBetOption = "";
+
+        UpdateTotalBet();
+        ShowBetActionsPanelAnimated();
     }
 
     // -------------------------------------------------------------------------
@@ -751,16 +793,32 @@ public class BetController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Called when server "Limit reached" response is received for a single PLACE_BET.
+    /// Shows the actual area max limit in the popup — no chips have been spawned.
+    /// </summary>
+    internal void OnBetLimitReached()
+    {
+        double areaMax = GetMaxBetForArea(pendingBetOption);
+        string areaDisplay = string.IsNullOrEmpty(pendingBetOption) ? "this area" : pendingBetOption;
+        uiController?.ShowInGamePopup($"Max limit for {areaDisplay} is {FormatChipAmount(areaMax)}");
+        pendingBetOption = "";
+    }
+
     internal void OnBetActionResponse(BetAckResponse response)
     {
         if (response == null || response.payload == null)
         {
+            // Failure (e.g. Limit reached) — no chips spawned, just reset
+            pendingBetOption = "";
             ResetBetActionState();
             return;
         }
 
         int betCount = response.payload.bets != null ? response.payload.bets.Count : 0;
         Debug.Log($"[BET] ACK received for {currentBetAction}: {betCount} bets received");
+
+        pendingBetOption = "";
 
         if (betHistory.Count > 0)
         {
@@ -795,16 +853,11 @@ public class BetController : MonoBehaviour
 
         if (currentChipValues.Count == 0) return;
 
-        double betAmount = currentChipValues[selectedChipIndex];
-
-        if (!CanPlaceBet(betOption, betAmount)) return;
-
-        AddBetToArea(betOption, betAmount, selectedChipIndex);
+        // No client-side limit check or optimistic chip spawn.
+        // Server is the authority - chips are spawned from game:bet_placed broadcast.
+        pendingBetOption = betOption;
         gameManager.PlaceBet(betOption, selectedChipIndex);
-
         CloseChipSelector();
-        ShowBetActionsPanelAnimated();
-        hasPlacedBetThisRound = true;
     }
 
     private void OnTripleDiceAreaClicked(int diceNum)
@@ -818,21 +871,11 @@ public class BetController : MonoBehaviour
         if (currentChipValues.Count == 0) return;
 
         string betOption = $"specific_3_{diceNum}";
-        double betAmount = currentChipValues[selectedChipIndex];
 
-        if (!CanPlaceBet(betOption, betAmount)) return;
-
-        int areaIndex = diceNum - 1;
-        if (areaIndex >= 0 && areaIndex < TripleDiceAreas.Count && TripleDiceAreas[areaIndex] != null)
-        {
-            TripleDiceAreas[areaIndex].AddBet(betAmount, selectedChipIndex);
-            RecordBet(betOption, betAmount, selectedChipIndex, diceNum);
-        }
-
+        // No client-side limit check or optimistic chip spawn.
+        pendingBetOption = betOption;
         gameManager.PlaceBet(betOption, selectedChipIndex);
         CloseChipSelector();
-        ShowBetActionsPanelAnimated();
-        hasPlacedBetThisRound = true;
     }
 
     private void OnSingleDiceAreaClicked(int diceNum)
@@ -846,21 +889,11 @@ public class BetController : MonoBehaviour
         if (currentChipValues.Count == 0) return;
 
         string betOption = $"single_{diceNum}";
-        double betAmount = currentChipValues[selectedChipIndex];
 
-        if (!CanPlaceBet(betOption, betAmount)) return;
-
-        int areaIndex = diceNum - 1;
-        if (areaIndex >= 0 && areaIndex < SingleDiceAreas.Count && SingleDiceAreas[areaIndex] != null)
-        {
-            SingleDiceAreas[areaIndex].AddBet(betAmount, selectedChipIndex);
-            RecordBet(betOption, betAmount, selectedChipIndex);
-        }
-
+        // No client-side limit check or optimistic chip spawn.
+        pendingBetOption = betOption;
         gameManager.PlaceBet(betOption, selectedChipIndex);
         CloseChipSelector();
-        ShowBetActionsPanelAnimated();
-        hasPlacedBetThisRound = true;
     }
 
     private void AddBetToArea(string betOption, double betAmount, int chipIndex)
