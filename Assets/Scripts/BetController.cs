@@ -64,6 +64,7 @@ public class BetController : MonoBehaviour
     [SerializeField] private GameManager gameManager;
     [SerializeField] private UIController uiController;
     [SerializeField] private BonusIndicatorController bonusIndicatorController;
+    [SerializeField] private OpponentChipManager opponentChipManager;
     #endregion
 
     #region Private Fields - Pool System
@@ -116,7 +117,11 @@ public class BetController : MonoBehaviour
     private Sequence chipAnimationSequence;
     private Coroutine repeatPanelCoroutine;
     #endregion
-
+    #region Private Fields - Opponent System
+    private Dictionary<string, Dictionary<string, double>> opponentBets =
+        new Dictionary<string, Dictionary<string, double>>(); // username -> betOption -> amount
+    private string currentPlayerUsername = ""; // Set from GameManager
+    #endregion
     #region Unity Lifecycle
     private void Start()
     {
@@ -171,6 +176,14 @@ public class BetController : MonoBehaviour
 
         isPoolInitialized = true;
         bonusIndicatorController?.InitializePool(GetBetAreaContainerMap());
+
+        // Initialize opponent chip manager with bet area containers
+        if (opponentChipManager != null)
+        {
+            Dictionary<string, Transform> betAreaMap = GetOpponentBetAreaContainerMap();
+            opponentChipManager.InitializeContainers(betAreaMap);
+        }
+
         Debug.Log($"[BetController] Pool initialized with {spawnedCount} components");
     }
 
@@ -548,6 +561,7 @@ public class BetController : MonoBehaviour
         foreach (var area in TripleDiceAreas) ClearArea(area);
         foreach (var area in SingleDiceAreas) ClearArea(area);
         foreach (var area in SumAreas) ClearArea(area);
+        ClearAllOpponentBets();
 
         UpdateTotalBet();
         HideBetActionsPanel();
@@ -598,6 +612,16 @@ public class BetController : MonoBehaviour
     {
         if (data == null) return;
 
+        // CHECK IF THIS IS AN OPPONENT'S BET
+        if (!string.IsNullOrEmpty(data.username) &&
+            data.username != currentPlayerUsername)
+        {
+            // This is an opponent's bet - handle separately
+            HandleOpponentBet(data);
+            return;
+        }
+
+        // EXISTING CODE FOR PLAYER'S OWN BETS
         if (isProcessingBetAction && !string.IsNullOrEmpty(currentBetAction))
         {
             receivedBroadcastCount++;
@@ -623,7 +647,6 @@ public class BetController : MonoBehaviour
         }
         else
         {
-            // Normal single PLACE_BET confirmed by server — use actual server amount
             HandleSingleBetBroadcast(data);
         }
     }
@@ -733,6 +756,7 @@ public class BetController : MonoBehaviour
         UpdateTotalBet();
     }
 
+
     private void HandleCancelBroadcast(BetPlacedData data)
     {
         if (data.amount >= 0) return;
@@ -763,11 +787,49 @@ public class BetController : MonoBehaviour
         }
         currentTotalBet -= removeAmount;
 
-        // Clear ALL chips from this area (server handles the total)
+
         ClearBetsFromArea(data.betOption);
 
         UpdateTotalBet();
     }
+    private void HandleOpponentBet(BetPlacedData data)
+    {
+        if (data == null || data.amount == 0 || opponentChipManager == null) return;
+
+        // Initialize opponent tracking if needed
+        if (!opponentBets.ContainsKey(data.username))
+            opponentBets[data.username] = new Dictionary<string, double>();
+
+        if (data.amount > 0)
+        {
+            // Opponent placed a bet - spawn and animate chip
+            Debug.Log($"[OPPONENT] {data.username} bet {data.amount} on {data.betOption}");
+
+            opponentChipManager.AddOpponentBet(data.betOption, data.amount);
+
+            // Track opponent bet
+            if (!opponentBets[data.username].ContainsKey(data.betOption))
+                opponentBets[data.username][data.betOption] = 0;
+            opponentBets[data.username][data.betOption] += data.amount;
+        }
+        else
+        {
+            // Opponent removed a bet (undo/cancel)
+            // For simplicity, we don't remove individual chips, just track the amount
+            double removeAmount = System.Math.Abs(data.amount);
+
+            if (opponentBets[data.username].ContainsKey(data.betOption))
+            {
+                opponentBets[data.username][data.betOption] -= removeAmount;
+
+                if (opponentBets[data.username][data.betOption] <= 0.01)
+                {
+                    opponentBets[data.username].Remove(data.betOption);
+                }
+            }
+        }
+    }
+
     private void RemoveLastChipFromArea(string betOption)
     {
         if (betOption == "small" && SmallArea != null)
@@ -845,6 +907,17 @@ public class BetController : MonoBehaviour
             }
         }
     }
+    private void ClearAllOpponentBets()
+    {
+        opponentBets.Clear();
+
+        // Clear opponent chips via manager
+        if (opponentChipManager != null)
+        {
+            opponentChipManager.ClearAllOpponentBets();
+        }
+    }
+
     internal void OnBetLimitReached()
     {
         // Get the pending bet option that failed
@@ -1370,7 +1443,7 @@ public class BetController : MonoBehaviour
     #region Private Methods - Button Handlers
     private void OnUndoClicked()
     {
-        if (!isBettingEnabled || isProcessingBetAction)
+       /* if (!isBettingEnabled || isProcessingBetAction)
         {
             uiController?.ShowInGamePopup("Please wait...");
             return;
@@ -1384,14 +1457,14 @@ public class BetController : MonoBehaviour
 
         isProcessingBetAction = true;
         currentBetAction = "UNDO";
-        receivedBroadcastCount = 0;
+        receivedBroadcastCount = 0;*/
 
         gameManager.UndoBet();
     }
 
     private void OnCancelClicked()
     {
-        if (!isBettingEnabled || isProcessingBetAction)
+        /*if (!isBettingEnabled || isProcessingBetAction)
         {
             uiController?.ShowInGamePopup("Please wait...");
             return;
@@ -1405,14 +1478,14 @@ public class BetController : MonoBehaviour
 
         isProcessingBetAction = true;
         currentBetAction = "CANCEL";
-        receivedBroadcastCount = 0;
+        receivedBroadcastCount = 0;*/
 
         gameManager.CancelAllBets();
     }
 
     private void OnDoubleClicked()
     {
-        if (!isBettingEnabled || isProcessingBetAction)
+       /* if (!isBettingEnabled || isProcessingBetAction)
         {
             uiController?.ShowInGamePopup("Please wait...");
             return;
@@ -1454,12 +1527,12 @@ public class BetController : MonoBehaviour
         isProcessingBetAction = true;
         currentBetAction = "DOUBLE";
         receivedBroadcastCount = 0;
-
+       */
         gameManager.DoubleBet();
     }
 
     private void OnRepeatClicked()
-    {
+    {/*
         if (!isBettingEnabled || isProcessingBetAction)
         {
             uiController?.ShowInGamePopup("Please wait...");
@@ -1487,7 +1560,7 @@ public class BetController : MonoBehaviour
             StopCoroutine(repeatPanelCoroutine);
             repeatPanelCoroutine = null;
         }
-
+        */
         gameManager.RepeatBet();
     }
     #endregion
@@ -1504,7 +1577,10 @@ public class BetController : MonoBehaviour
         if (area != null && wager != null)
             area.SetWinRatio(wager.GetPayoutRatioString());
     }
-
+    internal void SetCurrentPlayerUsername(string username)
+    {
+        currentPlayerUsername = username;
+    }
     private void ClearArea(SimpleBetArea area) { if (area != null) area.ClearBets(); }
     private void ClearArea(TripleSameDiceArea area) { if (area != null) area.ClearBets(); }
     private void ClearArea(SingleDiceArea area) { if (area != null) area.ClearBets(); }
@@ -1729,6 +1805,53 @@ public class BetController : MonoBehaviour
         }
 
         return winningOptions;
+    }
+
+    /// <summary>
+    /// Get map of betOption -> OpponentBetContainer Transform for opponent chip placement
+    /// </summary>
+    private Dictionary<string, Transform> GetOpponentBetAreaContainerMap()
+    {
+        Dictionary<string, Transform> map = new Dictionary<string, Transform>();
+
+        // Main bets
+        if (SmallArea != null && SmallArea.OpponentBetContainer != null)
+            map["small"] = SmallArea.OpponentBetContainer;
+        if (BigArea != null && BigArea.OpponentBetContainer != null)
+            map["big"] = BigArea.OpponentBetContainer;
+        if (OddArea != null && OddArea.OpponentBetContainer != null)
+            map["odd"] = OddArea.OpponentBetContainer;
+        if (EvenArea != null && EvenArea.OpponentBetContainer != null)
+            map["even"] = EvenArea.OpponentBetContainer;
+
+        // Triple dice areas    
+        for (int i = 0; i < TripleDiceAreas.Count; i++)
+        {
+            if (TripleDiceAreas[i] != null && TripleDiceAreas[i].OpponentBetContainer != null)
+            {
+                map[$"specific_3_{i + 1}"] = TripleDiceAreas[i].OpponentBetContainer;
+            }
+        }
+
+        // Single dice areas
+        for (int i = 0; i < SingleDiceAreas.Count; i++)
+        {
+            if (SingleDiceAreas[i] != null && SingleDiceAreas[i].OpponentBetContainer != null)
+            {
+                map[$"single_{i + 1}"] = SingleDiceAreas[i].OpponentBetContainer;
+            }
+        }
+
+        // Sum areas
+        for (int i = 0; i < SumAreas.Count; i++)
+        {
+            if (SumAreas[i] != null && SumAreas[i].OpponentBetContainer != null)
+            {
+                map[$"sum_{i + 4}"] = SumAreas[i].OpponentBetContainer;
+            }
+        }
+
+        return map;
     }
     #endregion
 

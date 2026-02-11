@@ -17,6 +17,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private BetLimitManager betLimitManager;
     [SerializeField] private ChipWinAnimationController chipWinAnimationController;
     [SerializeField] private BonusIndicatorController bonusIndicatorController;
+    [SerializeField] private OpponentChipManager opponentChipManager;
 
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
@@ -26,6 +27,7 @@ public class GameManager : MonoBehaviour
 
     #region Public Properties
     internal string CurrentRoom { get; private set; }
+    internal string PlayerUsername { get; private set; }
     internal double CurrentBalance { get; private set; }
     internal string CurrentRoundId { get; private set; }
     internal Wagers CurrentWagers { get; private set; }
@@ -39,6 +41,7 @@ public class GameManager : MonoBehaviour
         CurrentBalance = socketManager.PlayerData.balance;
         CurrentWagers = socketManager.InitialData.wagers;
 
+        betController.SetCurrentPlayerUsername(socketManager.PlayerData.username);
         uiController.SetupInitialData(
             socketManager.PlayerData.username,
             CurrentBalance,
@@ -46,6 +49,7 @@ public class GameManager : MonoBehaviour
             socketManager.InitialData.wagers,
             socketManager.InitialData.bets
         );
+        betController.SetCurrentPlayerUsername(socketManager.PlayerData.username);
 
         if (socketManager.InitialData.lobby != null)
         {
@@ -236,6 +240,9 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
+
+        // Trigger opponent chip cashout animation (bet area → dealers)
+        opponentChipManager?.PlayCashoutAnimation();
 
         betController.ClearAllBets();
     }

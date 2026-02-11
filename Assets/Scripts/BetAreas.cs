@@ -12,6 +12,7 @@ public abstract class BaseBetArea
     public Button Button;
     public GameObject WinImage;
     public Transform PlayerBetContainer;
+    public Transform OpponentBetContainer;  // Used by OpponentChipManager
 
     [HideInInspector] public PlayerBetComponent playerBetComponent;
 
@@ -87,4 +88,4 @@ public class SumArea : BaseBetArea
     {
         if (WinRatio_Text) WinRatio_Text.text = ratio;
     }
-}   
+}
