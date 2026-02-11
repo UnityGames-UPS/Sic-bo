@@ -1,4 +1,4 @@
-using DG.Tweening;
+﻿using DG.Tweening;
 using DG.Tweening.Core.Easing;
 using System.Collections;
 using System.Collections.Generic;
@@ -177,6 +177,10 @@ public class UIController : MonoBehaviour
         HidePopupImmediate(ReconnectPopupParent, ReconnectPopup);
         HidePopupImmediate(DisconnectPopupParent, DisconnectPopup);
         HidePopupImmediate(QuitPopupParent, QuitPopup);
+
+        // Hide win panel at start � it is shown only when a win occurs
+        if (WinPanel) WinPanel.SetActive(false);
+        if (WinAmount_Text) WinAmount_Text.gameObject.SetActive(false);
     }
 
     internal void SetupInitialData(string name, double balance, Leaderboards leaderboards, Wagers wagers, Bets bets)
@@ -403,13 +407,19 @@ public class UIController : MonoBehaviour
     }
     #endregion
 
-    #region Error Popup (For Network/General Errors Only)
+    #region Error Popup (For Connection/System Errors Only)
     /// <summary>
-    /// Show error popup for ERRORS ONLY:
-    /// - Request failed, Response fail
-    /// - Network errors
-    /// - Internal errors
-    /// - Another device login (will also close game)
+    /// Show error popup for ACTUAL ERRORS ONLY:
+    /// - Connection failures (timeout, can't connect)
+    /// - Authentication failures
+    /// - Socket errors
+    /// - Internal system errors
+    /// - Another device login
+    /// 
+    /// DO NOT USE FOR:
+    /// - Insufficient balance → use ShowInGamePopup
+    /// - Bet locked → use ShowInGamePopup
+    /// - Bet limit reached → use ShowInGamePopup
     /// </summary>
     internal void ShowErrorPopup(string message, string title = "Error")
     {
@@ -425,13 +435,16 @@ public class UIController : MonoBehaviour
     }
     #endregion
 
-    #region In-Game Popup (For Game Events Only)
+    #region In-Game Popup (For Game Notifications Only)
     /// <summary>
-    /// Show in-game popup for GAME EVENTS ONLY:
-    /// - Max bet reached (for specific button or entire board)
-    /// - Bet locked (no more bets, wait for next round)
+    /// Show in-game popup for GAME NOTIFICATIONS:
     /// - Insufficient balance
-    /// Auto-closes after 1 second
+    /// - Betting is locked
+    /// - Bet limit reached for [bet option]
+    /// - Cannot place bet (betting not active)
+    /// - Any server message response
+    /// 
+    /// Auto-closes after inGamePopupDisplayTime (default 1 second)
     /// </summary>
     internal void ShowInGamePopup(string message)
     {
@@ -711,6 +724,8 @@ public class UIController : MonoBehaviour
         winTween?.Kill();
 
         WinAmount_Text.text = $"+{winAmount:F2}";
+        WinAmount_Text.gameObject.SetActive(true);
+        WinPanel.transform.localScale = Vector3.zero; // always reset before animating
         WinPanel.SetActive(true);
 
         winTween = DOTween.Sequence()
@@ -718,7 +733,11 @@ public class UIController : MonoBehaviour
             .Append(WinPanel.transform.DOScale(1f, 0.2f))
             .AppendInterval(2f)
             .Append(WinPanel.transform.DOScale(0f, 0.3f))
-            .OnComplete(() => WinPanel.SetActive(false));
+            .OnComplete(() =>
+            {
+                WinPanel.SetActive(false);
+                if (WinAmount_Text) WinAmount_Text.gameObject.SetActive(false);
+            });
     }
 
     internal void ShowBonusNotification(int bonusNumber, int multiplier)

@@ -12435,7 +12435,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &239315915
 RectTransform:
   m_ObjectHideFlags: 0
@@ -14220,7 +14220,7 @@ MonoBehaviour:
   ChipOptions_Container: {fileID: 1765690011}
   ChipAreaPanel: {fileID: 2043243341}
   TotalStakePanel: {fileID: 902567199}
-  chipSelectorPrefab: {fileID: 6796085848189280699, guid: fb6746f30774e9c4394420f01383061e, type: 3}
+  chipSelectorPrefab: {fileID: 612846565074103464, guid: 4f1666bfb3bf94c459e5f6042af0fbd1, type: 3}
   chipSprites:
   - {fileID: -650650756073182861, guid: bd6d25a8641e5d34ea775f5f50f94da9, type: 3}
   - {fileID: 2379530504969426204, guid: bd6d25a8641e5d34ea775f5f50f94da9, type: 3}
@@ -14236,27 +14236,27 @@ MonoBehaviour:
   SmallArea:
     Button: {fileID: 1656661461}
     WinImage: {fileID: 1160551662}
-    WinRatio_Text: {fileID: 1636588718}
     PlayerBetContainer: {fileID: 1656661458}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1636588718}
   BigArea:
     Button: {fileID: 1289539970}
     WinImage: {fileID: 1585875243}
-    WinRatio_Text: {fileID: 1133700712}
     PlayerBetContainer: {fileID: 1289539967}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1133700712}
   OddArea:
     Button: {fileID: 1937846151}
     WinImage: {fileID: 1581366387}
-    WinRatio_Text: {fileID: 1665363949}
     PlayerBetContainer: {fileID: 1937846150}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1665363949}
   EvenArea:
     Button: {fileID: 10433631}
     WinImage: {fileID: 359686567}
-    WinRatio_Text: {fileID: 1300435204}
     PlayerBetContainer: {fileID: 10433630}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1300435204}
   TripleDiceAreas:
   - Button: {fileID: 2034449703}
     WinImage: {fileID: 325381760}
@@ -14310,74 +14310,74 @@ MonoBehaviour:
   SumAreas:
   - Button: {fileID: 892113643}
     WinImage: {fileID: 2018279354}
-    WinRatio_Text: {fileID: 102222237}
     PlayerBetContainer: {fileID: 892113642}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 102222237}
   - Button: {fileID: 724560961}
     WinImage: {fileID: 1699524969}
-    WinRatio_Text: {fileID: 629947806}
     PlayerBetContainer: {fileID: 724560960}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 629947806}
   - Button: {fileID: 2100954598}
     WinImage: {fileID: 1771331039}
-    WinRatio_Text: {fileID: 1139783686}
     PlayerBetContainer: {fileID: 2100954597}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1139783686}
   - Button: {fileID: 1336080792}
     WinImage: {fileID: 1918099540}
-    WinRatio_Text: {fileID: 1499186612}
     PlayerBetContainer: {fileID: 1336080791}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1499186612}
   - Button: {fileID: 2144231937}
     WinImage: {fileID: 446756773}
-    WinRatio_Text: {fileID: 402140791}
     PlayerBetContainer: {fileID: 2144231936}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 402140791}
   - Button: {fileID: 301394110}
     WinImage: {fileID: 1631431969}
-    WinRatio_Text: {fileID: 857887911}
     PlayerBetContainer: {fileID: 301394109}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 857887911}
   - Button: {fileID: 1244234797}
     WinImage: {fileID: 396464062}
-    WinRatio_Text: {fileID: 1876140615}
     PlayerBetContainer: {fileID: 1244234796}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1876140615}
   - Button: {fileID: 579249747}
     WinImage: {fileID: 1525047210}
-    WinRatio_Text: {fileID: 1776458736}
     PlayerBetContainer: {fileID: 579249746}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1776458736}
   - Button: {fileID: 993873213}
     WinImage: {fileID: 1252403219}
-    WinRatio_Text: {fileID: 1556175322}
     PlayerBetContainer: {fileID: 993873212}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1556175322}
   - Button: {fileID: 65678576}
     WinImage: {fileID: 150979233}
-    WinRatio_Text: {fileID: 2033856453}
     PlayerBetContainer: {fileID: 65678575}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 2033856453}
   - Button: {fileID: 159044044}
     WinImage: {fileID: 1572997385}
-    WinRatio_Text: {fileID: 506666814}
     PlayerBetContainer: {fileID: 159044043}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 506666814}
   - Button: {fileID: 680200043}
     WinImage: {fileID: 90355267}
-    WinRatio_Text: {fileID: 896344755}
     PlayerBetContainer: {fileID: 680200042}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 896344755}
   - Button: {fileID: 399784777}
     WinImage: {fileID: 719128781}
-    WinRatio_Text: {fileID: 796313035}
     PlayerBetContainer: {fileID: 399784776}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 796313035}
   - Button: {fileID: 2031837198}
     WinImage: {fileID: 984479912}
-    WinRatio_Text: {fileID: 1968157371}
     PlayerBetContainer: {fileID: 2031837197}
     playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1968157371}
   RepeatPanelMain: {fileID: 2082428799}
   RepeatPanel: {fileID: 1184101825}
   Repeat_Button: {fileID: 1893757666}
@@ -22572,7 +22572,7 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: fa92b26d2f66413cadff4922c212caf8
+  testToken: 6302aaaf8ea1497db4df1de54c707a12
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
 --- !u!4 &410521237
@@ -41816,6 +41816,50 @@ RectTransform:
   m_AnchoredPosition: {x: 182.57, y: 0}
   m_SizeDelta: {x: 350, y: 85.1}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &781455176
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 781455177}
+  - component: {fileID: 781455178}
+  m_Layer: 5
+  m_Name: WinnigChipsStart
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &781455177
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 781455176}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1400909897}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 517.25}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &781455178
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 781455176}
+  m_CullTransparentMesh: 1
 --- !u!1 &782031530
 GameObject:
   m_ObjectHideFlags: 0
@@ -48939,6 +48983,41 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 921935015}
   m_CullTransparentMesh: 1
+--- !u!1 &926643728
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 926643729}
+  m_Layer: 5
+  m_Name: WinningCHipsEnd
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &926643729
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 926643728}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1400909897}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -317.62677, y: -496.0001}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &927545313
 GameObject:
   m_ObjectHideFlags: 0
@@ -74489,6 +74568,8 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 781455177}
+  - {fileID: 926643729}
   - {fileID: 1587749457}
   - {fileID: 758743825}
   - {fileID: 2024641287}
@@ -87535,6 +87616,7 @@ MonoBehaviour:
   roundController: {fileID: 1629638714}
   historyController: {fileID: 1390679434}
   betLimitManager: {fileID: 1345149126}
+  chipWinAnimationController: {fileID: 2046684977}
   socketManager: {fileID: 410521236}
 --- !u!4 &1673436616
 Transform:
@@ -99927,7 +100009,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -4.85}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1929601969
@@ -105920,6 +106002,76 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 249}
   m_SizeDelta: {x: 698, y: 78}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &2046684976
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2046684978}
+  - component: {fileID: 2046684977}
+  m_Layer: 0
+  m_Name: WInAnimation
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2046684977
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2046684976}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7958de010538d8c479d01177dd1bbd88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dealerSpawnPoint: {fileID: 781455177}
+  chipPrefab: {fileID: 612846565074103464, guid: 4f1666bfb3bf94c459e5f6042af0fbd1, type: 3}
+  chipSprites:
+  - {fileID: -650650756073182861, guid: bd6d25a8641e5d34ea775f5f50f94da9, type: 3}
+  - {fileID: 2379530504969426204, guid: bd6d25a8641e5d34ea775f5f50f94da9, type: 3}
+  - {fileID: -2814181001494701904, guid: bd6d25a8641e5d34ea775f5f50f94da9, type: 3}
+  - {fileID: 3784851473557604243, guid: bd6d25a8641e5d34ea775f5f50f94da9, type: 3}
+  - {fileID: 6914834406222593661, guid: bd6d25a8641e5d34ea775f5f50f94da9, type: 3}
+  - {fileID: 5536666578610334598, guid: 812e41effb206e5459d8de386322bf00, type: 3}
+  - {fileID: 2682478918730800274, guid: 812e41effb206e5459d8de386322bf00, type: 3}
+  - {fileID: -3651860344762602277, guid: 812e41effb206e5459d8de386322bf00, type: 3}
+  - {fileID: 4696392963260273521, guid: 812e41effb206e5459d8de386322bf00, type: 3}
+  - {fileID: -986765258395856084, guid: 812e41effb206e5459d8de386322bf00, type: 3}
+  targetCanvas: {fileID: 674617748}
+  playerNameTarget: {fileID: 926643729}
+  dealerPoolSize: 25
+  dealerScatterX: 28
+  dealerScatterY: 18
+  dealerToBetDuration: 0.5
+  chipStaggerDelay: 0.055
+  betAreaScatterX: 11
+  betAreaScatterY: 9
+  betToPlayerDuration: 0.6
+  cashoutStagger: 0.04
+  arcHeight: 110
+  chipWorkingScale: 1
+--- !u!4 &2046684978
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2046684976}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.3044213, y: -0.3024564, z: 1.1608586}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2050684928
 GameObject:
   m_ObjectHideFlags: 0
@@ -111394,3 +111546,4 @@ SceneRoots:
   - {fileID: 226403982}
   - {fileID: 1345149127}
   - {fileID: 1713741161}
+  - {fileID: 2046684978}

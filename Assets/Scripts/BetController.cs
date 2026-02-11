@@ -792,12 +792,31 @@ public class BetController : MonoBehaviour
 
     internal void OnBetLimitReached()
     {
-        double areaMax = GetMaxBetForArea(pendingBetOption);
-        string areaDisplay = string.IsNullOrEmpty(pendingBetOption) ? "this area" : pendingBetOption;
-        uiController?.ShowInGamePopup($"Max limit for {areaDisplay} is {FormatChipAmount(areaMax)}");
-        pendingBetOption = "";
-    }
+        // Get the pending bet option that failed
+        if (string.IsNullOrEmpty(pendingBetOption))
+        {
+            uiController?.ShowInGamePopup("Max bet limit reached");
+            return;
+        }
 
+        // Get max bet for this specific option
+        double maxBet = gameManager.GetMaxBetForBetOption(pendingBetOption);
+
+        // Show formatted message
+        string message = $"Max bet for {FormatBetOptionName(pendingBetOption)} is {GameUtilities.FormatCurrency(maxBet)}";
+        uiController?.ShowInGamePopup(message);
+    }
+    private string FormatBetOptionName(string betOption)
+    {
+        if (betOption == "small") return "SMALL";
+        if (betOption == "big") return "BIG";
+        if (betOption == "odd") return "ODD";
+        if (betOption == "even") return "EVEN";
+        if (betOption.StartsWith("single_")) return "SINGLE " + betOption.Substring(7);
+        if (betOption.StartsWith("specific_3_")) return "TRIPLE " + betOption.Substring(11);
+        if (betOption.StartsWith("sum_")) return "SUM " + betOption.Substring(4);
+        return betOption.ToUpper();
+    }
     internal void OnBetActionResponse(BetAckResponse response)
     {
         if (response == null || response.payload == null)
@@ -1457,5 +1476,171 @@ public class BetController : MonoBehaviour
             Debug.Log($"  Active component: {kvp.Key}");
     }
     #endregion
+
+    #region Win Animation Data Collection
+    /// <summary>
+    /// Collect data about winning areas for chip animation
+    /// </summary>
+    internal List<WinAreaData> GetWinningAreasData()
+    {
+        List<WinAreaData> winAreas = new List<WinAreaData>();
+
+        // Check all bet areas that have bets
+        foreach (var kvp in areaBets)
+        {
+            string betOption = kvp.Key;
+            double betAmount = kvp.Value;
+
+            // Find the corresponding bet area transform
+            Transform areaTransform = GetBetAreaTransform(betOption);
+            if (areaTransform != null)
+            {
+                // Check if this area is highlighted (winning)
+                GameObject winImage = GetWinImage(betOption);
+                if (winImage != null && winImage.activeSelf)
+                {
+                    // Calculate win amount
+                    BetWager wager = gameManager.GetWagerForBetOption(betOption);
+                    double winAmount = 0;
+                    if (wager != null)
+                    {
+                        winAmount = wager.CalculateWin(betAmount);
+                    }
+
+                    winAreas.Add(new WinAreaData
+                    {
+                        betOption = betOption,
+                        betAreaTarget = areaTransform,
+                        betAmount = betAmount,
+                        winAmount = winAmount
+                    });
+                }
+            }
+        }
+
+        return winAreas;
+    }
+
+    /// <summary>
+    /// Get the transform for a bet area's player bet container
+    /// </summary>
+    private Transform GetBetAreaTransform(string betOption)
+    {
+        // Main bets
+        if (betOption == "small" && SmallArea != null)
+            return SmallArea.PlayerBetContainer;
+        if (betOption == "big" && BigArea != null)
+            return BigArea.PlayerBetContainer;
+        if (betOption == "odd" && OddArea != null)
+            return OddArea.PlayerBetContainer;
+        if (betOption == "even" && EvenArea != null)
+            return EvenArea.PlayerBetContainer;
+
+        // Triple dice areas
+        if (betOption.StartsWith("specific_3_"))
+        {
+            string numberStr = betOption.Substring(11);
+            if (int.TryParse(numberStr, out int number) && number >= 1 && number <= 6)
+            {
+                int index = number - 1;
+                if (index < TripleDiceAreas.Count && TripleDiceAreas[index] != null)
+                {
+                    return TripleDiceAreas[index].PlayerBetContainer;
+                }
+            }
+        }
+
+        // Single dice areas
+        if (betOption.StartsWith("single_"))
+        {
+            string numberStr = betOption.Substring(7);
+            if (int.TryParse(numberStr, out int number) && number >= 1 && number <= 6)
+            {
+                int index = number - 1;
+                if (index < SingleDiceAreas.Count && SingleDiceAreas[index] != null)
+                {
+                    return SingleDiceAreas[index].PlayerBetContainer;
+                }
+            }
+        }
+
+        // Sum areas
+        if (betOption.StartsWith("sum_"))
+        {
+            string numberStr = betOption.Substring(4);
+            if (int.TryParse(numberStr, out int sum) && sum >= 4 && sum <= 17)
+            {
+                int index = sum - 4;
+                if (index < SumAreas.Count && SumAreas[index] != null)
+                {
+                    return SumAreas[index].PlayerBetContainer;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Get the win image GameObject for a bet area
+    /// </summary>
+    private GameObject GetWinImage(string betOption)
+    {
+        // Main bets
+        if (betOption == "small" && SmallArea != null)
+            return SmallArea.WinImage;
+        if (betOption == "big" && BigArea != null)
+            return BigArea.WinImage;
+        if (betOption == "odd" && OddArea != null)
+            return OddArea.WinImage;
+        if (betOption == "even" && EvenArea != null)
+            return EvenArea.WinImage;
+
+        // Triple dice areas
+        if (betOption.StartsWith("specific_3_"))
+        {
+            string numberStr = betOption.Substring(11);
+            if (int.TryParse(numberStr, out int number) && number >= 1 && number <= 6)
+            {
+                int index = number - 1;
+                if (index < TripleDiceAreas.Count && TripleDiceAreas[index] != null)
+                {
+                    return TripleDiceAreas[index].WinImage;
+                }
+            }
+        }
+
+        // Single dice areas
+        if (betOption.StartsWith("single_"))
+        {
+            string numberStr = betOption.Substring(7);
+            if (int.TryParse(numberStr, out int number) && number >= 1 && number <= 6)
+            {
+                int index = number - 1;
+                if (index < SingleDiceAreas.Count && SingleDiceAreas[index] != null)
+                {
+                    return SingleDiceAreas[index].WinImage;
+                }
+            }
+        }
+
+        // Sum areas
+        if (betOption.StartsWith("sum_"))
+        {
+            string numberStr = betOption.Substring(4);
+            if (int.TryParse(numberStr, out int sum) && sum >= 4 && sum <= 17)
+            {
+                int index = sum - 4;
+                if (index < SumAreas.Count && SumAreas[index] != null)
+                {
+                    return SumAreas[index].WinImage;
+                }
+            }
+        }
+
+        return null;
+    }
+    #endregion
+
 }
 

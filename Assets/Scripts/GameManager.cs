@@ -1,9 +1,10 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// Main game coordinator handling all game flow and socket communication
+/// UPDATED: Now includes bet limit messages and win animation triggers
 /// </summary>
 public class GameManager : MonoBehaviour
 {
@@ -14,15 +15,19 @@ public class GameManager : MonoBehaviour
     [SerializeField] private RoundController roundController;
     [SerializeField] private HistoryController historyController;
     [SerializeField] private BetLimitManager betLimitManager;
+    [SerializeField] private ChipWinAnimationController chipWinAnimationController;
 
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
+
+
     #endregion
 
     #region Public Properties
     internal string CurrentRoom { get; private set; }
     internal double CurrentBalance { get; private set; }
     internal string CurrentRoundId { get; private set; }
+    internal Wagers CurrentWagers { get; private set; }
     #endregion
 
     #region Socket Callbacks - Initialization
@@ -31,6 +36,7 @@ public class GameManager : MonoBehaviour
         if (socketManager.InitialData == null || socketManager.PlayerData == null) return;
 
         CurrentBalance = socketManager.PlayerData.balance;
+        CurrentWagers = socketManager.InitialData.wagers;
 
         uiController.SetupInitialData(
             socketManager.PlayerData.username,
@@ -93,6 +99,9 @@ public class GameManager : MonoBehaviour
         roundController.StartRound(data);
         betController.OnRoundStart();
         betController.EnableBetting();
+
+        // Reset chip animation pool ready for next round
+        chipWinAnimationController?.ResetAll();
     }
 
     internal void OnBettingTimer(TimerData data)
@@ -125,6 +134,14 @@ public class GameManager : MonoBehaviour
 
         betController.HighlightWinningAreas(data.matchSide, data.sum);
         betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
+
+        // Trigger chip animation for winning areas (dealer → bet area)
+        if (chipWinAnimationController != null)
+        {
+            List<WinAreaData> winAreas = betController.GetWinningAreasData();
+            if (winAreas != null && winAreas.Count > 0)
+                chipWinAnimationController.PlayDiceResultAnimation(winAreas);
+        }
     }
 
     internal void OnBetPlaced(BetPlacedData data)
@@ -160,6 +177,9 @@ public class GameManager : MonoBehaviour
                     if (payout.win > 0)
                     {
                         uiController.ShowWinAnimation(payout.win);
+
+                        // Trigger cashout chip sweep animation (bet area → player)
+                        chipWinAnimationController?.PlayCashoutAnimation();
                     }
                 }
             }
@@ -224,15 +244,33 @@ public class GameManager : MonoBehaviour
         }
         else
         {
+            // IMPORTANT: All bet action failures are GAME NOTIFICATIONS, not errors
+            // They should use ShowInGamePopup(), NOT ShowErrorPopup()
+            //
+            // ShowInGamePopup = Game notifications (auto-closes after 1 second)
+            // ShowErrorPopup = Connection/system errors (requires user to click OK)
+
             string errorMsg = response.payload?.message ?? "Bet action failed";
 
             if (errorMsg == "Limit reached")
             {
+                // Specific handling for limit - BetController shows detailed message
                 betController.OnBetLimitReached();
+            }
+            else if (errorMsg.Contains("Insufficient"))
+            {
+                // Insufficient balance notification
+                uiController.ShowInGamePopup("Insufficient balance");
+            }
+            else if (errorMsg.Contains("not active") || errorMsg.Contains("locked"))
+            {
+                // Betting phase ended notification
+                uiController.ShowInGamePopup("Betting is locked");
             }
             else
             {
-                uiController.ShowErrorPopup(errorMsg);
+                // Any other bet-related message from server
+                uiController.ShowInGamePopup(errorMsg);
             }
 
             betController.OnBetActionResponse(null);
@@ -320,6 +358,60 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
+    #region Public API - NEW: Bet Limit Query
+    internal double GetMaxBetForBetOption(string betOption)
+    {
+        if (string.IsNullOrEmpty(CurrentRoom) || CurrentWagers == null) return 0;
+
+        BetWager wager = GetWagerForBetOption(betOption);
+        if (wager != null)
+        {
+            return wager.GetMaxBet(CurrentRoom);
+        }
+
+        return 0;
+    }
+
+    internal BetWager GetWagerForBetOption(string betOption)
+    {
+        if (CurrentWagers == null) return null;
+
+        if (betOption == "small") return CurrentWagers.main_bets?.small;
+        if (betOption == "big") return CurrentWagers.main_bets?.big;
+        if (betOption == "odd") return CurrentWagers.main_bets?.odd;
+        if (betOption == "even") return CurrentWagers.main_bets?.even;
+
+        if (betOption.StartsWith("single_")) return CurrentWagers.side_bets?.single_match_1;
+        if (betOption.StartsWith("specific_3_")) return CurrentWagers.side_bets?.specific_3;
+        if (betOption == "specific_2") return CurrentWagers.side_bets?.specific_2;
+
+        if (betOption.StartsWith("sum_"))
+        {
+            int sumValue = int.Parse(betOption.Substring(4));
+            return sumValue switch
+            {
+                4 => CurrentWagers.op_bets?.sum_4,
+                5 => CurrentWagers.op_bets?.sum_5,
+                6 => CurrentWagers.op_bets?.sum_6,
+                7 => CurrentWagers.op_bets?.sum_7,
+                8 => CurrentWagers.op_bets?.sum_8,
+                9 => CurrentWagers.op_bets?.sum_9,
+                10 => CurrentWagers.op_bets?.sum_10,
+                11 => CurrentWagers.op_bets?.sum_11,
+                12 => CurrentWagers.op_bets?.sum_12,
+                13 => CurrentWagers.op_bets?.sum_13,
+                14 => CurrentWagers.op_bets?.sum_14,
+                15 => CurrentWagers.op_bets?.sum_15,
+                16 => CurrentWagers.op_bets?.sum_16,
+                17 => CurrentWagers.op_bets?.sum_17,
+                _ => null
+            };
+        }
+
+        return null;
+    }
+    #endregion
+
     #region Private Helpers
     private List<double> GetChipValuesForRoom(string roomName)
     {
@@ -359,5 +451,7 @@ public class GameManager : MonoBehaviour
 
         return "main_bets";
     }
+
+
     #endregion
 }

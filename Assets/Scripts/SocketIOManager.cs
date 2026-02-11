@@ -494,7 +494,74 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
         Debug.LogError($"[ERROR] {json}");
-        ShowErrorAndBlock("An error occurred. Please refresh.");
+
+        // IMPORTANT: Distinguish between game logic rejections and actual errors
+        //
+        // GAME LOGIC REJECTIONS (use ShowInGamePopup):
+        //   - Bet limit reached
+        //   - Insufficient balance
+        //   - Betting not active/locked
+        //   - Invalid bet option
+        //   - Round not found
+        //   → These are normal game flow, show brief notification that auto-closes
+        //
+        // ACTUAL ERRORS (use ShowErrorAndBlock):
+        //   - Server internal errors
+        //   - Database errors
+        //   - Unexpected failures
+        //   → These require user attention and may need page refresh
+
+        string message = TryParseErrorMessage(json);
+
+        bool isGameLogicError = !string.IsNullOrEmpty(message) && (
+            message.Contains("Limit") ||
+            message.Contains("limit") ||
+            message.Contains("Insufficient") ||
+            message.Contains("insufficient") ||
+            message.Contains("not active") ||
+            message.Contains("locked") ||
+            message.Contains("not found") ||
+            message.Contains("Invalid bet") ||
+            message.Contains("Betting")
+        );
+
+        if (isGameLogicError)
+        {
+            // Game notification - auto-closes after 1 second
+            uiController?.ShowInGamePopup(message);
+        }
+        else
+        {
+            // Actual error - blocks UI until user acknowledges
+            ShowErrorAndBlock(string.IsNullOrEmpty(message)
+                ? "An error occurred. Please refresh."
+                : message);
+        }
+    }
+
+
+    private string TryParseErrorMessage(string json)
+    {
+        if (string.IsNullOrEmpty(json)) return string.Empty;
+
+        // Plain string (not JSON object)
+        if (!json.TrimStart().StartsWith("{")) return json;
+
+        try
+        {
+            // Minimal parse – just look for a "message" field
+            var obj = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+            if (obj != null)
+            {
+                if (obj.TryGetValue("message", out var msg) && msg != null)
+                    return msg.ToString();
+                if (obj.TryGetValue("error", out var err) && err != null)
+                    return err.ToString();
+            }
+        }
+        catch { /* Ignore parse errors */ }
+
+        return json; // fall back to raw string
     }
 
     private void OnForceDisconnect(string json)
@@ -661,20 +728,14 @@ public class SocketIOManager : MonoBehaviour
         {
             BetAckResponse response = JsonConvert.DeserializeObject<BetAckResponse>(json);
 
-            if (response != null && response.success && response.payload != null)
-            {
-                PlayerData.balance = response.payload.balance;
-                gameManager.OnBalanceUpdated(response.payload.balance);
-            }
-            else if (response != null && !response.success)
-            {
-                string errorMsg = response.payload?.message ?? "Bet placement failed";
-                uiController?.ShowErrorPopup(errorMsg);
-            }
+            // Pass response to GameManager which handles success/failure properly
+            // This ensures "Limit reached" uses ShowInGamePopup, not ShowErrorPopup
+            gameManager.OnBetActionResponse(response);
         }
         catch (Exception e)
         {
             Debug.LogError($"[ACK] Bet parse error: {e.Message}");
+            gameManager.OnBetActionResponse(null);
         }
     }
 
@@ -912,6 +973,20 @@ public class SocketIOManager : MonoBehaviour
         gameSocket.Emit(eventName);
     }
 
+    /// <summary>
+    /// Shows error popup and blocks UI with raycast blocker.
+    /// 
+    /// USE ONLY FOR ACTUAL ERRORS:
+    /// - Connection timeout
+    /// - Authentication failure
+    /// - Socket errors
+    /// - Configuration errors
+    /// 
+    /// DO NOT USE FOR:
+    /// - Bet limit reached (use ShowInGamePopup in UIController)
+    /// - Insufficient balance (use ShowInGamePopup in UIController)
+    /// - Betting locked (use ShowInGamePopup in UIController)
+    /// </summary>
     private void ShowErrorAndBlock(string message)
     {
         if (isBeingDestroyed) return;
@@ -964,4 +1039,3 @@ public class SocketIOManager : MonoBehaviour
     }
     #endregion
 }
-
