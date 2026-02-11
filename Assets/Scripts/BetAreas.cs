@@ -17,26 +17,26 @@ public abstract class BaseBetArea
 
     public virtual void AddBet(double amount, int chipIndex)
     {
-        if (playerBetComponent != null) 
+        if (playerBetComponent != null)
             playerBetComponent.AddBet(amount, chipIndex);
     }
 
     public virtual void RemoveLastBet()
     {
-        if (playerBetComponent != null) 
+        if (playerBetComponent != null)
             playerBetComponent.RemoveLastBet();
     }
 
     public virtual void ClearBets()
     {
-        if (playerBetComponent != null) 
+        if (playerBetComponent != null)
             playerBetComponent.Clear();
     }
 
-    public double GetTotalBet() => 
+    public double GetTotalBet() =>
         playerBetComponent != null ? playerBetComponent.GetTotalBet() : 0;
 
-    public bool HasBets() => 
+    public bool HasBets() =>
         playerBetComponent != null && playerBetComponent.HasBets();
 
     public void SetHighlight(bool highlight)
@@ -87,4 +87,4 @@ public class SumArea : BaseBetArea
     {
         if (WinRatio_Text) WinRatio_Text.text = ratio;
     }
-}
+}   

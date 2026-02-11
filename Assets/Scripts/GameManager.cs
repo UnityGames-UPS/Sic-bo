@@ -16,6 +16,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private HistoryController historyController;
     [SerializeField] private BetLimitManager betLimitManager;
     [SerializeField] private ChipWinAnimationController chipWinAnimationController;
+    [SerializeField] private BonusIndicatorController bonusIndicatorController;
 
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
@@ -102,6 +103,9 @@ public class GameManager : MonoBehaviour
 
         // Reset chip animation pool ready for next round
         chipWinAnimationController?.ResetAll();
+
+        // Clear bonus indicators from previous round
+        bonusIndicatorController?.ClearAllIndicators();
     }
 
     internal void OnBettingTimer(TimerData data)
@@ -118,7 +122,50 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        uiController.ShowBonusNotification(data.bonusPlayer, data.bonusMultiplier);
+        if (data.HasBonusDictionary())
+        {
+            // No containerMap needed – BonusIndicatorController has its own pre-spawned pool
+            bonusIndicatorController?.ShowBonusAnnouncements(data.bonus);  // CHANGED
+
+            string bonusText = "BONUS: ";
+            foreach (var kvp in data.bonus)
+                bonusText += $"{FormatBetOptionName(kvp.Key)} x{kvp.Value}, ";
+            bonusText = bonusText.TrimEnd(',', ' ');
+            uiController.ShowBonusNotification(bonusText);
+        }
+        else
+        {
+            uiController.ShowBonusNotification(data.bonusPlayer, data.bonusMultiplier);
+        }
+    }
+
+    private string FormatBetOptionName(string betOption)
+    {
+        // Convert bet option to readable name
+        if (betOption == "small") return "SMALL";
+        if (betOption == "big") return "BIG";
+        if (betOption == "odd") return "ODD";
+        if (betOption == "even") return "EVEN";
+
+        if (betOption.StartsWith("single_"))
+        {
+            string num = betOption.Substring(7);
+            return $"DICE {num}";
+        }
+
+        if (betOption.StartsWith("specific_3_"))
+        {
+            string num = betOption.Substring(11);
+            return $"TRIPLE {num}";
+        }
+
+        if (betOption.StartsWith("sum_"))
+        {
+            string num = betOption.Substring(4);
+            return $"SUM {num}";
+        }
+
+        return betOption.ToUpper();
     }
 
     internal void OnDiceResult(DiceResultData data)
@@ -134,6 +181,11 @@ public class GameManager : MonoBehaviour
 
         betController.HighlightWinningAreas(data.matchSide, data.sum);
         betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
+
+        // Get winning bet options
+        List<string> winningBetOptions = betController.GetWinningBetOptions();
+
+        bonusIndicatorController?.HandleDiceResult(winningBetOptions);
 
         // Trigger chip animation for winning areas (dealer → bet area)
         if (chipWinAnimationController != null)

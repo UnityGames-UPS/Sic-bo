@@ -756,5 +756,22 @@ public class UIController : MonoBehaviour
             .Append(BonusPanel.transform.DOScale(0f, 0.3f))
             .OnComplete(() => BonusPanel.SetActive(false));
     }
+
+    internal void ShowBonusNotification(string bonusText)
+    {
+        if (BonusNotification_Text == null || BonusPanel == null) return;
+
+        bonusTween?.Kill();
+
+        BonusNotification_Text.text = bonusText;
+        BonusPanel.SetActive(true);
+
+        bonusTween = DOTween.Sequence()
+            .Append(BonusPanel.transform.DOScale(1.2f, 0.3f))
+            .Append(BonusPanel.transform.DOScale(1f, 0.2f))
+            .AppendInterval(2f) // Show for longer when there are multiple bonuses
+            .Append(BonusPanel.transform.DOScale(0f, 0.3f))
+            .OnComplete(() => BonusPanel.SetActive(false));
+    }
     #endregion
 }

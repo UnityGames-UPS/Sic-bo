@@ -270,8 +270,22 @@ public class TimerData
 public class BonusData
 {
     public string roundId;
+
+    // Legacy fields (kept for backwards compatibility)
     public int bonusPlayer;
     public int bonusMultiplier;
+
+    // NEW: Dictionary of betOption -> multiplier
+    // Example: {"single_match_3": 10, "sum_12": 10}
+    public Dictionary<string, int> bonus;
+
+    /// <summary>
+    /// Check if this bonus data uses the new dictionary format
+    /// </summary>
+    public bool HasBonusDictionary()
+    {
+        return bonus != null && bonus.Count > 0;
+    }
 }
 
 [Serializable]
@@ -485,4 +499,4 @@ public class BetAckPayload
     public double refundAmount;
     public BetInfo bet;
 }
-#endregion
+#endregion  

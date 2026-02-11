@@ -11,7 +11,7 @@ public static class GameUtilities
     /// <summary>
     /// Format currency with K suffix for thousands
     /// </summary>
-    public static string FormatCurrency(double amount)
+    internal static string FormatCurrency(double amount)
     {
         if (amount >= 1000)
         {
@@ -34,7 +34,7 @@ public static class GameUtilities
     /// <summary>
     /// Format bet value with 2 decimal places if needed
     /// </summary>
-    public static string FormatBetValue(double value)
+    internal static string FormatBetValue(double value)
     {
         if (value % 1 == 0)
             return value.ToString("F0");
@@ -45,7 +45,7 @@ public static class GameUtilities
     /// <summary>
     /// Format currency with 2 decimal places for balance display
     /// </summary>
-    public static string FormatBalance(double balance)
+    internal static string FormatBalance(double balance)
     {
         return balance.ToString("F2");
     }
@@ -55,7 +55,7 @@ public static class GameUtilities
     /// <summary>
     /// Calculate remaining seconds from server timestamps
     /// </summary>
-    public static int CalculateTimeRemaining(long endTime, long serverTime)
+    internal static int CalculateTimeRemaining(long endTime, long serverTime)
     {
         long remainingMs = endTime - serverTime;
         float remainingSeconds = remainingMs / 1000f;
@@ -65,7 +65,7 @@ public static class GameUtilities
     /// <summary>
     /// Format DateTime to readable string
     /// </summary>
-    public static string FormatDateTime(DateTime dateTime)
+    internal static string FormatDateTime(DateTime dateTime)
     {
         if (dateTime == DateTime.MinValue) return "Unknown";
         return dateTime.ToString("dd/MM/yyyy hh:mm tt");
@@ -74,7 +74,7 @@ public static class GameUtilities
     /// <summary>
     /// Parse ISO 8601 timestamp
     /// </summary>
-    public static DateTime ParseTimestamp(string timestamp)
+    internal static DateTime ParseTimestamp(string timestamp)
     {
         try
         {
@@ -91,7 +91,7 @@ public static class GameUtilities
     /// <summary>
     /// Convert integer list to double list
     /// </summary>
-    public static List<double> ConvertToDoubleList(List<int> intList)
+    internal static List<double> ConvertToDoubleList(List<int> intList)
     {
         List<double> result = new List<double>();
         if (intList != null)
@@ -109,7 +109,7 @@ public static class GameUtilities
     /// <summary>
     /// Find optimal chip combination for target amount
     /// </summary>
-    public static List<ChipCombinationItem> FindChipCombination(double targetAmount, List<double> availableChipValues)
+    internal static List<ChipCombinationItem> FindChipCombination(double targetAmount, List<double> availableChipValues)
     {
         List<ChipCombinationItem> result = new List<ChipCombinationItem>();
 
@@ -168,7 +168,7 @@ public static class GameUtilities
     /// <summary>
     /// Safely get element from list with bounds checking
     /// </summary>
-    public static T GetFromList<T>(List<T> list, int index) where T : class
+    internal static T GetFromList<T>(List<T> list, int index) where T : class
     {
         if (list == null || index < 0 || index >= list.Count)
             return null;

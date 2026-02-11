@@ -43,7 +43,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -67,7 +67,7 @@ TextureImporter:
   swizzle: 50462976
   cookieLightType: 0
   platformSettings:
-  - serializedVersion: 3
+  - serializedVersion: 4
     buildTarget: DefaultTexturePlatform
     maxTextureSize: 2048
     resizeAlgorithm: 0
@@ -80,7 +80,7 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
-  - serializedVersion: 3
+  - serializedVersion: 4
     buildTarget: Standalone
     maxTextureSize: 2048
     resizeAlgorithm: 0
@@ -93,8 +93,34 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
-  - serializedVersion: 3
+  - serializedVersion: 4
     buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
@@ -108,8 +134,537 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites: []
+    sprites:
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_0
+      rect:
+        serializedVersion: 2
+        x: 16
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 92019cfd4139f4e46a896b1e2b62f84a
+      internalID: -1896520803
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_1
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 62083cf18d7daf84d85e63c2f7470cda
+      internalID: -1407631256
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_2
+      rect:
+        serializedVersion: 2
+        x: 157
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0b6251ed95667904590109e2524ef84b
+      internalID: -1344112475
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_3
+      rect:
+        serializedVersion: 2
+        x: 228
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8862cd4b250ec684ea26e00f7c346d9a
+      internalID: -928396053
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_4
+      rect:
+        serializedVersion: 2
+        x: 302
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c684201f8bc830a4e996965d3e60773b
+      internalID: -368963199
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_5
+      rect:
+        serializedVersion: 2
+        x: 374
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dc971ef4a79bc82448b74dffd9117389
+      internalID: -536066358
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_6
+      rect:
+        serializedVersion: 2
+        x: 445
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a6543a2146794d4459d97328fd4ceba3
+      internalID: 1808649536
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_7
+      rect:
+        serializedVersion: 2
+        x: 515
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fb32c6d74771f0241bc2c94e224d52b5
+      internalID: -29393536
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_8
+      rect:
+        serializedVersion: 2
+        x: 587
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7a9703b5a763fe74bb7a9b0e2cba0f64
+      internalID: -349069316
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_9
+      rect:
+        serializedVersion: 2
+        x: 660
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3ac7c40aece5c88488d740ef69d54817
+      internalID: -1262402993
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_10
+      rect:
+        serializedVersion: 2
+        x: 726
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1ca07f81acf7e2845a07679ed3b8234c
+      internalID: 548213723
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_11
+      rect:
+        serializedVersion: 2
+        x: 790
+        y: 104
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5645ab3a8ab12fd41b7a68f0429be70e
+      internalID: -1404870320
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_12
+      rect:
+        serializedVersion: 2
+        x: 16
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0b98470a553abf742a901bcb55af6b8e
+      internalID: -830275150
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_13
+      rect:
+        serializedVersion: 2
+        x: 84
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 326b56f05f38a1c4ebe625abbfbf957c
+      internalID: 704294879
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_14
+      rect:
+        serializedVersion: 2
+        x: 157
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7fd02072ace06b74ebc7725251ffa9cd
+      internalID: 1222534850
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_15
+      rect:
+        serializedVersion: 2
+        x: 228
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dc41bab28eb3cb943907db8f871272cf
+      internalID: 1239037182
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_16
+      rect:
+        serializedVersion: 2
+        x: 302
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3296cb6e2951fcb4aad424c7364a0549
+      internalID: -24290724
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_17
+      rect:
+        serializedVersion: 2
+        x: 374
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6e47fde708bb9d84e92021641eb4e9f0
+      internalID: 1023338953
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_18
+      rect:
+        serializedVersion: 2
+        x: 445
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4c612ab94d88ef9499a11c4c4378184c
+      internalID: -1914149039
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_19
+      rect:
+        serializedVersion: 2
+        x: 515
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ea904e5e501d8034a9f7282635c9afe4
+      internalID: -502725350
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_20
+      rect:
+        serializedVersion: 2
+        x: 587
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0db8473930da9fa489bfcd2bf4764926
+      internalID: 1935349612
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_21
+      rect:
+        serializedVersion: 2
+        x: 660
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7698206f3f518314ab4354446787c8bf
+      internalID: -1907934308
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_22
+      rect:
+        serializedVersion: 2
+        x: 726
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e7ef561e3ae84f540976fd80b17ef27e
+      internalID: -586019258
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sic_bo_Extra_2_23
+      rect:
+        serializedVersion: 2
+        x: 790
+        y: 21
+        width: 30
+        height: 45
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a531bba9f2f681e479b2f4f6975d1bd3
+      internalID: -177387441
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
     outline: []
+    customData: 
     physicsShape: []
     bones: []
     spriteID: 5e97eb03825dee720800000000000000
@@ -119,7 +674,33 @@ TextureImporter:
     edges: []
     weights: []
     secondaryTextures: []
-    nameFileIdTable: {}
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Sic_bo_Extra_2_0: -1896520803
+      Sic_bo_Extra_2_1: -1407631256
+      Sic_bo_Extra_2_10: 548213723
+      Sic_bo_Extra_2_11: -1404870320
+      Sic_bo_Extra_2_12: -830275150
+      Sic_bo_Extra_2_13: 704294879
+      Sic_bo_Extra_2_14: 1222534850
+      Sic_bo_Extra_2_15: 1239037182
+      Sic_bo_Extra_2_16: -24290724
+      Sic_bo_Extra_2_17: 1023338953
+      Sic_bo_Extra_2_18: -1914149039
+      Sic_bo_Extra_2_19: -502725350
+      Sic_bo_Extra_2_2: -1344112475
+      Sic_bo_Extra_2_20: 1935349612
+      Sic_bo_Extra_2_21: -1907934308
+      Sic_bo_Extra_2_22: -586019258
+      Sic_bo_Extra_2_23: -177387441
+      Sic_bo_Extra_2_3: -928396053
+      Sic_bo_Extra_2_4: -368963199
+      Sic_bo_Extra_2_5: -536066358
+      Sic_bo_Extra_2_6: 1808649536
+      Sic_bo_Extra_2_7: -29393536
+      Sic_bo_Extra_2_8: -349069316
+      Sic_bo_Extra_2_9: -1262402993
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

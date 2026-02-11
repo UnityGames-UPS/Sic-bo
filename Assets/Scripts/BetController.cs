@@ -63,6 +63,7 @@ public class BetController : MonoBehaviour
     [Header("References")]
     [SerializeField] private GameManager gameManager;
     [SerializeField] private UIController uiController;
+    [SerializeField] private BonusIndicatorController bonusIndicatorController;
     #endregion
 
     #region Private Fields - Pool System
@@ -169,6 +170,7 @@ public class BetController : MonoBehaviour
             spawnedCount += SpawnComponentInArea(SumAreas[i], $"sum_{i + 4}");
 
         isPoolInitialized = true;
+        bonusIndicatorController?.InitializePool(GetBetAreaContainerMap());
         Debug.Log($"[BetController] Pool initialized with {spawnedCount} components");
     }
 
@@ -384,7 +386,7 @@ public class BetController : MonoBehaviour
             minBetAmount = chipValues[0];
             maxBetAmount = CalculateMaxBetForAllOptions();
         }
- 
+
         UpdateAllComponentChipValues();
 
         SetupWinRatios();
@@ -536,6 +538,7 @@ public class BetController : MonoBehaviour
         areaBets.Clear();
         currentTotalBet = 0;
         betHistory.Clear();
+        bonusIndicatorController?.UpdatePlayerBetAreas(null);
 
         ClearArea(SmallArea);
         ClearArea(BigArea);
@@ -638,6 +641,7 @@ public class BetController : MonoBehaviour
         if (!areaBets.ContainsKey(data.betOption)) areaBets[data.betOption] = 0;
         areaBets[data.betOption] += data.amount;
         currentTotalBet += data.amount;
+        bonusIndicatorController?.AddPlayerBetArea(data.betOption);
 
         int chipIndex = GetChipIndexForAmount(data.amount);
         betHistory.Add(new BetAction
@@ -705,6 +709,7 @@ public class BetController : MonoBehaviour
 
         double removeAmount = System.Math.Abs(data.amount);
 
+        // Remove the last matching bet from history
         for (int i = betHistory.Count - 1; i >= 0; i--)
         {
             if (betHistory[i].betOption == data.betOption)
@@ -714,13 +719,16 @@ public class BetController : MonoBehaviour
             }
         }
 
+        // Update tracking
         if (areaBets.ContainsKey(data.betOption))
         {
             areaBets[data.betOption] -= removeAmount;
-            if (areaBets[data.betOption] <= 0) areaBets.Remove(data.betOption);
+            if (areaBets[data.betOption] <= 0.01)
+                areaBets.Remove(data.betOption);
         }
         currentTotalBet -= removeAmount;
 
+        // Remove last chip
         RemoveLastChipFromArea(data.betOption);
         UpdateTotalBet();
     }
@@ -731,26 +739,35 @@ public class BetController : MonoBehaviour
 
         double removeAmount = System.Math.Abs(data.amount);
 
+        // Remove ALL matching bets from history (not just one)
+        double totalRemovedFromHistory = 0;
         for (int i = betHistory.Count - 1; i >= 0; i--)
         {
             if (betHistory[i].betOption == data.betOption)
             {
+                totalRemovedFromHistory += betHistory[i].amount;
                 betHistory.RemoveAt(i);
-                break;
+
+                // Stop when we've removed the exact amount
+                if (System.Math.Abs(totalRemovedFromHistory - removeAmount) < 0.01)
+                    break;
             }
         }
 
+        // Update tracking
         if (areaBets.ContainsKey(data.betOption))
         {
             areaBets[data.betOption] -= removeAmount;
-            if (areaBets[data.betOption] <= 0) areaBets.Remove(data.betOption);
+            if (areaBets[data.betOption] <= 0.01)
+                areaBets.Remove(data.betOption);
         }
         currentTotalBet -= removeAmount;
 
-        RemoveLastChipFromArea(data.betOption);
+        // Clear ALL chips from this area (server handles the total)
+        ClearBetsFromArea(data.betOption);
+
         UpdateTotalBet();
     }
-
     private void RemoveLastChipFromArea(string betOption)
     {
         if (betOption == "small" && SmallArea != null)
@@ -790,6 +807,44 @@ public class BetController : MonoBehaviour
         }
     }
 
+    private void ClearBetsFromArea(string betOption)
+    {
+        if (betOption == "small" && SmallArea != null)
+            SmallArea.ClearBets();
+        else if (betOption == "big" && BigArea != null)
+            BigArea.ClearBets();
+        else if (betOption == "odd" && OddArea != null)
+            OddArea.ClearBets();
+        else if (betOption == "even" && EvenArea != null)
+            EvenArea.ClearBets();
+        else if (betOption.StartsWith("specific_3_"))
+        {
+            if (int.TryParse(betOption.Replace("specific_3_", ""), out int diceNum))
+            {
+                int index = diceNum - 1;
+                if (index >= 0 && index < TripleDiceAreas.Count && TripleDiceAreas[index] != null)
+                    TripleDiceAreas[index].ClearBets();
+            }
+        }
+        else if (betOption.StartsWith("single_"))
+        {
+            if (int.TryParse(betOption.Replace("single_", ""), out int diceNum))
+            {
+                int index = diceNum - 1;
+                if (index >= 0 && index < SingleDiceAreas.Count && SingleDiceAreas[index] != null)
+                    SingleDiceAreas[index].ClearBets();
+            }
+        }
+        else if (betOption.StartsWith("sum_"))
+        {
+            if (int.TryParse(betOption.Replace("sum_", ""), out int sum))
+            {
+                int index = sum - 4;
+                if (index >= 0 && index < SumAreas.Count && SumAreas[index] != null)
+                    SumAreas[index].ClearBets();
+            }
+        }
+    }
     internal void OnBetLimitReached()
     {
         // Get the pending bet option that failed
@@ -1642,5 +1697,39 @@ public class BetController : MonoBehaviour
     }
     #endregion
 
-}
+    #region Bonus System Support
+    /// <summary>
+    /// Get map of betOption -> Transform for bonus indicator placement
+    /// </summary>
+    internal Dictionary<string, Transform> GetBetAreaContainerMap()
+    {
+        return BonusIndicatorController.BuildBetAreaContainerMap(
+            SmallArea, BigArea, OddArea, EvenArea,
+            TripleDiceAreas, SingleDiceAreas, SumAreas
+        );
+    }
 
+    /// <summary>
+    /// Get list of currently winning bet options (areas with active WinImage)
+    /// </summary>
+    internal List<string> GetWinningBetOptions()
+    {
+        List<string> winningOptions = new List<string>();
+
+        // Check all bet areas that have bets
+        foreach (var kvp in areaBets)
+        {
+            string betOption = kvp.Key;
+            GameObject winImage = GetWinImage(betOption);
+
+            if (winImage != null && winImage.activeSelf)
+            {
+                winningOptions.Add(betOption);
+            }
+        }
+
+        return winningOptions;
+    }
+    #endregion
+
+}
