@@ -1,23 +1,22 @@
-using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Reusable chip component for betting areas
-/// Displays chip image and amount text
-/// Can be used in both chip selector and bet displays
+/// Reusable chip component for betting displays
 /// </summary>
 public class Chip : MonoBehaviour
 {
+    #region Serialized Fields
     [SerializeField] internal Image chipImage;
     [SerializeField] internal TMP_Text chipText;
+    #endregion
 
+    #region Public Properties
     internal int chipIndex { get; private set; }
+    #endregion
 
-    /// <summary>   
-    /// Set chip data including sprite, amount text, and index
-    /// </summary>
+    #region Public API
     internal void SetData(Sprite chip, string amount, int chipIndex)
     {
         if (chipImage != null) chipImage.sprite = chip;
@@ -25,35 +24,21 @@ public class Chip : MonoBehaviour
         this.chipIndex = chipIndex;
     }
 
-    /// <summary>
-    /// Update only the amount text without changing sprite or index
-    /// </summary>
     internal void SetAmount(string amount)
     {
         if (chipText != null) chipText.text = amount;
     }
 
-    /// <summary>
-    /// Update only the chip sprite without changing text or index
-    /// </summary>
     internal void SetSprite(Sprite chip)
     {
         if (chipImage != null) chipImage.sprite = chip;
     }
 
-    /// <summary>
-    /// Show or hide this chip
-    /// </summary>
     internal void SetActive(bool active)
     {
         gameObject.SetActive(active);
     }
 
-    /// <summary>
-    /// Check if this chip is currently active
-    /// </summary>
-    internal bool IsActive()
-    {
-        return gameObject.activeSelf;
-    }
+    internal bool IsActive() => gameObject.activeSelf;
+    #endregion
 }

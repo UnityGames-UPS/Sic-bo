@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using DG.Tweening;
 
 [RequireComponent(typeof(Image))]
-public class ImagePopWaitFadeLoop : MonoBehaviour
+public class ImagePopupTween : MonoBehaviour
 {
     public float popScale = 1.15f;
 

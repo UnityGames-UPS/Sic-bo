@@ -1,20 +1,22 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Main game coordinator handling all game flow and socket communication
+/// </summary>
 public class GameManager : MonoBehaviour
 {
-    #region Serialized References
+    #region Serialized Fields
     [Header("Controllers")]
     [SerializeField] private UIController uiController;
     [SerializeField] private BetController betController;
     [SerializeField] private RoundController roundController;
     [SerializeField] private HistoryController historyController;
-    [SerializeField] private BetLimitManager betLimitManager;  // NEW: Added BetLimitManager reference
+    [SerializeField] private BetLimitManager betLimitManager;
 
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
-
     #endregion
 
     #region Public Properties
@@ -23,7 +25,7 @@ public class GameManager : MonoBehaviour
     internal string CurrentRoundId { get; private set; }
     #endregion
 
-    #region Socket Callbacks - Init
+    #region Socket Callbacks - Initialization
     internal void OnInitDataReceived()
     {
         if (socketManager.InitialData == null || socketManager.PlayerData == null) return;
@@ -82,7 +84,7 @@ public class GameManager : MonoBehaviour
 
         CurrentRoundId = data.roundId;
 
-        int timeRemaining = CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
+        int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
         uiController.UpdatePlayerCount(data.playerCount);
         uiController.ShowBettingPhase(timeRemaining);
@@ -97,7 +99,7 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        int timeRemaining = CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
+        int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
         roundController.UpdateTimer(timeRemaining);
         uiController.UpdateTimer(timeRemaining);
@@ -170,7 +172,7 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        int secondsUntilNextRound = CalculateTimeRemaining(data.nextRoundStartTime, data.serverTime);
+        int secondsUntilNextRound = GameUtilities.CalculateTimeRemaining(data.nextRoundStartTime, data.serverTime);
 
         uiController.ShowNextRound(secondsUntilNextRound);
         uiController.UpdateRoundPhase("NEXTROUND");
@@ -200,7 +202,6 @@ public class GameManager : MonoBehaviour
         if (historyController != null)
         {
             historyController.UpdateHistoryData(history, meta);
-            print("Historyy...................");
         }
     }
 
@@ -225,7 +226,6 @@ public class GameManager : MonoBehaviour
         {
             string errorMsg = response.payload?.message ?? "Bet action failed";
 
-            // "Limit reached" — show area max limit popup (no chips spawned)
             if (errorMsg == "Limit reached")
             {
                 betController.OnBetLimitReached();
@@ -240,7 +240,7 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
-    #region Public API - Called by UI
+    #region Public API - Room Management
     internal void JoinRoom(string roomName)
     {
         CurrentRoom = roomName;
@@ -250,7 +250,6 @@ public class GameManager : MonoBehaviour
 
         betController.SetupChips(chipValues, wagers, roomName);
 
-        // NEW: Initialize BetLimitManager with game data
         if (betLimitManager != null && socketManager.InitialData != null)
         {
             betLimitManager.Initialize(
@@ -276,7 +275,9 @@ public class GameManager : MonoBehaviour
         uiController.HideAllTimers();
         CurrentRoom = null;
     }
+    #endregion
 
+    #region Public API - Betting Actions
     internal void PlaceBet(string betOption, int chipIndex)
     {
         if (string.IsNullOrEmpty(CurrentRoom)) return;
@@ -305,7 +306,9 @@ public class GameManager : MonoBehaviour
     {
         socketManager.RepeatBet();
     }
+    #endregion
 
+    #region Public API - History and Exit
     internal void RequestHistory(int page)
     {
         socketManager.RequestHistory(page);
@@ -318,13 +321,6 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region Private Helpers
-    private int CalculateTimeRemaining(long endTime, long serverTime)
-    {
-        long remainingMs = endTime - serverTime;
-        float remainingSeconds = remainingMs / 1000f;
-        return Mathf.Max(0, Mathf.RoundToInt(remainingSeconds));
-    }
-
     private List<double> GetChipValuesForRoom(string roomName)
     {
         if (socketManager.InitialData?.bets == null)
@@ -335,24 +331,11 @@ public class GameManager : MonoBehaviour
         return roomName switch
         {
             "casual" => socketManager.InitialData.bets.casual,
-            "novice" => ConvertToDoubleList(socketManager.InitialData.bets.novice),
-            "expert" => ConvertToDoubleList(socketManager.InitialData.bets.expert),
-            "high_roller" => ConvertToDoubleList(socketManager.InitialData.bets.high_roller),
+            "novice" => GameUtilities.ConvertToDoubleList(socketManager.InitialData.bets.novice),
+            "expert" => GameUtilities.ConvertToDoubleList(socketManager.InitialData.bets.expert),
+            "high_roller" => GameUtilities.ConvertToDoubleList(socketManager.InitialData.bets.high_roller),
             _ => new List<double>()
         };
-    }
-
-    private List<double> ConvertToDoubleList(List<int> intList)
-    {
-        List<double> result = new List<double>();
-        if (intList != null)
-        {
-            foreach (int value in intList)
-            {
-                result.Add((double)value);
-            }
-        }
-        return result;
     }
 
     private string GetBetType(string betOption)
@@ -362,7 +345,6 @@ public class GameManager : MonoBehaviour
             return "main_bets";
         }
 
-        // NEW: Handle specific_3_X (specific_3_1, specific_3_2, etc.)
         if (betOption.StartsWith("single_") ||
             betOption == "specific_2" ||
             betOption.StartsWith("specific_3_"))
@@ -377,6 +359,5 @@ public class GameManager : MonoBehaviour
 
         return "main_bets";
     }
-
     #endregion
 }

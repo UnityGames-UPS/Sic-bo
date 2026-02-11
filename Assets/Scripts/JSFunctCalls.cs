@@ -2,18 +2,19 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 
 /// <summary>
-/// JavaScript bridge for WebGL communication
-/// Unified version for both Plinko and Slot games
+/// JavaScript bridge for WebGL communication with React Native
 /// </summary>
 public class JSFunctCalls : MonoBehaviour
 {
-    // External JavaScript functions
+    #region External Functions
     [DllImport("__Internal")]
     private static extern void SendLogToReactNative(string message);
 
     [DllImport("__Internal")]
     private static extern void SendPostMessage(string message);
+    #endregion
 
+    #region Unity Lifecycle
     private void OnEnable()
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -29,7 +30,9 @@ public class JSFunctCalls : MonoBehaviour
         Debug.Log("[JS] Log forwarding disabled");
 #endif
     }
+    #endregion
 
+    #region Private Methods
 #if UNITY_WEBGL && !UNITY_EDITOR
     private void HandleLog(string logString, string stackTrace, LogType type)
     {
@@ -37,11 +40,9 @@ public class JSFunctCalls : MonoBehaviour
         SendLogToReactNative(formattedMessage);
     }
 #endif
+    #endregion
 
-    /// <summary>
-    /// Send custom message to React Native platform
-    /// Used for: "authToken", "OnEnter", "OnExit", "error"
-    /// </summary>
+    #region Public API
     internal void SendCustomMessage(string message)
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -51,4 +52,5 @@ public class JSFunctCalls : MonoBehaviour
         Debug.Log($"[JS] Would send message (editor mode): {message}");
 #endif
     }
+    #endregion
 }

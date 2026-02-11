@@ -1,11 +1,9 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Manages the menu screen with History and Info panels
-/// Allows navigation between panels with a single main close button
+/// Manages menu screen navigation (History and Info panels)
 /// </summary>
 public class MenuController : MonoBehaviour
 {
@@ -23,7 +21,7 @@ public class MenuController : MonoBehaviour
     [SerializeField] private GameObject infoPanel;
 
     [Header("Info Panel Pages")]
-    [SerializeField] private List<GameObject> infoPages; // 3 pages
+    [SerializeField] private List<GameObject> infoPages;
     [SerializeField] private Button forwardButton;
     [SerializeField] private Button backwardButton;
 
@@ -47,51 +45,37 @@ public class MenuController : MonoBehaviour
     #region Setup
     private void SetupButtons()
     {
-        // Main close button
         if (mainCloseButton) mainCloseButton.onClick.AddListener(CloseMenu);
 
-        // Panel navigation buttons
         if (historyNavButton) historyNavButton.onClick.AddListener(ShowHistoryPanel);
         if (infoNavButton) infoNavButton.onClick.AddListener(ShowInfoPanel);
 
-        // Info page navigation
         if (forwardButton) forwardButton.onClick.AddListener(NextInfoPage);
         if (backwardButton) backwardButton.onClick.AddListener(PreviousInfoPage);
     }
     #endregion
 
     #region Public API
-    /// <summary>
-    /// Open menu and show history panel
-    /// Called from Home screen History button
-    /// </summary>
     internal void OpenMenuWithHistory()
     {
         ShowMenu();
         ShowHistoryPanel();
     }
 
-    /// <summary>
-    /// Open menu and show info panel (Settings button)
-    /// Opens to first page by default
-    /// </summary>
     internal void OpenMenuWithInfo()
     {
         ShowMenu();
         ShowInfoPanel();
-        ShowInfoPage(0); // Default to first page
+        ShowInfoPage(0);
     }
 
-    /// <summary>
-    /// Close menu and hide all panels
-    /// </summary>
     internal void CloseMenu()
     {
         HideMenu();
     }
     #endregion
 
-    #region Private Methods
+    #region Private Methods - Menu Management
     private void ShowMenu()
     {
         if (menuScreen) menuScreen.SetActive(true);
@@ -108,39 +92,35 @@ public class MenuController : MonoBehaviour
         if (historyPanel) historyPanel.SetActive(false);
         if (infoPanel) infoPanel.SetActive(false);
     }
+    #endregion
 
+    #region Private Methods - Panel Navigation
     private void ShowHistoryPanel()
     {
-        // Hide all panels first
         HideAllPanels();
 
-        // Show history panel
         if (historyPanel) historyPanel.SetActive(true);
 
-        // Request history data
         if (historyController) historyController.ShowHistoryPanel();
     }
 
     private void ShowInfoPanel()
     {
-        // Hide all panels first
         HideAllPanels();
 
-        // Show info panel
         if (infoPanel) infoPanel.SetActive(true);
 
-        // Show first page by default
         ShowInfoPage(0);
     }
+    #endregion
 
+    #region Private Methods - Info Page Navigation
     private void ShowInfoPage(int pageIndex)
     {
         if (infoPages == null || infoPages.Count == 0) return;
 
-        // Clamp page index
         currentInfoPage = Mathf.Clamp(pageIndex, 0, TOTAL_INFO_PAGES - 1);
 
-        // Hide all pages
         for (int i = 0; i < infoPages.Count; i++)
         {
             if (infoPages[i] != null)
@@ -149,7 +129,6 @@ public class MenuController : MonoBehaviour
             }
         }
 
-        // Update navigation buttons
         UpdateInfoNavigationButtons();
     }
 
@@ -171,13 +150,11 @@ public class MenuController : MonoBehaviour
 
     private void UpdateInfoNavigationButtons()
     {
-        // Update forward button
         if (forwardButton)
         {
             forwardButton.interactable = currentInfoPage < TOTAL_INFO_PAGES - 1;
         }
 
-        // Update backward button
         if (backwardButton)
         {
             backwardButton.interactable = currentInfoPage > 0;

@@ -1,7 +1,11 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using Unity.Burst.CompilerServices;
+
+/// <summary>
+/// All data models for Sic Bo game
+/// Organized by: Root, Init Data, Room, Round Events, History, Betting, Requests/Responses
+/// </summary>
 
 #region Root Response
 [Serializable]
@@ -23,7 +27,7 @@ public class AuthTokenData
 }
 #endregion
 
-#region Game Init Data
+#region Init Data
 [Serializable]
 public class SicBoGameData
 {
@@ -81,6 +85,7 @@ public class Player
     public double balance;
     public string username;
 }
+#endregion
 
 #region Wager Data
 [Serializable]
@@ -144,7 +149,6 @@ public class BetWager
         return "1 : 1";
     }
 
-
     public double CalculateWin(double betAmount)
     {
         if (payout != null && payout.Count >= 2)
@@ -168,10 +172,6 @@ public class BetWager
         };
     }
 
-    /// <summary>
-    /// Get combined display for specific_2 and specific_3 in single text field
-    /// Shows both payouts dynamically from server data
-    /// </summary>
     public static string GetCombinedSpecificPayoutString(BetWager specific2, BetWager specific3)
     {
         string specific2Payout = "1";
@@ -188,7 +188,6 @@ public class BetWager
         }
 
         return $"2 HIT PAYS 1 : {specific2Payout}   3 HIT PAYS 1 : {specific3Payout}";
-
     }
 }
 
@@ -202,9 +201,7 @@ public class MaxBetLimit
 }
 #endregion
 
-#endregion
-
-#region Room Join Response
+#region Room Data
 [Serializable]
 public class RoomPayload
 {
@@ -237,6 +234,15 @@ public class RoundState
     public long serverTime;
     public int timeRemaining;
     public string phase;
+}
+
+[Serializable]
+public class Lobby
+{
+    public int casual;
+    public int novice;
+    public int expert;
+    public int high_roller;
 }
 #endregion
 
@@ -312,15 +318,6 @@ public class LobbyCountData
 }
 
 [Serializable]
-public class Lobby
-{
-    public int casual;
-    public int novice;
-    public int expert;
-    public int high_roller;
-}
-
-[Serializable]
 public class RoundEndPayload
 {
     public string roundId;
@@ -356,43 +353,17 @@ public class HistoryEntry
     public int dice_2;
     public int dice_3;
     public string match_side;
-    public string created_at;  // ISO 8601 timestamp: "2026-02-07T05:55:07.595Z"
-    public List<BetDetail> bets;  // Detailed bet information
+    public string created_at;
+    public List<BetDetail> bets;
 
-    /// <summary>
-    /// Calculate Profit/Loss (P/L) for this round
-    /// P/L = Win Amount - Bet Amount
-    /// </summary>
     public double GetProfitLoss()
     {
         return win_amount - bet_amount;
     }
 
-    /// <summary>
-    /// Parse the created_at timestamp to DateTime
-    /// </summary>
-    public DateTime GetDateTime()
-    {
-        try
-        {
-            return DateTime.Parse(created_at);
-        }
-        catch
-        {
-            return DateTime.MinValue;
-        }
-    }
-
-    /// <summary>
-    /// Get formatted date and time string for display
-    /// Format: "07/02/2026 12:12 PM"
-    /// </summary>
     public string GetFormattedDateTime()
     {
-        DateTime dt = GetDateTime();
-        if (dt == DateTime.MinValue) return "Unknown";
-
-        return dt.ToString("dd/MM/yyyy hh:mm tt");
+        return GameUtilities.FormatDateTime(GameUtilities.ParseTimestamp(created_at));
     }
 }
 
@@ -425,9 +396,10 @@ public class BetInfo
     public string betOption;
     public double amount;
     public double delta;
-    public int diceNumber; // For triple dice bets (specific_3) - which dice (1-6)
+    public int diceNumber;
 }
 
+[Serializable]
 public class BetLimitInfo
 {
     public double MinBet { get; set; }
@@ -444,5 +416,73 @@ public class BetLimitInfo
     {
         return (CurrentBetOnArea + betAmount) > MaxBet;
     }
+}
+
+[Serializable]
+public class BetAction
+{
+    public string betOption;
+    public double amount;
+    public int chipIndex;
+    public int diceNumber;
+}
+
+[Serializable]
+public class BetData
+{
+    public double amount;
+    public int chipIndex;
+}
+#endregion
+
+#region Request/Response Models
+[Serializable]
+public class GameRequest
+{
+    public string type;
+    public object payload;
+}
+
+[Serializable]
+public class EmptyPayload
+{
+}
+
+[Serializable]
+public class JoinLevelPayload
+{
+    public string level;
+}
+
+[Serializable]
+public class PlaceBetPayload
+{
+    public int amountIndex;
+    public string betType;
+    public string betOption;
+}
+
+[Serializable]
+public class HistoryRequestPayload
+{
+    public int page;
+}
+
+[Serializable]
+public class BetAckResponse
+{
+    public bool success;
+    public BetAckPayload payload;
+}
+
+[Serializable]
+public class BetAckPayload
+{
+    public string message;
+    public double balance;
+    public double totalBet;
+    public List<BetInfo> bets;
+    public double refundAmount;
+    public BetInfo bet;
 }
 #endregion
