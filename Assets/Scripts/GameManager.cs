@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 /// <summary>
 /// Main game coordinator handling all game flow and socket communication
@@ -120,6 +121,13 @@ public class GameManager : MonoBehaviour
 
     internal void OnBettingTimer(TimerData data)
     {
+        // SECURITY: Validate server data before processing
+        if (!ValidateTimerData(data))
+        {
+            Debug.LogError("[SECURITY] Invalid timer data from server - ignoring");
+            return;
+        }
+
         if (data == null) return;
 
         int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
@@ -199,6 +207,13 @@ public class GameManager : MonoBehaviour
 
     internal void OnDiceResult(DiceResultData data)
     {
+        // SECURITY: Validate server data before processing
+        if (!ValidateDiceResult(data))
+        {
+            Debug.LogError("[SECURITY] Invalid dice result from server - ignoring");
+            return;
+        }
+
         if (data == null) return;
 
         betController.DisableBetting();
@@ -252,11 +267,12 @@ public class GameManager : MonoBehaviour
             {
                 if (payout.username == socketManager.PlayerData.username)
                 {
-                    CurrentBalance = payout.balance;
-                    uiController.UpdateBalance(CurrentBalance);
+                    // SECURITY: Use validated balance update
+                    OnBalanceUpdated(payout.balance);
 
                     if (payout.win > 0)
                     {
+                        // Display SERVER's win amount (not client-calculated)
                         uiController.ShowWinAnimation(payout.win);
 
                         // Trigger cashout chip sweep animation (bet area → player)
@@ -295,11 +311,6 @@ public class GameManager : MonoBehaviour
         );
     }
 
-    internal void OnBalanceUpdated(double newBalance)
-    {
-        CurrentBalance = newBalance;
-        uiController.UpdateBalance(CurrentBalance);
-    }
 
     internal void OnHistoryReceived(List<HistoryEntry> history, HistoryMeta meta)
     {
@@ -321,6 +332,7 @@ public class GameManager : MonoBehaviour
         {
             if (response.payload != null)
             {
+                // SECURITY: Use validated balance update
                 OnBalanceUpdated(response.payload.balance);
             }
 
@@ -516,7 +528,24 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
-    #region Private Helpers
+    #region Private Helpers - Balance & State
+
+    /// <summary>
+    /// Update player balance with validation
+    /// </summary>
+    private void OnBalanceUpdated(double newBalance)
+    {
+        // SECURITY: Validate balance before updating
+        if (!ValidateBalanceUpdate(newBalance))
+        {
+            Debug.LogError("[SECURITY] Invalid balance update - keeping current balance");
+            return;
+        }
+
+        CurrentBalance = newBalance;
+        uiController.UpdateBalance(newBalance);
+    }
+
     private List<double> GetChipValuesForRoom(string roomName)
     {
         if (socketManager.InitialData?.bets == null)
@@ -555,7 +584,107 @@ public class GameManager : MonoBehaviour
 
         return "main_bets";
     }
+    #endregion
 
+    #region Server Data Validation - SECURITY IMPROVEMENTS
+
+    /// <summary>
+    /// Validate dice result from server to prevent malformed data
+    /// </summary>
+    private bool ValidateDiceResult(DiceResultData data)
+    {
+        if (data == null)
+        {
+            Debug.LogError("[SECURITY] DiceResultData is null");
+            return false;
+        }
+
+        // Validate dice values are in range 1-6
+        if (!IsValidDiceValue(data.dice1) ||
+            !IsValidDiceValue(data.dice2) ||
+            !IsValidDiceValue(data.dice3))
+        {
+            Debug.LogError($"[SECURITY] Invalid dice values: d1={data.dice1}, d2={data.dice2}, d3={data.dice3}");
+            return false;
+        }
+
+        // Validate sum matches dice total
+        int expectedSum = data.dice1 + data.dice2 + data.dice3;
+        if (data.sum != expectedSum)
+        {
+            Debug.LogError($"[SECURITY] Sum mismatch. Expected: {expectedSum}, Got: {data.sum}");
+            return false;
+        }
+
+        // Validate matchSide logic
+        bool isTriple = (data.dice1 == data.dice2 && data.dice2 == data.dice3);
+        if (!isTriple)
+        {
+            string expectedSide = (data.sum >= 4 && data.sum <= 10) ? "small" : "big";
+            if (data.matchSide != expectedSide)
+            {
+                Debug.LogWarning($"[SECURITY] MatchSide unexpected. Sum={data.sum}, Expected={expectedSide}, Got={data.matchSide}");
+                // Don't fail - server is authoritative
+            }
+        }
+
+        return true;
+    }
+
+    private bool IsValidDiceValue(int value)
+    {
+        return value >= 1 && value <= 6;
+    }
+
+    /// <summary>
+    /// Validate timer data from server
+    /// </summary>
+    private bool ValidateTimerData(TimerData data)
+    {
+        if (data == null)
+        {
+            Debug.LogError("[SECURITY] TimerData is null");
+            return false;
+        }
+
+        // Validate roundId matches if we have a current round
+        if (!string.IsNullOrEmpty(CurrentRoundId) && data.roundId != CurrentRoundId)
+        {
+            Debug.LogWarning($"[SECURITY] Timer roundId mismatch. Current={CurrentRoundId}, Received={data.roundId}");
+            // Don't fail - might be new round starting
+        }
+
+        // Validate timeRemaining is reasonable (0 to 60 seconds)
+        if (data.timeRemaining < 0 || data.timeRemaining > 60000)
+        {
+            Debug.LogError($"[SECURITY] Invalid timeRemaining: {data.timeRemaining}ms");
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Validate balance update from server
+    /// </summary>
+    private bool ValidateBalanceUpdate(double newBalance)
+    {
+        // Balance should never be negative
+        if (newBalance < 0)
+        {
+            Debug.LogError($"[SECURITY] Negative balance received: {newBalance}");
+            return false;
+        }
+
+        // Log large balance changes for monitoring
+        double balanceDiff = Math.Abs(newBalance - CurrentBalance);
+        if (balanceDiff > 1000)
+        {
+            Debug.Log($"[SECURITY] Large balance change: {balanceDiff:F2} (Old: {CurrentBalance:F2}, New: {newBalance:F2})");
+        }
+
+        return true;
+    }
 
     #endregion
 }

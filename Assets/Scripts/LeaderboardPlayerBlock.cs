@@ -19,7 +19,7 @@ public class LeaderboardPlayerBlock : MonoBehaviour
     /// </summary>
     public void SetPlayerData(string username, double balance, Sprite avatar)
     {
-        Debug.Log($"[LeaderboardPlayerBlock] SetPlayerData called - username: {username}, balance: {balance}, container: {(Container != null ? Container.name : "null")}");
+
 
         if (NameText != null)
             NameText.text = MaskUsername(username);
@@ -33,7 +33,7 @@ public class LeaderboardPlayerBlock : MonoBehaviour
         if (Container != null)
         {
             Container.SetActive(true);
-            Debug.Log($"[LeaderboardPlayerBlock] Container {Container.name} set to active");
+          
         }
         else
         {

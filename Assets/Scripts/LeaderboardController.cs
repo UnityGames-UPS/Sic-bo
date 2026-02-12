@@ -14,7 +14,7 @@ public class LeaderboardController : MonoBehaviour
     [SerializeField] private List<LeaderboardPlayerBlock> winnersBlocks = new List<LeaderboardPlayerBlock>(3);
 
     [Header("Avatar Images (Random Selection)")]
-    [SerializeField] private Sprite[] playerAvatars; // 4-5 avatar images
+    [SerializeField] private Sprite[] playerAvatars; 
 
     [Header("Animation Settings")]
     [SerializeField] private float nameDuration = 2f; // How long to HOLD name visible before fading out
@@ -88,11 +88,8 @@ public class LeaderboardController : MonoBehaviour
     {
         if (leaderboards == null)
         {
-            Debug.LogWarning("[LeaderboardController] UpdateLeaderboard called with null leaderboards");
             return;
         }
-
-        Debug.Log($"[LeaderboardController] UpdateLeaderboard called - richest count: {leaderboards.richest?.Count ?? 0}, winners count: {leaderboards.winners?.Count ?? 0}");
 
         // Check if we have any data to show
         bool hasRichestData = leaderboards.richest != null && leaderboards.richest.Count > 0;
@@ -113,7 +110,7 @@ public class LeaderboardController : MonoBehaviour
         // Show parent if we have data
         if (leaderboardParent != null && !leaderboardParent.activeSelf)
         {
-            Debug.Log("[LeaderboardController] Showing leaderboard parent");
+        
             leaderboardParent.SetActive(true);
         }
 
@@ -122,7 +119,7 @@ public class LeaderboardController : MonoBehaviour
         List<LeaderboardEntry> richestData = leaderboards.richest;
         if (!hasRichestData && hasWinnersData)
         {
-            Debug.Log("[LeaderboardController] Richest is empty, duplicating winners data");
+          
             richestData = leaderboards.winners;
         }
 
@@ -153,7 +150,6 @@ public class LeaderboardController : MonoBehaviour
         List<LeaderboardEntry> winnersData = leaderboards.winners;
         if (!hasWinnersData && hasRichestData)
         {
-            Debug.Log("[LeaderboardController] Winners is empty, duplicating richest data");
             winnersData = leaderboards.richest;
         }
 
@@ -185,7 +181,6 @@ public class LeaderboardController : MonoBehaviour
     /// </summary>
     public void Hide()
     {
-        Debug.Log("[LeaderboardController] Hide called");
 
         if (leaderboardParent != null)
         {
@@ -234,8 +229,6 @@ public class LeaderboardController : MonoBehaviour
         // Check if player changed
         bool playerChanged = !isFirstTime && currentData[index].username != newEntry.username;
 
-        Debug.Log($"[LeaderboardController] UpdatePlayerBlock index={index}, isFirstTime={isFirstTime}, playerChanged={playerChanged}, username={newEntry.username}");
-
         if (isFirstTime)
         {
             // First time - just set data directly without animation
@@ -245,8 +238,6 @@ public class LeaderboardController : MonoBehaviour
                 newEntry.balance,
                 GetRandomAvatar()
             );
-
-            Debug.Log($"[LeaderboardController] First time display for {newEntry.username} at index {index}");
 
             // Start alternating animation after a random delay
             float randomOffset = Random.Range(minRandomOffset, maxRandomOffset);

@@ -493,6 +493,13 @@ public class BetData
     public double amount;
     public int chipIndex;
 }
+
+[System.Serializable]
+public class ChipCombinationItem
+{
+    public double amount;
+    public int chipIndex;
+}
 #endregion
 
 #region Request/Response Models

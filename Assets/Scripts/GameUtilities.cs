@@ -178,9 +178,3 @@ public static class GameUtilities
     #endregion
 }
 
-[System.Serializable]
-public class ChipCombinationItem
-{
-    public double amount;
-    public int chipIndex;
-}
