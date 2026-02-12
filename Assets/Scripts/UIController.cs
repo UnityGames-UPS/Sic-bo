@@ -59,13 +59,6 @@ public class UIController : MonoBehaviour
     [SerializeField] private float buttonDropDelay = 0.1f;
     [SerializeField] private float panelSlideDistance = 500f; // Distance panel slides from
 
-    [Header("Leaderboard - Top 3 Players")]
-    [SerializeField] private TMP_Text FirstPlace_Name;
-    [SerializeField] private TMP_Text FirstPlace_Balance;
-    [SerializeField] private TMP_Text SecondPlace_Name;
-    [SerializeField] private TMP_Text SecondPlace_Balance;
-    [SerializeField] private TMP_Text ThirdPlace_Name;
-    [SerializeField] private TMP_Text ThirdPlace_Balance;
 
     [Header("Error Popup - Separate Parent")]
     [SerializeField] private GameObject ErrorPopupParent;
@@ -96,19 +89,17 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text WinAmount_Text;
     [SerializeField] private GameObject WinPanel;
 
-    [Header("Bonus Notification")]
-    [SerializeField] private TMP_Text BonusNotification_Text;
-    [SerializeField] private GameObject BonusPanel;
 
     [Header("Animation Settings")]
-    [SerializeField] private float slideDistance = 1000f; // Distance to slide from off-screen
-    [SerializeField] private float slideDuration = 0.3f; // Animation duration
-    [SerializeField] private float inGamePopupDisplayTime = 1f; // How long in-game popup shows
+    [SerializeField] private float slideDistance = 1000f;
+    [SerializeField] private float slideDuration = 0.3f;
+    [SerializeField] private float inGamePopupDisplayTime = 1f;
 
     [Header("Controllers")]
     [SerializeField] private GameManager gameManager;
     [SerializeField] private MenuController menuController;
     [SerializeField] private BetTimerController betTimerController;
+    [SerializeField] private LeaderboardController leaderboardController;
     #endregion
 
     #region Private Fields
@@ -134,6 +125,12 @@ public class UIController : MonoBehaviour
         ShowHomeScreen();
         InitializePopups();
         InitializeSideMenuAnimation();
+
+        // Initialize leaderboard controller
+        if (leaderboardController != null)
+        {
+            leaderboardController.Initialize();
+        }
     }
 
     private void OnDestroy()
@@ -194,7 +191,10 @@ public class UIController : MonoBehaviour
 
         UpdateBalance(balance);
 
-        if (leaderboards != null)
+        // Only update leaderboards if there's actual data
+        if (leaderboards != null &&
+            ((leaderboards.richest != null && leaderboards.richest.Count > 0) ||
+             (leaderboards.winners != null && leaderboards.winners.Count > 0)))
         {
             UpdateLeaderboards(leaderboards);
         }
@@ -620,41 +620,14 @@ public class UIController : MonoBehaviour
 
     internal void UpdateLeaderboards(Leaderboards leaderboards)
     {
-        if (leaderboards?.richest == null) return;
-
-        if (leaderboards.richest.Count > 0)
+        // Use new LeaderboardController if available
+        if (leaderboardController != null)
         {
-            if (FirstPlace_Name) FirstPlace_Name.text = leaderboards.richest[0].username;
-            if (FirstPlace_Balance) FirstPlace_Balance.text = leaderboards.richest[0].balance.ToString("F2");
-        }
-        else
-        {
-            if (FirstPlace_Name) FirstPlace_Name.text = "-";
-            if (FirstPlace_Balance) FirstPlace_Balance.text = "0.00";
-        }
-
-        if (leaderboards.richest.Count > 1)
-        {
-            if (SecondPlace_Name) SecondPlace_Name.text = leaderboards.richest[1].username;
-            if (SecondPlace_Balance) SecondPlace_Balance.text = leaderboards.richest[1].balance.ToString("F2");
-        }
-        else
-        {
-            if (SecondPlace_Name) SecondPlace_Name.text = "-";
-            if (SecondPlace_Balance) SecondPlace_Balance.text = "0.00";
-        }
-
-        if (leaderboards.richest.Count > 2)
-        {
-            if (ThirdPlace_Name) ThirdPlace_Name.text = leaderboards.richest[2].username;
-            if (ThirdPlace_Balance) ThirdPlace_Balance.text = leaderboards.richest[2].balance.ToString("F2");
-        }
-        else
-        {
-            if (ThirdPlace_Name) ThirdPlace_Name.text = "-";
-            if (ThirdPlace_Balance) ThirdPlace_Balance.text = "0.00";
+            leaderboardController.UpdateLeaderboard(leaderboards);
         }
     }
+
+
 
     private void UpdateLobbyMinMaxDisplay()
     {
@@ -740,38 +713,6 @@ public class UIController : MonoBehaviour
             });
     }
 
-    internal void ShowBonusNotification(int bonusNumber, int multiplier)
-    {
-        if (BonusNotification_Text == null || BonusPanel == null) return;
 
-        bonusTween?.Kill();
-
-        BonusNotification_Text.text = $"BONUS {bonusNumber} x{multiplier}";
-        BonusPanel.SetActive(true);
-
-        bonusTween = DOTween.Sequence()
-            .Append(BonusPanel.transform.DOScale(1.2f, 0.3f))
-            .Append(BonusPanel.transform.DOScale(1f, 0.2f))
-            .AppendInterval(1.5f)
-            .Append(BonusPanel.transform.DOScale(0f, 0.3f))
-            .OnComplete(() => BonusPanel.SetActive(false));
-    }
-
-    internal void ShowBonusNotification(string bonusText)
-    {
-        if (BonusNotification_Text == null || BonusPanel == null) return;
-
-        bonusTween?.Kill();
-
-        BonusNotification_Text.text = bonusText;
-        BonusPanel.SetActive(true);
-
-        bonusTween = DOTween.Sequence()
-            .Append(BonusPanel.transform.DOScale(1.2f, 0.3f))
-            .Append(BonusPanel.transform.DOScale(1f, 0.2f))
-            .AppendInterval(2f) // Show for longer when there are multiple bonuses
-            .Append(BonusPanel.transform.DOScale(0f, 0.3f))
-            .OnComplete(() => BonusPanel.SetActive(false));
-    }
     #endregion
 }

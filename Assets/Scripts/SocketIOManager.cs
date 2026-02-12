@@ -705,11 +705,13 @@ public class SocketIOManager : MonoBehaviour
 
         try
         {
-            RoomPayload payload = JsonConvert.DeserializeObject<RoomPayload>(json);
+            // Parse the response wrapper first
+            SicBoRoot response = JsonConvert.DeserializeObject<SicBoRoot>(json);
 
-            if (payload != null)
+            if (response != null && response.success && response.payload != null)
             {
-                gameManager.OnRoomJoinedWithData(payload);
+                print("updateed data at join");
+                gameManager.OnRoomJoinedWithData(response.payload);
             }
         }
         catch (Exception e)
@@ -1038,4 +1040,4 @@ public class SocketIOManager : MonoBehaviour
         }
     }
     #endregion
-}   
+}

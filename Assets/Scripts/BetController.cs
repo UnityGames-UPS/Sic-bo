@@ -281,7 +281,19 @@ public class BetController : MonoBehaviour
 
     internal void OnRoundEnd()
     {
-        // Components stay visible until next round starts
+        // Hide total stake panel at round end
+        if (TotalStakePanel != null)
+        {
+            TotalStakePanel.DOKill(); // Kill any existing animations
+            TotalStakePanel.DOAnchorPosY(-200f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
+        }
+
+        // Also hide chip area panel if visible
+        if (ChipAreaPanel != null)
+        {
+            ChipAreaPanel.DOKill();
+            ChipAreaPanel.DOAnchorPosY(-200f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
+        }
     }
     internal void ResetAllComponents()
     {

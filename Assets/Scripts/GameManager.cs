@@ -4,7 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// Main game coordinator handling all game flow and socket communication
-/// UPDATED: Now includes bet limit messages and win animation triggers
+/// UPDATED: Now supports array-based bonus multipliers
 /// </summary>
 public class GameManager : MonoBehaviour
 {
@@ -76,10 +76,14 @@ public class GameManager : MonoBehaviour
 
         uiController.UpdatePlayerCount(payload.playerCount);
 
-        if (payload.leaderboards != null)
+        // Always try to update leaderboards - LeaderboardController will handle null/empty cases
+        Debug.Log($"[GameManager] OnRoomJoinedWithData - leaderboards is {(payload.leaderboards == null ? "null" : "not null")}");
+        if (payload.leaderboards == null)
         {
-            uiController.UpdateLeaderboards(payload.leaderboards);
+            Debug.LogWarning("[GameManager] Leaderboards data is null in room join payload");
         }
+
+        uiController.UpdateLeaderboards(payload.leaderboards);
 
         if (payload.roundState == null)
         {
@@ -128,20 +132,39 @@ public class GameManager : MonoBehaviour
 
         if (data.HasBonusDictionary())
         {
-            // No containerMap needed – BonusIndicatorController has its own pre-spawned pool
-            bonusIndicatorController?.ShowBonusAnnouncements(data.bonus);  // CHANGED
+            // NEW: Show array-based bonus announcements
+            bonusIndicatorController?.ShowBonusAnnouncements(data.bonus);
 
+            // Build debug message
             string bonusText = "BONUS: ";
             foreach (var kvp in data.bonus)
-                bonusText += $"{FormatBetOptionName(kvp.Key)} x{kvp.Value}, ";
+            {
+                string betOption = FormatBetOptionName(kvp.Key);
+                List<int> multipliers = kvp.Value;
+
+                if (multipliers.Count == 1)
+                {
+                    bonusText += $"{betOption} x{multipliers[0]}, ";
+                }
+                else
+                {
+                    bonusText += $"{betOption} [";
+                    for (int i = 0; i < multipliers.Count; i++)
+                    {
+                        bonusText += $"x{multipliers[i]}";
+                        if (i < multipliers.Count - 1) bonusText += ", ";
+                    }
+                    bonusText += "], ";
+                }
+            }
             bonusText = bonusText.TrimEnd(',', ' ');
-            uiController.ShowBonusNotification(bonusText);
-        }
-        else
-        {
-            uiController.ShowBonusNotification(data.bonusPlayer, data.bonusMultiplier);
+
+            if (showDebugLogs)
+                Debug.Log($"[GameManager] {bonusText}");
         }
     }
+
+    private bool showDebugLogs = true;  // Can be made a serialized field if needed
 
     private string FormatBetOptionName(string betOption)
     {

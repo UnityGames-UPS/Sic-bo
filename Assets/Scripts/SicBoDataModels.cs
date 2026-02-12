@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 
@@ -75,7 +75,6 @@ public class LeaderboardEntry
 {
     public string username;
     public double balance;
-    public double totalWins;
     public int rank;
 }
 
@@ -275,9 +274,12 @@ public class BonusData
     public int bonusPlayer;
     public int bonusMultiplier;
 
-    // NEW: Dictionary of betOption -> multiplier
-    // Example: {"single_match_3": 10, "sum_12": 10}
-    public Dictionary<string, int> bonus;
+    // NEW: Dictionary of betOption -> array of multipliers
+    // Examples:
+    // - Single dice: {"single_1": [2, 3, 3]} → match1=2, match2=3, match3=3
+    // - Specific triple: {"specific_3_2": [3, 2]} → specific_3=3, specific_2=2
+    // - Other bets: {"sum_12": [1], "odd": [1]} → single multiplier in array
+    public Dictionary<string, List<int>> bonus;
 
     /// <summary>
     /// Check if this bonus data uses the new dictionary format
@@ -285,6 +287,50 @@ public class BonusData
     public bool HasBonusDictionary()
     {
         return bonus != null && bonus.Count > 0;
+    }
+
+    /// <summary>
+    /// Get multipliers for a specific bet option
+    /// </summary>
+    public List<int> GetMultipliers(string betOption)
+    {
+        if (bonus != null && bonus.TryGetValue(betOption, out List<int> multipliers))
+        {
+            return multipliers;
+        }
+        return new List<int>();
+    }
+
+    /// <summary>
+    /// Get a formatted string describing all bonuses
+    /// </summary>
+    public string GetBonusDescription()
+    {
+        if (bonus == null || bonus.Count == 0) return "No bonuses";
+
+        string description = "";
+        foreach (var kvp in bonus)
+        {
+            string betOption = kvp.Key;
+            List<int> multipliers = kvp.Value;
+
+            if (multipliers.Count == 1)
+            {
+                description += $"{betOption}: x{multipliers[0]}, ";
+            }
+            else
+            {
+                description += $"{betOption}: [";
+                for (int i = 0; i < multipliers.Count; i++)
+                {
+                    description += $"x{multipliers[i]}";
+                    if (i < multipliers.Count - 1) description += ", ";
+                }
+                description += "], ";
+            }
+        }
+
+        return description.TrimEnd(',', ' ');
     }
 }
 
@@ -499,4 +545,4 @@ public class BetAckPayload
     public double refundAmount;
     public BetInfo bet;
 }
-#endregion  
+#endregion
