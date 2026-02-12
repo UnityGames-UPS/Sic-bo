@@ -47,6 +47,12 @@ public class SocketIOManager : MonoBehaviour
     private bool isWaitingForInitData = false;
     private bool isBeingDestroyed = false;
     private bool hasFocus = true;
+    private float focusLostTime = 0f;
+    private const float maxBackgroundTime = 120f;
+    #endregion
+
+    #region Private Fields - Room Tracking
+    private string CurrentRoomId = null;
     #endregion
 
     #region Private Fields - Ping/Pong
@@ -102,6 +108,8 @@ public class SocketIOManager : MonoBehaviour
 
         if (!focus)
         {
+            focusLostTime = Time.time;
+
             if (focusCheckRoutine == null && gameObject.activeInHierarchy)
             {
                 focusCheckRoutine = StartCoroutine(FocusTimeoutCheck());
@@ -293,6 +301,14 @@ public class SocketIOManager : MonoBehaviour
         try
         {
             RoomPayload payload = JsonConvert.DeserializeObject<RoomPayload>(json);
+
+            // Track room ID
+            if (!string.IsNullOrEmpty(payload.roomId))
+            {
+                CurrentRoomId = payload.roomId;
+                Debug.Log($"[ROOM] Joined room: {CurrentRoomId}");
+            }
+
             gameManager.OnRoomJoinedWithData(payload);
         }
         catch (Exception e)
@@ -672,22 +688,28 @@ public class SocketIOManager : MonoBehaviour
     internal IEnumerator CloseSocket()
     {
         isExiting = true;
+        Debug.Log("[SOCKET] Closing");
+
+        RaycastBlocker?.SetActive(true);
         CleanupRoutines();
 
-        if (manager != null && gameSocket != null && gameSocket.IsOpen)
+        if (manager != null)
         {
             try
             {
-                gameSocket.Disconnect();
                 manager.Close();
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[CLOSE] Error during close: {e.Message}");
+                Debug.LogWarning($"[SOCKET] Error closing manager: {e.Message}");
             }
+            manager = null;
         }
 
+        yield return new WaitForSeconds(0.5f);
+
 #if UNITY_WEBGL && !UNITY_EDITOR
+        Debug.Log("[PLATFORM] Sending OnExit");
         JSManager?.SendCustomMessage("OnExit");
 #endif
 
@@ -849,6 +871,34 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
         Debug.Log($"[ACK] request {json}");
+
+        try
+        {
+            SicBoRoot response = JsonConvert.DeserializeObject<SicBoRoot>(json);
+
+            if (response != null && response.success && response.payload != null)
+            {
+                // Update room ID
+                if (!string.IsNullOrEmpty(response.payload.roomId))
+                {
+                    string oldRoomId = CurrentRoomId;
+                    CurrentRoomId = response.payload.roomId;
+                    Debug.Log($"[ROOM] Returned to lobby - New room: {CurrentRoomId}, Old room: {response.payload.oldRoomId}");
+                }
+
+                // Update balance if present
+                if (response.payload.balance > 0)
+                {
+                    PlayerData = new Player { balance = response.payload.balance, username = PlayerData?.username };
+                    uiController.UpdateBalance(PlayerData.balance);
+                }
+
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[HOME] Parse error: {e.Message}");
+        }
     }
     #endregion
 
@@ -939,6 +989,13 @@ public class SocketIOManager : MonoBehaviour
     {
         while (!hasFocus && !isBeingDestroyed)
         {
+            if (Time.time - focusLostTime > maxBackgroundTime)
+            {
+                Debug.LogWarning("[FOCUS] Max background time exceeded");
+                uiController?.ShowDisconnectPopup();
+                yield break;
+            }
+
             yield return new WaitForSeconds(1f);
         }
 

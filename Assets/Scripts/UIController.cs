@@ -110,6 +110,7 @@ public class UIController : MonoBehaviour
     private string playerName;
     private Wagers gameWagers;
     private Bets gameBets;
+    private bool isAnotherDeviceError = false;
 
     // Side Menu Animation Fields
     private RectTransform[] menuButtonRects;
@@ -160,7 +161,7 @@ public class UIController : MonoBehaviour
         if (HistoryGame_Button) HistoryGame_Button.onClick.AddListener(OpenHistoryFromGame);
         if (SettingsGame_Button) SettingsGame_Button.onClick.AddListener(OpenInfoFromGame);
 
-        if (ErrorOK_Button) ErrorOK_Button.onClick.AddListener(CloseErrorPopup);
+        if (ErrorOK_Button) ErrorOK_Button.onClick.AddListener(OnErrorOK);
         if (DisconnectOK_Button) DisconnectOK_Button.onClick.AddListener(() => { CloseDisconnectPopup(); gameManager.ExitGame(); });
         if (QuitYes_Button) QuitYes_Button.onClick.AddListener(() => { CloseQuitPopup(); gameManager.ExitGame(); });
         if (QuitNo_Button) QuitNo_Button.onClick.AddListener(CloseQuitPopup);
@@ -433,6 +434,18 @@ public class UIController : MonoBehaviour
     {
         SlideOutPopup(ErrorPopupParent, ErrorPopup);
     }
+
+    private void OnErrorOK()
+    {
+        CloseErrorPopup();
+
+        // If this was an "another device" error, exit the game
+        if (isAnotherDeviceError)
+        {
+            isAnotherDeviceError = false;
+            gameManager.ExitGame();
+        }
+    }
     #endregion
 
     #region In-Game Popup (For Game Notifications Only)
@@ -529,21 +542,15 @@ public class UIController : MonoBehaviour
     #region Another Device Popup
     /// <summary>
     /// Show when another device logs in with same credentials
-    /// This will close the current game (close socket, send OnExit, enable raycast)
+    /// User must click OK button to exit the game
     /// </summary>
     internal void ShowAnotherDevicePopup()
     {
-        // Show as error popup
-        ShowErrorPopup("Another device has logged in with your account.", "Session Ended");
+        // Set flag so error OK will trigger exit
+        isAnotherDeviceError = true;
 
-        // Close game after showing error
-        StartCoroutine(CloseGameAfterDelay(2f));
-    }
-
-    private IEnumerator CloseGameAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        gameManager.ExitGame();
+        // Show as error popup with custom title
+        ShowErrorPopup("Another device has logged in with your account.", "Another Login Detected");
     }
     #endregion
 

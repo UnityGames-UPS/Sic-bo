@@ -22,6 +22,8 @@ public class GameManager : MonoBehaviour
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
 
+    [Header("Blocker")]
+    [SerializeField] private GameObject raycastBlocker;
 
     #endregion
 
@@ -436,6 +438,26 @@ public class GameManager : MonoBehaviour
 
     internal void ExitGame()
     {
+        Debug.Log("[GameManager] ExitGame called");
+
+        // 1. Activate raycast blocker (prevent user input)
+        if (raycastBlocker != null)
+        {
+            raycastBlocker.SetActive(true);
+        }
+
+        // 2. Disable betting
+        betController?.DisableBetting();
+
+        // 3. Clear all game state
+        betController?.ClearAllBets();
+        betController?.ClearAllWinHighlights();
+        roundController?.ClearRoundDisplay();
+
+        // 4. Clear current room
+        CurrentRoom = null;
+
+        // 5. Close socket (async)
         StartCoroutine(socketManager.CloseSocket());
     }
     #endregion
