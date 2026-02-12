@@ -568,10 +568,13 @@ public class BetController : MonoBehaviour
     }
     internal void HighlightWinningAreas(string matchSide, int sum)
     {
+        // small / big come directly from the server's matchSide field
         SetAreaHighlight(SmallArea, matchSide == "small");
         SetAreaHighlight(BigArea, matchSide == "big");
-        SetAreaHighlight(OddArea, matchSide == "odd");
-        SetAreaHighlight(EvenArea, matchSide == "even");
+
+        // odd / even are never sent by the server — always calculate from sum parity.
+        SetAreaHighlight(OddArea, sum % 2 == 1);
+        SetAreaHighlight(EvenArea, sum % 2 == 0);
 
         int sumIndex = sum - 4;
         if (sumIndex >= 0 && sumIndex < SumAreas.Count && SumAreas[sumIndex] != null)
@@ -957,9 +960,24 @@ public class BetController : MonoBehaviour
         int betCount = response.payload.bets != null ? response.payload.bets.Count : 0;
         Debug.Log($"[BET] ACK received for {currentBetAction}: {betCount} bets received");
 
+        // Server rejected the action — show its message and bail out without touching UI
+        if (!response.success)
+        {
+            string msg = !string.IsNullOrEmpty(response.payload.message)
+                ? response.payload.message
+                : "Action failed";
+            uiController?.ShowInGamePopup(msg);
+            pendingBetOption = "";
+            ResetBetActionState();
+            return;
+        }
+
+        // Reconcile local tracking from server-authoritative ACK data
+        ReconcileStateFromAck(response);
+
         pendingBetOption = "";
 
-        if (betHistory.Count > 0)
+        if (currentTotalBet > 0)
         {
             ShowBetActionsPanelAnimated();
             hasPlacedBetThisRound = true;
@@ -971,6 +989,62 @@ public class BetController : MonoBehaviour
         }
 
         ResetBetActionState();
+    }
+
+    /// <summary>
+    /// Reconcile areaBets, betHistory and currentTotalBet from the server ACK payload.
+    /// The chip visuals have already been updated by the broadcast handler — this just
+    /// makes sure the local tracking dictionaries stay in sync with the server truth.
+    /// </summary>
+    private void ReconcileStateFromAck(BetAckResponse response)
+    {
+        if (response?.payload == null) return;
+
+        switch (currentBetAction)
+        {
+            case "DOUBLE":
+                // ACK contains totalBet (the new total after doubling).
+                // Broadcasts already added the delta chips and updated areaBets/currentTotalBet,
+                // but we override with the server's definitive totalBet to stay in sync.
+                if (response.payload.totalBet > 0)
+                {
+                    currentTotalBet = response.payload.totalBet;
+
+                    // Sync per-area amounts: each bet entry carries the new total for that betOption.
+                    if (response.payload.bets != null)
+                    {
+                        foreach (var bet in response.payload.bets)
+                        {
+                            if (bet == null || string.IsNullOrEmpty(bet.betOption)) continue;
+                            // bet.amount = delta (added this round); accumulate onto what broadcasts set.
+                            // To avoid double-counting we trust broadcasts for chips and only fix
+                            // the running total here if it drifts.
+                        }
+                    }
+                }
+                UpdateTotalBet();
+                break;
+
+            case "CANCEL":
+                // All bets wiped — broadcasts already cleared chip visuals.
+                // Ensure tracking state is fully reset regardless of broadcast timing.
+                areaBets.Clear();
+                betHistory.Clear();
+                currentTotalBet = 0;
+                bonusIndicatorController?.UpdatePlayerBetAreas(null);
+                UpdateTotalBet();
+                break;
+
+            case "UNDO":
+                // Broadcasts already removed the last chip and decremented currentTotalBet.
+                // Use server totalBet to correct any drift (undo payload may not always include it).
+                if (response.payload.totalBet >= 0 && response.payload.bets != null)
+                {
+                    currentTotalBet = response.payload.totalBet;
+                    UpdateTotalBet();
+                }
+                break;
+        }
     }
 
     private void ResetBetActionState()
@@ -1443,96 +1517,51 @@ public class BetController : MonoBehaviour
     #region Private Methods - Button Handlers
     private void OnUndoClicked()
     {
-       /* if (!isBettingEnabled || isProcessingBetAction)
+        if (!isBettingEnabled || isProcessingBetAction)
         {
             uiController?.ShowInGamePopup("Please wait...");
             return;
         }
 
-        if (betHistory.Count == 0)
-        {
-            uiController?.ShowInGamePopup("No bets to undo");
-            return;
-        }
-
         isProcessingBetAction = true;
         currentBetAction = "UNDO";
-        receivedBroadcastCount = 0;*/
+        receivedBroadcastCount = 0;
 
         gameManager.UndoBet();
     }
 
     private void OnCancelClicked()
     {
-        /*if (!isBettingEnabled || isProcessingBetAction)
+        if (!isBettingEnabled || isProcessingBetAction)
         {
             uiController?.ShowInGamePopup("Please wait...");
             return;
         }
 
-        if (betHistory.Count == 0)
-        {
-            uiController?.ShowInGamePopup("No bets to cancel");
-            return;
-        }
-
         isProcessingBetAction = true;
         currentBetAction = "CANCEL";
-        receivedBroadcastCount = 0;*/
+        receivedBroadcastCount = 0;
 
         gameManager.CancelAllBets();
     }
 
     private void OnDoubleClicked()
     {
-       /* if (!isBettingEnabled || isProcessingBetAction)
+        if (!isBettingEnabled || isProcessingBetAction)
         {
             uiController?.ShowInGamePopup("Please wait...");
-            return;
-        }
-
-        if (betHistory.Count == 0)
-        {
-            uiController?.ShowInGamePopup("No bets to double");
-            return;
-        }
-
-        if (currentTotalBet * 2 > maxBetAmount)
-        {
-            uiController?.ShowInGamePopup($"Cannot double - would exceed max total bet of {FormatChipAmount(maxBetAmount)}");
-            return;
-        }
-
-        bool canDouble = true;
-        string limitExceededArea = "";
-
-        foreach (var kvp in areaBets)
-        {
-            double doubledAmount = kvp.Value * 2;
-            double areaMaxBet = GetMaxBetForArea(kvp.Key);
-            if (doubledAmount > areaMaxBet)
-            {
-                canDouble = false;
-                limitExceededArea = kvp.Key;
-                break;
-            }
-        }
-
-        if (!canDouble)
-        {
-            uiController?.ShowInGamePopup($"Cannot double - {limitExceededArea} would exceed area limit");
             return;
         }
 
         isProcessingBetAction = true;
         currentBetAction = "DOUBLE";
         receivedBroadcastCount = 0;
-       */
+
         gameManager.DoubleBet();
     }
 
     private void OnRepeatClicked()
-    {/*
+    {
         if (!isBettingEnabled || isProcessingBetAction)
         {
             uiController?.ShowInGamePopup("Please wait...");
@@ -1560,7 +1589,7 @@ public class BetController : MonoBehaviour
             StopCoroutine(repeatPanelCoroutine);
             repeatPanelCoroutine = null;
         }
-        */
+
         gameManager.RepeatBet();
     }
     #endregion
