@@ -3,51 +3,22 @@ using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
 
-/// <summary>
-/// Manages bonus indicators on bet areas with 3 pre-defined rows per indicator.
-///
-/// STRUCTURE:
-///   - Each BonusIndicator prefab has 3 rows pre-built (Row1, Row2, Row3)
-///   - Each row has 4 images: X, Number1, Number2, Number3
-///   - Rows are shown/hidden based on how many multipliers are in the array
-///
-/// LIFECYCLE:
-///   1. BetController calls InitializePool() → one BonusIndicator per bet area
-///   2. Bonus broadcast → ShowBonusAnnouncements() shows rows based on array length
-///   3. Dice result → HandleDiceResult() animates winning indicators to green
-///   4. OnRoundStart → ClearAllIndicators() hides all rows
-/// </summary>
 public class BonusIndicatorController : MonoBehaviour
 {
     #region Serialized Fields
     [Header("Number Sprites - Brown (Announced)")]
-    [Tooltip("Sprites for digits 0-9 in brown color")]
     [SerializeField] private Sprite[] brownNumberSprites = new Sprite[10];
-
-    [Tooltip("Brown multiplier 'X' symbol")]
     [SerializeField] private Sprite brownMultiplierSprite;
-
-    [Tooltip("Brown background sprite")]
     [SerializeField] private Sprite brownBackgroundSprite;
-
-    [Tooltip("Brown decimal point '.' sprite")]
     [SerializeField] private Sprite brownDotSprite;
 
     [Header("Number Sprites - Green (Won)")]
-    [Tooltip("Sprites for digits 0-9 in green color")]
     [SerializeField] private Sprite[] greenNumberSprites = new Sprite[10];
-
-    [Tooltip("Green multiplier 'X' symbol")]
     [SerializeField] private Sprite greenMultiplierSprite;
-
-    [Tooltip("Green background sprite")]
     [SerializeField] private Sprite greenBackgroundSprite;
-
-    [Tooltip("Green decimal point '.' sprite")]
     [SerializeField] private Sprite greenDotSprite;
 
     [Header("Bonus Indicator Prefab")]
-    [Tooltip("Prefab with BonusIndicator component (3 rows pre-built)")]
     [SerializeField] private GameObject bonusIndicatorPrefab;
 
     [Header("Win Animation Settings")]
@@ -55,40 +26,41 @@ public class BonusIndicatorController : MonoBehaviour
     [SerializeField] private float scaleInDuration = 0.22f;
     [SerializeField] private float winScale = 1.2f;
 
+    [Header("Fall-In Entrance Animation")]
+    [SerializeField] private float fallStartScale = 3.5f;
+    [SerializeField] private float fallDuration = 0.45f;
+    [SerializeField] private Ease fallEase = Ease.OutBounce;
+    [SerializeField] private float landingPunchScale = 0.25f;
+    [SerializeField] private float landingPunchDuration = 0.3f;
+    [SerializeField] private float fallStaggerDelay = 0.06f;
+
+    [Header("Win-Exit Animation")]
+    [SerializeField] private float winHoldDuration = 1.5f;
+    [SerializeField] private float winExitDuration = 0.25f;
+    [SerializeField] private Ease winExitEase = Ease.InBack;
+
     [Header("Decimal Support")]
-    [Tooltip("Enable if bonuses can be decimal values (e.g. 2.5x)")]
     [SerializeField] private bool supportDecimalMultipliers = false;
 
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = false;
+    [SerializeField] private bool forceWinAnimation = false;
     #endregion
 
     #region Private Fields
-    // betOption → pre-spawned BonusIndicator
-    private readonly Dictionary<string, BonusIndicator> indicatorPool =
-        new Dictionary<string, BonusIndicator>();
-
-    // bet options that are currently visible (active bonus this round)
+    private readonly Dictionary<string, BonusIndicator> indicatorPool = new Dictionary<string, BonusIndicator>();
     private readonly HashSet<string> activeBonusOptions = new HashSet<string>();
-
-    // bet options the player has chips on this round
     private readonly HashSet<string> playerBetAreas = new HashSet<string>();
-
-    // Store current multipliers for re-setup during color change
-    private readonly Dictionary<string, List<int>> currentMultipliers =
-        new Dictionary<string, List<int>>();
-
+    private readonly Dictionary<string, List<int>> currentMultipliers = new Dictionary<string, List<int>>();
     private bool isPoolInitialized = false;
     #endregion
 
-    // ─────────────────────────────────────────────────────────────────────────
     #region Pool Initialization
-    // ─────────────────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Pre-spawns one disabled BonusIndicator as a child of each bet area container.
     /// </summary>
-    public void InitializePool(Dictionary<string, Transform> betAreaContainers)
+    internal void InitializePool(Dictionary<string, Transform> betAreaContainers)
     {
         if (isPoolInitialized)
         {
@@ -136,20 +108,18 @@ public class BonusIndicatorController : MonoBehaviour
     }
     #endregion
 
-    // ─────────────────────────────────────────────────────────────────────────
     #region Public API – called by GameManager
-    // ─────────────────────────────────────────────────────────────────────────
-
     /// <summary>
-    /// NEW: Bonus broadcast with array-based multipliers
+    ///Bonus broadcast with array-based multipliers
     /// Example: {"single_1": [2, 3, 3], "specific_3_2": [3, 2], "sum_12": [1]}
     /// </summary>
-    public void ShowBonusAnnouncements(Dictionary<string, List<int>> bonuses)
+    internal void ShowBonusAnnouncements(Dictionary<string, List<int>> bonuses)
     {
         HideAllActiveIndicators();
         activeBonusOptions.Clear();
         currentMultipliers.Clear();
 
+        int staggerIndex = 0;
         foreach (var kvp in bonuses)
         {
             string betOption = kvp.Key;
@@ -157,7 +127,8 @@ public class BonusIndicatorController : MonoBehaviour
 
             if (multipliers == null || multipliers.Count == 0) continue;
 
-            ShowBonus(betOption, multipliers);
+            ShowBonus(betOption, multipliers, staggerIndex);
+            staggerIndex++;
         }
 
         if (showDebugLogs)
@@ -167,7 +138,7 @@ public class BonusIndicatorController : MonoBehaviour
     /// <summary>
     /// LEGACY: Backwards compatibility for old single-multiplier format
     /// </summary>
-    public void ShowBonusAnnouncements(Dictionary<string, int> bonuses)
+    internal void ShowBonusAnnouncements(Dictionary<string, int> bonuses)
     {
         Dictionary<string, List<int>> newFormat = new Dictionary<string, List<int>>();
         foreach (var kvp in bonuses)
@@ -180,7 +151,7 @@ public class BonusIndicatorController : MonoBehaviour
     /// <summary>
     /// LEGACY: Float version for backwards compatibility
     /// </summary>
-    public void ShowBonusAnnouncements(Dictionary<string, float> bonuses)
+    internal void ShowBonusAnnouncements(Dictionary<string, float> bonuses)
     {
         Dictionary<string, List<int>> newFormat = new Dictionary<string, List<int>>();
         foreach (var kvp in bonuses)
@@ -192,10 +163,8 @@ public class BonusIndicatorController : MonoBehaviour
 
     /// <summary>
     /// Called once the dice result is known.
-    /// - Areas where player has a bet AND is a winning option → animate green.
-    /// - All other active bonus areas → disable.
     /// </summary>
-    public void HandleDiceResult(List<string> winningBetOptions)
+    internal void HandleDiceResult(List<string> winningBetOptions)
     {
         var winningSet = new HashSet<string>(winningBetOptions);
 
@@ -207,12 +176,16 @@ public class BonusIndicatorController : MonoBehaviour
             bool playerHasBet = playerBetAreas.Contains(betOption);
             bool isWinning = winningSet.Contains(betOption);
 
-            if (playerHasBet && isWinning)
+            // forceWinAnimation bypasses the real conditions for testing
+            bool shouldPlayWin = forceWinAnimation || (playerHasBet && isWinning);
+
+            if (shouldPlayWin)
             {
                 AnimateIndicatorToGreen(indicator, betOption);
 
                 if (showDebugLogs)
-                    Debug.Log($"[BonusIndicator] {betOption} → GREEN (player won with bonus).");
+                    Debug.Log($"[BonusIndicator] {betOption} → GREEN " +
+                              $"(forced={forceWinAnimation}, playerBet={playerHasBet}, winning={isWinning}).");
             }
             else
             {
@@ -228,7 +201,7 @@ public class BonusIndicatorController : MonoBehaviour
     /// <summary>
     /// Disable all indicators and reset round state.
     /// </summary>
-    public void ClearAllIndicators()
+    internal void ClearAllIndicators()
     {
         HideAllActiveIndicators();
 
@@ -246,6 +219,7 @@ public class BonusIndicatorController : MonoBehaviour
 
                 kvp.Value.transform.DOKill();
                 kvp.Value.transform.localScale = Vector3.one;
+                kvp.Value.transform.localPosition = Vector3.zero; // reset fall position
                 kvp.Value.HideAllRows();
                 kvp.Value.gameObject.SetActive(false);
             }
@@ -258,10 +232,7 @@ public class BonusIndicatorController : MonoBehaviour
         if (showDebugLogs)
             Debug.Log("[BonusIndicator] All indicators cleared.");
     }
-
-    // ── Player bet tracking ──────────────────────────────────────────────────
-
-    public void UpdatePlayerBetAreas(List<string> betOptions)
+    internal void UpdatePlayerBetAreas(List<string> betOptions)
     {
         playerBetAreas.Clear();
         if (betOptions != null)
@@ -269,15 +240,14 @@ public class BonusIndicatorController : MonoBehaviour
                 playerBetAreas.Add(opt);
     }
 
-    public void AddPlayerBetArea(string betOption) => playerBetAreas.Add(betOption);
-    public void RemovePlayerBetArea(string betOption) => playerBetAreas.Remove(betOption);
+    internal void AddPlayerBetArea(string betOption) => playerBetAreas.Add(betOption);
+    internal void RemovePlayerBetArea(string betOption) => playerBetAreas.Remove(betOption);
     #endregion
 
-    // ─────────────────────────────────────────────────────────────────────────
     #region Private – Display Helpers
-    // ─────────────────────────────────────────────────────────────────────────
 
-    private void ShowBonus(string betOption, List<int> multipliers)
+
+    private void ShowBonus(string betOption, List<int> multipliers, int staggerIndex = 0)
     {
         if (!indicatorPool.TryGetValue(betOption, out BonusIndicator indicator))
         {
@@ -305,14 +275,51 @@ public class BonusIndicatorController : MonoBehaviour
                 brownBackgroundSprite, brownDotSprite, false);
         }
 
-        // Enable immediately
-        indicator.transform.localScale = Vector3.one;
-        indicator.gameObject.SetActive(true);
+        // Kill any leftover tweens
+        indicator.transform.DOKill();
+
+        // ── Z-depth entrance: preset the start scale while still INACTIVE ──
+        // The parent stays inactive until the stagger delay ends so Unity's
+        // OnEnable cascade can't trigger backgroundAnimObject early.
+        indicator.transform.localPosition = Vector3.zero;
+        indicator.transform.localScale = Vector3.one * fallStartScale;
+        // DO NOT SetActive here — done inside the sequence below
+
+        float delay = staggerIndex * fallStaggerDelay;
+
+        Sequence fallSeq = DOTween.Sequence();
+        fallSeq.AppendInterval(delay);
+
+  
+        fallSeq.AppendCallback(() =>
+        {
+            indicator.gameObject.SetActive(true);   // 1 - parent on
+         
+        });
+
+        // Scale down to rest size — starts the same frame as the callback above
+        fallSeq.Append(
+            indicator.transform.DOScale(Vector3.one, fallDuration)
+                .SetEase(fallEase)
+        );
+
+        // Punch scale on snap-to-rest for physical feel
+        fallSeq.AppendCallback(() =>
+        {
+            indicator.transform.DOPunchScale(
+                Vector3.one * landingPunchScale,
+                landingPunchDuration,
+                vibrato: 1,
+                elasticity: 0.5f
+            );
+        });
+
+        fallSeq.Play();
 
         activeBonusOptions.Add(betOption);
 
         if (showDebugLogs)
-            Debug.Log($"[BonusIndicator] Showing {multipliers.Count} row(s) for '{betOption}'");
+            Debug.Log($"[BonusIndicator] Falling in {multipliers.Count} row(s) for '{betOption}' (stagger={delay:F2}s)");
     }
 
     private void HideAllActiveIndicators()
@@ -331,6 +338,7 @@ public class BonusIndicatorController : MonoBehaviour
 
                 indicator.transform.DOKill();
                 indicator.transform.localScale = Vector3.one;
+                indicator.transform.localPosition = Vector3.zero;
                 indicator.HideAllRows();
                 indicator.gameObject.SetActive(false);
             }
@@ -349,18 +357,54 @@ public class BonusIndicatorController : MonoBehaviour
 
         indicator.isWon = true;
 
-        // Animate all rows at once using single number holder
+        // Animate all rows to green; when done, run the hold-then-exit sequence
         indicator.AnimateToGreen(
             greenNumberSprites,
             greenMultiplierSprite,
             greenBackgroundSprite,
             greenDotSprite,
             scaleOutDuration,
-            scaleInDuration
+            scaleInDuration,
+            onComplete: () => AnimateIndicatorOut(indicator)
         );
 
         if (showDebugLogs)
             Debug.Log($"[BonusIndicator] Animating to green for '{betOption}'");
+    }
+
+    /// <summary>
+    /// Hold the green indicator for <see cref="winHoldDuration"/> seconds,
+    /// then scale it down and deactivate — giving the player a clean exit
+    /// instead of an abrupt disappearance.
+    /// </summary>
+    private void AnimateIndicatorOut(BonusIndicator indicator)
+    {
+        if (indicator == null) return;
+
+        indicator.transform.DOKill();
+
+        Sequence exitSeq = DOTween.Sequence();
+
+        // Let the player enjoy the green state briefly
+        exitSeq.AppendInterval(winHoldDuration);
+
+        // Scale down to nothing
+        exitSeq.Append(
+            indicator.transform.DOScale(0f, winExitDuration)
+                .SetEase(winExitEase)
+        );
+
+        // Deactivate once fully scaled out
+        exitSeq.OnComplete(() =>
+        {
+            indicator.transform.localScale = Vector3.one; // reset for next round
+            indicator.gameObject.SetActive(false);
+
+            if (showDebugLogs)
+                Debug.Log($"[BonusIndicator] Win indicator exited cleanly.");
+        });
+
+        exitSeq.Play();
     }
     #endregion
 
@@ -368,7 +412,7 @@ public class BonusIndicatorController : MonoBehaviour
     #region Static Helper
     // ─────────────────────────────────────────────────────────────────────────
 
-    public static Dictionary<string, Transform> BuildBetAreaContainerMap(
+    internal static Dictionary<string, Transform> BuildBetAreaContainerMap(
         SimpleBetArea smallArea, SimpleBetArea bigArea,
         SimpleBetArea oddArea, SimpleBetArea evenArea,
         List<TripleSameDiceArea> tripleDiceAreas,
