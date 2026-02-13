@@ -893,6 +893,21 @@ public class SocketIOManager : MonoBehaviour
                     uiController.UpdateBalance(PlayerData.balance);
                 }
 
+                if (response.payload.lobby != null)
+                {
+                    LobbyCountData lobbyData = new LobbyCountData { lobby = response.payload.lobby };
+                    gameManager.OnLobbyCount(lobbyData);
+
+                    Debug.Log($"[LOBBY] Updated lobby counts on return home - " +
+                             $"Casual: {response.payload.lobby.casual}, " +
+                             $"Novice: {response.payload.lobby.novice}, " +
+                             $"Expert: {response.payload.lobby.expert}, " +
+                             $"High Roller: {response.payload.lobby.high_roller}");
+                }
+                else
+                {
+                    Debug.LogWarning("[LOBBY] No lobby data in HOME response - counts not updated");
+                }
             }
         }
         catch (Exception e)

@@ -55,6 +55,7 @@ public class BetController : MonoBehaviour
 
     [Header("Min/Max Bet Display")]
     [SerializeField] private TMP_Text MinBet_Text;
+    [SerializeField] private TMP_Text TopMinBet_Text;
     [SerializeField] private TMP_Text MaxBet_Text;
 
     [Header("Shared Win Ratio - Triple Dice")]
@@ -529,6 +530,7 @@ public class BetController : MonoBehaviour
     private void UpdateMinMaxDisplay()
     {
         if (MinBet_Text) MinBet_Text.text = FormatChipAmount(minBetAmount);
+        if (TopMinBet_Text) TopMinBet_Text.text = FormatChipAmount(minBetAmount);
         if (MaxBet_Text) MaxBet_Text.text = FormatChipAmount(maxBetAmount);
     }
     internal void EnableBetting()

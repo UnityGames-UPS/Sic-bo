@@ -14,6 +14,7 @@ public class UIController : MonoBehaviour
     [SerializeField] private GameObject GameScreen;
 
     [Header("Home Screen Elements")]
+    [SerializeField] private TMP_Text TotalPlayers_Text;
     [SerializeField] private TMP_Text PlayerName_Text;
     [SerializeField] private TMP_Text PlayerBalance_Text;
     [SerializeField] private Button CasualRoom_Button;
@@ -38,6 +39,7 @@ public class UIController : MonoBehaviour
 
     [Header("Game Screen Elements")]
     [SerializeField] private TMP_Text GamePlayerName_Text;
+    [SerializeField] private TMP_Text RoundId_Text;
     [SerializeField] private TMP_Text GameBalance_Text;
     [SerializeField] private TMP_Text PlayerCount_Text;
     [SerializeField] private TMP_Text RoundPhase_Text;
@@ -409,19 +411,7 @@ public class UIController : MonoBehaviour
     #endregion
 
     #region Error Popup (For Connection/System Errors Only)
-    /// <summary>
-    /// Show error popup for ACTUAL ERRORS ONLY:
-    /// - Connection failures (timeout, can't connect)
-    /// - Authentication failures
-    /// - Socket errors
-    /// - Internal system errors
-    /// - Another device login
-    /// 
-    /// DO NOT USE FOR:
-    /// - Insufficient balance → use ShowInGamePopup
-    /// - Bet locked → use ShowInGamePopup
-    /// - Bet limit reached → use ShowInGamePopup
-    /// </summary>
+
     internal void ShowErrorPopup(string message, string title = "Error")
     {
         if (ErrorTitle_Text) ErrorTitle_Text.text = title;
@@ -449,16 +439,7 @@ public class UIController : MonoBehaviour
     #endregion
 
     #region In-Game Popup (For Game Notifications Only)
-    /// <summary>
-    /// Show in-game popup for GAME NOTIFICATIONS:
-    /// - Insufficient balance
-    /// - Betting is locked
-    /// - Bet limit reached for [bet option]
-    /// - Cannot place bet (betting not active)
-    /// - Any server message response
-    /// 
-    /// Auto-closes after inGamePopupDisplayTime (default 1 second)
-    /// </summary>
+
     internal void ShowInGamePopup(string message)
     {
         // Stop any existing coroutine
@@ -484,11 +465,7 @@ public class UIController : MonoBehaviour
     #endregion
 
     #region Reconnect Popup
-    /// <summary>
-    /// Show reconnect popup when 2 pings are missed
-    /// Stays visible until connection is restored (ping received)
-    /// If 15 pings are missed, this closes automatically and disconnect popup shows
-    /// </summary>
+
     internal void ShowReconnectPopup()
     {
         SlideInPopup(ReconnectPopupParent, ReconnectPopup);
@@ -501,10 +478,6 @@ public class UIController : MonoBehaviour
     #endregion
 
     #region Disconnect Popup
-    /// <summary>
-    /// Show disconnect popup when 15 pings are missed (max missed pings)
-    /// OK button closes the game (close socket, send OnExit to platform, enable raycast)
-    /// </summary>
     internal void ShowDisconnectPopup()
     {
         // Close reconnect popup first if it's showing
@@ -523,11 +496,6 @@ public class UIController : MonoBehaviour
     #endregion
 
     #region Quit Popup
-    /// <summary>
-    /// Show quit popup when Home screen Exit button is pressed
-    /// YES button: closes the game (close socket, send OnExit to platform, enable raycast)
-    /// NO button: just closes the popup
-    /// </summary>
     private void ShowQuitPopup()
     {
         SlideInPopup(QuitPopupParent, QuitPopup);
@@ -540,13 +508,9 @@ public class UIController : MonoBehaviour
     #endregion
 
     #region Another Device Popup
-    /// <summary>
-    /// Show when another device logs in with same credentials
-    /// User must click OK button to exit the game
-    /// </summary>
+
     internal void ShowAnotherDevicePopup()
     {
-        // Set flag so error OK will trigger exit
         isAnotherDeviceError = true;
 
         // Show as error popup with custom title
@@ -591,8 +555,29 @@ public class UIController : MonoBehaviour
             betTimerController.UpdateBettingTimer(secondsRemaining);
         }
     }
-
-    internal void UpdatePlayerCount(int count)
+    internal void UpdateRoundId(string roundId)
+    {
+        if (RoundId_Text)
+        {
+            if (string.IsNullOrEmpty(roundId))
+            {
+                RoundId_Text.text = "Waiting...";
+            }
+            else
+            {
+                RoundId_Text.text = $"RoundID : {roundId}";
+            }
+        }
+    }
+    internal void ClearRoundId()
+    {
+        if (RoundId_Text) RoundId_Text.text = "---";
+    }
+    internal void UpdateTotalPlayerCount(int total)
+    {
+        if (TotalPlayers_Text) TotalPlayers_Text.text = $"{total}";
+    }
+    internal void UpdatePlayerCountInLevel(int count)
     {
         if (PlayerCount_Text) PlayerCount_Text.text = count.ToString();
     }
@@ -633,8 +618,6 @@ public class UIController : MonoBehaviour
             leaderboardController.UpdateLeaderboard(leaderboards);
         }
     }
-
-
 
     private void UpdateLobbyMinMaxDisplay()
     {

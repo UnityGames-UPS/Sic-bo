@@ -19,6 +19,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private ChipWinAnimationController chipWinAnimationController;
     [SerializeField] private BonusIndicatorController bonusIndicatorController;
     [SerializeField] private OpponentChipManager opponentChipManager;
+    [SerializeField] private ResultPlaneController resultPlaneController;
 
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
@@ -77,7 +78,7 @@ public class GameManager : MonoBehaviour
     {
         if (payload == null) return;
 
-        uiController.UpdatePlayerCount(payload.playerCount);
+        uiController.UpdateTotalPlayerCount(payload.playerCount);
 
         // Always try to update leaderboards - LeaderboardController will handle null/empty cases
         Debug.Log($"[GameManager] OnRoomJoinedWithData - leaderboards is {(payload.leaderboards == null ? "null" : "not null")}");
@@ -88,9 +89,23 @@ public class GameManager : MonoBehaviour
 
         uiController.UpdateLeaderboards(payload.leaderboards);
 
-        if (payload.roundState == null)
+        // NEW: Update Round ID or show waiting state
+        if (payload.roundState != null && !string.IsNullOrEmpty(payload.roundState.roundId))
         {
+            CurrentRoundId = payload.roundState.roundId;
+            uiController.UpdateRoundId(payload.roundState.roundId);
+            Debug.Log($"[GameManager] Round ID set on room join: {payload.roundState.roundId}");
+
+            // Set phase if available
+            string phase = payload.roundState.phase?.ToUpper() ?? "WAITING";
+            uiController.UpdateRoundPhase(phase);
+        }
+        else
+        {
+            CurrentRoundId = null;
+            uiController.UpdateRoundId(null); 
             uiController.UpdateRoundPhase("WAITING");
+            Debug.Log("[GameManager] No active round - showing waiting state");
         }
     }
     #endregion
@@ -104,7 +119,11 @@ public class GameManager : MonoBehaviour
 
         int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
-        uiController.UpdatePlayerCount(data.playerCount);
+        uiController.UpdatePlayerCountInLevel(data.playerCount);
+
+        uiController.UpdateRoundId(data.roundId);
+        Debug.Log($"[GameManager] Round ID updated: {data.roundId}");
+
         uiController.ShowBettingPhase(timeRemaining);
         uiController.UpdateRoundPhase("BETTING");
 
@@ -215,7 +234,14 @@ public class GameManager : MonoBehaviour
         }
 
         if (data == null) return;
-
+        if (resultPlaneController != null)
+        {
+            resultPlaneController.AddNewResult(data);
+        }
+        else
+        {
+            Debug.LogWarning("[GameManager] ResultPlaneController is not assigned!");
+        }
         betController.DisableBetting();
 
         uiController.ShowBetLocked();
@@ -309,6 +335,15 @@ public class GameManager : MonoBehaviour
             data.lobby.expert,
             data.lobby.high_roller
         );
+
+        // NEW: Calculate and display total players (optional)
+        int totalPlayers = data.lobby.casual + data.lobby.novice +
+                          data.lobby.expert + data.lobby.high_roller;
+        uiController.UpdateTotalPlayerCount(totalPlayers);
+
+        Debug.Log($"[GameManager] Lobby counts updated - Total: {totalPlayers}, " +
+                 $"Casual: {data.lobby.casual}, Novice: {data.lobby.novice}, " +
+                 $"Expert: {data.lobby.expert}, High Roller: {data.lobby.high_roller}");
     }
 
 
@@ -396,6 +431,7 @@ public class GameManager : MonoBehaviour
 
         socketManager.JoinLevel(roomName);
         uiController.ShowGameScreen();
+        uiController.UpdateRoundId(null);
     }
 
     internal void LeaveRoom()
@@ -404,10 +440,13 @@ public class GameManager : MonoBehaviour
         betController.ClearAllBets();
         betController.ClearAllWinHighlights();
         roundController.ClearRoundDisplay();
+        resultPlaneController?.ClearAllResults();
         socketManager.ReturnHome();
         uiController.ShowHomeScreen();
         uiController.HideAllTimers();
         CurrentRoom = null;
+        CurrentRoundId = null;
+        uiController.ClearRoundId();
     }
     #endregion
 

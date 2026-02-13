@@ -502,6 +502,19 @@ public class ChipCombinationItem
 }
 #endregion
 
+#region Result Data
+
+[System.Serializable]
+public class ResultData
+{
+    public int dice1;
+    public int dice2;
+    public int dice3;
+    public int sum;
+    public string matchSide;
+}
+    #endregion
+
 #region Request/Response Models
 [Serializable]
 public class GameRequest

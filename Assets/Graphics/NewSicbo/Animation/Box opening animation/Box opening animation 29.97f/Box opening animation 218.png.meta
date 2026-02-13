@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: ef39b46820fbb8645b57d74414009eb4
+guid: 69c1e6b24e6148f4894fcd01d72ba281
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1644839434426325878
-    second: Box opening animation 218_0
+      213: 7017233273662668769
+    second: Box opening animation 208_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +46,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -139,7 +139,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Box opening animation 218_0
+      name: Box opening animation 208_0
       rect:
         serializedVersion: 2
         x: 0
@@ -154,8 +154,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 67b198930c4a3d610800000000000000
-      internalID: 1644839434426325878
+      spriteID: 1eff6b6cb78326160800000000000000
+      internalID: 7017233273662668769
       vertices: []
       indices: 
       edges: []
@@ -164,7 +164,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Box opening animation 218_0: 1644839434426325878
+      Box opening animation 208_0: 7017233273662668769
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
