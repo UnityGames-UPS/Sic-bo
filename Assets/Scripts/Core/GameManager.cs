@@ -454,7 +454,10 @@ public class GameManager : MonoBehaviour
     internal void PlaceBet(string betOption, int chipIndex)
     {
         if (string.IsNullOrEmpty(CurrentRoom)) return;
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayPlayerBetPlace();
+        }
         string betType = GetBetType(betOption);
 
         socketManager.PlaceBet(betType, betOption, chipIndex, CurrentRoom);

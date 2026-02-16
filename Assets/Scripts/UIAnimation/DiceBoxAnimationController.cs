@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Dice box animation controller with SERVER TIME SYNCHRONIZATION
+/// Dice box animation controller with SERVER TIME SYNCHRONIZATION - AUDIO INTEGRATED
 /// Now handles mid-round joins by calculating elapsed time and jumping to correct animation phase
 /// </summary>
 public class DiceBoxAnimationController : MonoBehaviour
@@ -51,6 +51,11 @@ public class DiceBoxAnimationController : MonoBehaviour
     private Action onDiceShouldShow;
     private Action onDiceShouldHide;
     private Action onAnimationCycleComplete;
+
+    // Audio tracking
+    private bool hasPlayedShakeSound = false;
+    private bool hasPlayedBoxOpenSound = false;
+    private bool hasPlayedBoxCloseSound = false;
     #endregion
 
     #region Unity Lifecycle
@@ -83,6 +88,11 @@ public class DiceBoxAnimationController : MonoBehaviour
 
         StopAllAnimations();
 
+        // Reset audio flags - CRITICAL for new round
+        hasPlayedShakeSound = false;
+        hasPlayedBoxOpenSound = false;
+        hasPlayedBoxCloseSound = false;
+
         // Store server timing
         roundStartTime = roundStartTimestamp;
         bettingEndTime = bettingEndTimestamp;
@@ -109,6 +119,11 @@ public class DiceBoxAnimationController : MonoBehaviour
     {
         Debug.Log("[DiceBoxAnim] Starting new animation cycle (legacy - from beginning)");
         StopAllAnimations();
+
+        // Reset audio flags - CRITICAL for new round
+        hasPlayedShakeSound = false;
+        hasPlayedBoxOpenSound = false;
+        hasPlayedBoxCloseSound = false;
 
         // Show container and ensure dice are hidden
         if (diceBoxContainer) diceBoxContainer.SetActive(true);
@@ -234,156 +249,149 @@ public class DiceBoxAnimationController : MonoBehaviour
             // Start shake but skip ahead
             float timeIntoShake = elapsedSeconds;
             Debug.Log($"[DiceBoxAnim] Joining during SHAKE phase ({timeIntoShake:F2}s into shake)");
-            PlayShakeAnimationFromTime(timeIntoShake);
+            
+            // Mark shake sound as played since we're joining mid-shake
+            hasPlayedShakeSound = true;
+            PlayShakeAnimation(timeIntoShake);
         }
         else if (elapsedSeconds < idleEnd)
         {
-            // Start idle
+            // Start idle but skip ahead
             float timeIntoIdle = elapsedSeconds - shakeEnd;
             Debug.Log($"[DiceBoxAnim] Joining during IDLE phase ({timeIntoIdle:F2}s into idle)");
-            PlayIdleLoop();
+            
+            // Mark shake sound as played
+            hasPlayedShakeSound = true;
+            PlayIdleAnimation(timeIntoIdle);
         }
         else if (elapsedSeconds < zoomInEnd)
         {
             // Start zoom in but skip ahead
             float timeIntoZoomIn = elapsedSeconds - idleEnd;
-            Debug.Log($"[DiceBoxAnim] Joining during ZOOM IN phase ({timeIntoZoomIn:F2}s into zoom)");
-            PlayZoomInAnimationFromTime(timeIntoZoomIn);
+            Debug.Log($"[DiceBoxAnim] Joining during ZOOM IN phase ({timeIntoZoomIn:F2}s into zoom in)");
+            
+            hasPlayedShakeSound = true;
+            PlayZoomInAnimation(timeIntoZoomIn);
         }
         else if (elapsedSeconds < openingEnd)
         {
             // Start opening but skip ahead
             float timeIntoOpening = elapsedSeconds - zoomInEnd;
             Debug.Log($"[DiceBoxAnim] Joining during OPENING phase ({timeIntoOpening:F2}s into opening)");
-            PlayOpeningAnimationFromTime(timeIntoOpening);
+            
+            hasPlayedShakeSound = true;
+            // Mark box open as played since we're joining mid-open
+            hasPlayedBoxOpenSound = true;
+            PlayOpeningAnimation(timeIntoOpening);
         }
         else if (elapsedSeconds < holdOpenEnd)
         {
-            // Jump to hold open
-            float timeIntoHold = elapsedSeconds - openingEnd;
-            Debug.Log($"[DiceBoxAnim] Joining during HOLD OPEN phase ({timeIntoHold:F2}s into hold)");
-            // Show dice immediately
-            ShowDice();
-            SetDisplayToFrame(openingSequence, openingSequence.Count - 1);
+            // Jump to hold open state
+            Debug.Log($"[DiceBoxAnim] Joining during HOLD OPEN phase");
+            
+            hasPlayedShakeSound = true;
+            hasPlayedBoxOpenSound = true;
+            
+            // Set to final frame of opening sequence
+            if (openingSequence != null && openingSequence.Count > 0)
+            {
+                SetDisplayToFrame(openingSequence, openingSequence.Count - 1);
+            }
             currentState = DiceBoxState.Open;
-            float remainingHoldTime = holdOpenDuration - timeIntoHold;
-            if (remainingHoldTime > 0)
-            {
-                animationCoroutine = StartCoroutine(HoldOpenCoroutineWithTime(remainingHoldTime));
-            }
-            else
-            {
-                PlayClosingAnimation();
-            }
+            
+            // Start hold timer
+            float remainingHoldTime = holdOpenEnd - elapsedSeconds;
+            animationCoroutine = StartCoroutine(HoldOpenThenClose(remainingHoldTime));
         }
         else if (elapsedSeconds < closingEnd)
         {
             // Start closing but skip ahead
             float timeIntoClosing = elapsedSeconds - holdOpenEnd;
             Debug.Log($"[DiceBoxAnim] Joining during CLOSING phase ({timeIntoClosing:F2}s into closing)");
-            // Dice might already be hidden
-            PlayClosingAnimationFromTime(timeIntoClosing);
+            
+            hasPlayedShakeSound = true;
+            hasPlayedBoxOpenSound = true;
+            // Mark box close as played since we're joining mid-close
+            hasPlayedBoxCloseSound = true;
+            PlayClosingAnimation(timeIntoClosing);
         }
         else if (elapsedSeconds < zoomOutEnd)
         {
             // Start zoom out but skip ahead
             float timeIntoZoomOut = elapsedSeconds - closingEnd;
             Debug.Log($"[DiceBoxAnim] Joining during ZOOM OUT phase ({timeIntoZoomOut:F2}s into zoom out)");
-            PlayZoomOutAnimationFromTime(timeIntoZoomOut);
+            
+            hasPlayedShakeSound = true;
+            hasPlayedBoxOpenSound = true;
+            hasPlayedBoxCloseSound = true;
+            PlayZoomOutAnimation(timeIntoZoomOut);
         }
         else
         {
-            // Round should be over or in waiting state
-            Debug.Log("[DiceBoxAnim] Round already finished, staying in waiting state");
+            // Round should be over, go to waiting state
+            Debug.Log($"[DiceBoxAnim] Joining after cycle complete - waiting state");
             currentState = DiceBoxState.Waiting;
             if (diceBoxContainer) diceBoxContainer.SetActive(false);
-        }
-    }
-
-    /// <summary>
-    /// Display a specific frame from a sequence
-    /// </summary>
-    private void SetDisplayToFrame(List<Sprite> sequence, int frameIndex)
-    {
-        if (sequence == null || frameIndex < 0 || frameIndex >= sequence.Count)
-        {
-            Debug.LogWarning($"[DiceBoxAnim] Invalid frame index {frameIndex} for sequence with {sequence?.Count ?? 0} frames");
-            return;
-        }
-
-        if (animationImage && sequence[frameIndex])
-        {
-            animationImage.sprite = sequence[frameIndex];
+            onAnimationCycleComplete?.Invoke();
         }
     }
     #endregion
 
-    #region Private Methods - Animation Sequences (With Time Skip)
-    private void PlayShakeAnimation()
+    #region Private Methods - Individual Animation Phases
+    private void PlayShakeAnimation(float startTime = 0f)
     {
-        Debug.Log("[DiceBoxAnim] -> SHAKE (from start)");
         currentState = DiceBoxState.Shaking;
-        animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            shakeSequence,
-            shakeDuration,
-            false,
-            false,
-            0f,
-            PlayIdleLoop
-        ));
-    }
+        Debug.Log("[DiceBoxAnim] Playing shake animation");
 
-    private void PlayShakeAnimationFromTime(float startTime)
-    {
-        Debug.Log($"[DiceBoxAnim] -> SHAKE (from {startTime:F2}s)");
-        currentState = DiceBoxState.Shaking;
+        // AUDIO: Play shake sound only if starting from beginning (startTime == 0)
+        if (startTime == 0f && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayShake();
+            Debug.Log("[DiceBoxAnim] Shake sound played");
+        }
+        hasPlayedShakeSound = true;
+
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
             shakeSequence,
             shakeDuration,
-            false,
-            false,
+            reverse: false,
+            loop: false,
             startTime,
-            PlayIdleLoop
+            OnShakeComplete
         ));
     }
 
-    private void PlayIdleLoop()
+    private void OnShakeComplete()
     {
-        Debug.Log("[DiceBoxAnim] -> IDLE (looping)");
+        Debug.Log("[DiceBoxAnim] Shake complete");
+        PlayIdleAnimation();
+    }
+
+    private void PlayIdleAnimation(float startTime = 0f)
+    {
         currentState = DiceBoxState.Idle;
+        Debug.Log("[DiceBoxAnim] Playing idle animation (will loop until betting ends)");
+
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
             idleSequence,
             idleDuration,
-            false,
-            true,
-            0f,
+            reverse: false,
+            loop: true,
+            startTime,
             null
         ));
     }
 
-    private void PlayZoomInAnimation()
+    private void PlayZoomInAnimation(float startTime = 0f)
     {
-        Debug.Log("[DiceBoxAnim] -> ZOOM IN (from start)");
         currentState = DiceBoxState.ZoomingIn;
-        animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            zoomInSequence,
-            zoomInDuration,
-            false,
-            false,
-            0f,
-            OnZoomInComplete
-        ));
-    }
+        Debug.Log("[DiceBoxAnim] Playing zoom in animation");
 
-    private void PlayZoomInAnimationFromTime(float startTime)
-    {
-        Debug.Log($"[DiceBoxAnim] -> ZOOM IN (from {startTime:F2}s)");
-        currentState = DiceBoxState.ZoomingIn;
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
             zoomInSequence,
             zoomInDuration,
-            false,
-            false,
+            reverse: false,
+            loop: false,
             startTime,
             OnZoomInComplete
         ));
@@ -393,43 +401,25 @@ public class DiceBoxAnimationController : MonoBehaviour
     {
         Debug.Log("[DiceBoxAnim] Zoom in complete - waiting for dice result");
         currentState = DiceBoxState.ZoomedIn;
-        // Just wait here - RevealDiceResult() will be called externally
     }
 
-    private void PlayOpeningAnimation()
+    private void PlayOpeningAnimation(float startTime = 0f)
     {
-        Debug.Log("[DiceBoxAnim] -> OPENING (from start)");
         currentState = DiceBoxState.Opening;
-        animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            openingSequence,
-            openingDuration,
-            false,
-            false,
-            0f,
-            OnOpeningComplete
-        ));
-    }
+        Debug.Log("[DiceBoxAnim] Playing opening animation");
 
-    private void PlayOpeningAnimationFromTime(float startTime)
-    {
-        Debug.Log($"[DiceBoxAnim] -> OPENING (from {startTime:F2}s)");
-        currentState = DiceBoxState.Opening;
-
-        // Check if dice should already be visible
-        float frameDelay = openingDuration / openingSequence.Count;
-        int startFrame = Mathf.FloorToInt(startTime / frameDelay);
-
-        if (startFrame >= diceVisibleAtOpeningFrame)
+        // AUDIO: Play box open sound only once at the start
+        if (!hasPlayedBoxOpenSound && AudioManager.Instance != null)
         {
-            Debug.Log("[DiceBoxAnim] Dice should already be visible at this point");
-            ShowDice();
+            AudioManager.Instance.PlayBoxOpen();
+            hasPlayedBoxOpenSound = true;
         }
 
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
             openingSequence,
             openingDuration,
-            false,
-            false,
+            reverse: false,
+            loop: false,
             startTime,
             OnOpeningComplete
         ));
@@ -440,56 +430,34 @@ public class DiceBoxAnimationController : MonoBehaviour
         Debug.Log("[DiceBoxAnim] Opening complete - holding open");
         currentState = DiceBoxState.Open;
 
-        // Hold the last frame of opening for a duration
-        animationCoroutine = StartCoroutine(HoldOpenCoroutine());
+        animationCoroutine = StartCoroutine(HoldOpenThenClose(holdOpenDuration));
     }
 
-    private IEnumerator HoldOpenCoroutine()
+    private IEnumerator HoldOpenThenClose(float holdDuration)
     {
-        yield return new WaitForSeconds(holdOpenDuration);
+        Debug.Log($"[DiceBoxAnim] Holding open for {holdDuration}s");
+        yield return new WaitForSeconds(holdDuration);
+
         PlayClosingAnimation();
     }
 
-    private IEnumerator HoldOpenCoroutineWithTime(float duration)
+    private void PlayClosingAnimation(float startTime = 0f)
     {
-        yield return new WaitForSeconds(duration);
-        PlayClosingAnimation();
-    }
-
-    private void PlayClosingAnimation()
-    {
-        Debug.Log("[DiceBoxAnim] -> CLOSING (from start)");
         currentState = DiceBoxState.Closing;
-        animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            closingSequence,
-            closingDuration,
-            false,
-            false,
-            0f,
-            OnClosingComplete
-        ));
-    }
+        Debug.Log("[DiceBoxAnim] Playing closing animation");
 
-    private void PlayClosingAnimationFromTime(float startTime)
-    {
-        Debug.Log($"[DiceBoxAnim] -> CLOSING (from {startTime:F2}s)");
-        currentState = DiceBoxState.Closing;
-
-        // Check if dice should already be hidden
-        float frameDelay = closingDuration / closingSequence.Count;
-        int startFrame = Mathf.FloorToInt(startTime / frameDelay);
-
-        if (startFrame >= diceHiddenAtClosingFrame)
+        // AUDIO: Play box close sound only once at the start
+        if (!hasPlayedBoxCloseSound && AudioManager.Instance != null)
         {
-            Debug.Log("[DiceBoxAnim] Dice should already be hidden at this point");
-            HideDice();
+            AudioManager.Instance.PlayBoxClose();
+            hasPlayedBoxCloseSound = true;
         }
 
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
             closingSequence,
             closingDuration,
-            false,
-            false,
+            reverse: false,
+            loop: false,
             startTime,
             OnClosingComplete
         ));
@@ -497,36 +465,20 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     private void OnClosingComplete()
     {
-        Debug.Log("[DiceBoxAnim] Closing complete - zooming out");
+        Debug.Log("[DiceBoxAnim] Closing complete");
         PlayZoomOutAnimation();
     }
 
-    private void PlayZoomOutAnimation()
+    private void PlayZoomOutAnimation(float startTime = 0f)
     {
-        Debug.Log("[DiceBoxAnim] -> ZOOM OUT (from start)");
         currentState = DiceBoxState.ZoomingOut;
-
-        // Play zoom in sequence in reverse for zoom out
-        animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            zoomInSequence,
-            zoomOutDuration,
-            true,
-            false,
-            0f,
-            OnZoomOutComplete
-        ));
-    }
-
-    private void PlayZoomOutAnimationFromTime(float startTime)
-    {
-        Debug.Log($"[DiceBoxAnim] -> ZOOM OUT (from {startTime:F2}s)");
-        currentState = DiceBoxState.ZoomingOut;
+        Debug.Log("[DiceBoxAnim] Playing zoom out animation");
 
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
             zoomInSequence,
             zoomOutDuration,
-            true,
-            false,
+            reverse: true,
+            loop: false,
             startTime,
             OnZoomOutComplete
         ));
@@ -670,6 +622,14 @@ public class DiceBoxAnimationController : MonoBehaviour
             diceContainer.SetActive(false);
         }
         onDiceShouldHide?.Invoke();
+    }
+
+    private void SetDisplayToFrame(List<Sprite> sequence, int frameIndex)
+    {
+        if (animationImage && sequence != null && frameIndex >= 0 && frameIndex < sequence.Count)
+        {
+            animationImage.sprite = sequence[frameIndex];
+        }
     }
 
     private void StopAllAnimations()

@@ -144,7 +144,7 @@ public class ChipWinAnimationController : MonoBehaviour
         isAnimating = true;
 
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : dealerSpawnPoint.parent;
-
+        
         // How many chips per area
         double totalWin = 0;
         foreach (var a in winAreas) totalWin += a.winAmount;
@@ -162,7 +162,10 @@ public class ChipWinAnimationController : MonoBehaviour
             int count = totalWin > 0
                 ? Mathf.Clamp(Mathf.RoundToInt((float)(area.winAmount / totalWin) * 10f), 1, 6)
                 : 1;
-
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayChipAdd();
+            }
             for (int i = 0; i < count && poolIdx < dealerPool.Count; i++, poolIdx++)
             {
                 RectTransform chip = dealerPool[poolIdx];
@@ -341,6 +344,10 @@ public class ChipWinAnimationController : MonoBehaviour
                 .OnComplete(() =>
                 {
                     if (chip == null) return;
+                    if (AudioManager.Instance != null)
+                    {
+                        AudioManager.Instance.PlayChipAdd();
+                    }
                     chip.gameObject.SetActive(false);
                     chip.SetParent(dealerSpawnPoint, worldPositionStays: false);
                     chip.localPosition = Vector3.zero;

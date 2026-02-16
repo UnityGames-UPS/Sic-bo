@@ -149,24 +149,90 @@ public class UIController : MonoBehaviour
     #region Setup
     private void SetupButtonListeners()
     {
-        if (CasualRoom_Button) CasualRoom_Button.onClick.AddListener(() => gameManager.JoinRoom("casual"));
-        if (NoviceRoom_Button) NoviceRoom_Button.onClick.AddListener(() => gameManager.JoinRoom("novice"));
-        if (ExpertRoom_Button) ExpertRoom_Button.onClick.AddListener(() => gameManager.JoinRoom("expert"));
-        if (HighRollerRoom_Button) HighRollerRoom_Button.onClick.AddListener(() => gameManager.JoinRoom("high_roller"));
-        if (HistoryHome_Button) HistoryHome_Button.onClick.AddListener(OpenHistoryFromHome);
-        if (SettingsHome_Button) SettingsHome_Button.onClick.AddListener(OpenInfoFromHome);
-        if (ExitHome_Button) ExitHome_Button.onClick.AddListener(ShowQuitPopup);
+        if (CasualRoom_Button) CasualRoom_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayLobbyButton();
+            gameManager.JoinRoom("casual");
+        });
+        if (NoviceRoom_Button) NoviceRoom_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayLobbyButton();
+            gameManager.JoinRoom("novice");
+        });
+        if (ExpertRoom_Button) ExpertRoom_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayLobbyButton();
+            gameManager.JoinRoom("expert");
+        });
+        if (HighRollerRoom_Button) HighRollerRoom_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayLobbyButton();
+            gameManager.JoinRoom("high_roller");
+        });
+        if (HistoryHome_Button) HistoryHome_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            OpenHistoryFromHome();
+        });
+        if (SettingsHome_Button) SettingsHome_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            OpenInfoFromHome();
+        });
+        if (ExitHome_Button) ExitHome_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            ShowQuitPopup();
+        });
 
-        if (SideMenuOpen_Button) SideMenuOpen_Button.onClick.AddListener(OpenSideMenu);
-        if (SideMenuClose_Button) SideMenuClose_Button.onClick.AddListener(CloseSideMenu);
-        if (ExitGame_Button) ExitGame_Button.onClick.AddListener(() => { gameManager.LeaveRoom(); });
-        if (HistoryGame_Button) HistoryGame_Button.onClick.AddListener(OpenHistoryFromGame);
-        if (SettingsGame_Button) SettingsGame_Button.onClick.AddListener(OpenInfoFromGame);
+        if (SideMenuOpen_Button) SideMenuOpen_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            OpenSideMenu();
+        });
+        if (SideMenuClose_Button) SideMenuClose_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            CloseSideMenu();
+        });
+        if (ExitGame_Button) ExitGame_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            gameManager.LeaveRoom();
+        });
+        if (HistoryGame_Button) HistoryGame_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            OpenHistoryFromGame();
+        });
+        if (SettingsGame_Button) SettingsGame_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            OpenInfoFromGame();
+        });
 
-        if (ErrorOK_Button) ErrorOK_Button.onClick.AddListener(OnErrorOK);
-        if (DisconnectOK_Button) DisconnectOK_Button.onClick.AddListener(() => { CloseDisconnectPopup(); gameManager.ExitGame(); });
-        if (QuitYes_Button) QuitYes_Button.onClick.AddListener(() => { CloseQuitPopup(); gameManager.ExitGame(); });
-        if (QuitNo_Button) QuitNo_Button.onClick.AddListener(CloseQuitPopup);
+        if (ErrorOK_Button) ErrorOK_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            OnErrorOK();
+        });
+        if (DisconnectOK_Button) DisconnectOK_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            CloseDisconnectPopup();
+            gameManager.ExitGame();
+        });
+        if (QuitYes_Button) QuitYes_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            CloseQuitPopup();
+            gameManager.ExitGame();
+        });
+        if (QuitNo_Button) QuitNo_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            CloseQuitPopup();
+        });
     }
 
     private void InitializePopups()
@@ -416,7 +482,10 @@ public class UIController : MonoBehaviour
     {
         if (ErrorTitle_Text) ErrorTitle_Text.text = title;
         if (ErrorMessage_Text) ErrorMessage_Text.text = message;
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayPopupOpen();
+        }
         SlideInPopup(ErrorPopupParent, ErrorPopup);
     }
 
@@ -449,7 +518,10 @@ public class UIController : MonoBehaviour
         }
 
         if (InGameMessage_Text) InGameMessage_Text.text = message;
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayPopupOpen();
+        }
         SlideInPopup(InGamePopupParent, InGamePopup);
 
         // Auto-close after delay
@@ -468,6 +540,10 @@ public class UIController : MonoBehaviour
 
     internal void ShowReconnectPopup()
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayPopupOpen();
+        }
         SlideInPopup(ReconnectPopupParent, ReconnectPopup);
     }
 
@@ -485,7 +561,10 @@ public class UIController : MonoBehaviour
         {
             SlideOutPopup(ReconnectPopupParent, ReconnectPopup);
         }
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayPopupOpen();
+        }
         SlideInPopup(DisconnectPopupParent, DisconnectPopup);
     }
 
@@ -498,6 +577,10 @@ public class UIController : MonoBehaviour
     #region Quit Popup
     private void ShowQuitPopup()
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayPopupOpen();
+        }
         SlideInPopup(QuitPopupParent, QuitPopup);
     }
 

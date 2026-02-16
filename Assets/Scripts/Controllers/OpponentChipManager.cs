@@ -114,7 +114,10 @@ public class OpponentChipManager : MonoBehaviour
             Debug.LogError("[OpponentChipManager] Missing references!");
             return;
         }
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayChipAdd();
+        }
         StartCoroutine(CR_SpawnAndAnimateChip(betOption, amount));
     }
 
@@ -156,6 +159,10 @@ public class OpponentChipManager : MonoBehaviour
     /// </summary>
     public void PlayCashoutAnimation()
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayChipAdd();
+        }
         StartCoroutine(CR_Cashout());
     }
     #endregion

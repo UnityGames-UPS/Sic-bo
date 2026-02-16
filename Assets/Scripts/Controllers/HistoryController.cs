@@ -43,11 +43,35 @@ public class HistoryController : MonoBehaviour
     #region Setup
     private void SetupButtons()
     {
-        if (PrevPage_Button) PrevPage_Button.onClick.AddListener(OnPrevPageClicked);
-        if (NextPage_Button) NextPage_Button.onClick.AddListener(OnNextPageClicked);
-        if (Prev5Page_Button) Prev5Page_Button.onClick.AddListener(OnPrev5PageClicked);
-        if (Next5Page_Button) Next5Page_Button.onClick.AddListener(OnNext5PageClicked);
-        if (Close_Button) Close_Button.onClick.AddListener(HideHistoryPanel);
+        if (PrevPage_Button) PrevPage_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
+            OnPrevPageClicked();
+        });
+
+        if (NextPage_Button) NextPage_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
+            OnNextPageClicked();
+        });
+
+        if (Prev5Page_Button) Prev5Page_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
+            OnPrev5PageClicked();
+        });
+
+        if (Next5Page_Button) Next5Page_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
+            OnNext5PageClicked();
+        });
+
+        if (Close_Button) Close_Button.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            HideHistoryPanel();
+        });
     }
 
     private void InitializeRows()

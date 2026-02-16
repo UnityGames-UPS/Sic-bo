@@ -4,7 +4,7 @@ using TMPro;
 using DG.Tweening;
 
 /// <summary>
-/// Manages betting timer UI with phase flow
+/// Manages betting timer UI with phase flow - AUDIO INTEGRATED
 /// </summary>
 public class BetTimerController : MonoBehaviour
 {
@@ -30,12 +30,14 @@ public class BetTimerController : MonoBehaviour
     private BetTimerState currentState = BetTimerState.Hidden;
     private int currentSeconds = 0;
     private Coroutine countdownCoroutine;
+    private bool isClockTickActive = false;
     #endregion
 
     #region Unity Lifecycle
     private void OnDestroy()
     {
         StopCountdown();
+        StopClockTick();
         if (bettingTimer_Text) bettingTimer_Text.transform.DOKill();
     }
     #endregion
@@ -68,6 +70,20 @@ public class BetTimerController : MonoBehaviour
             if (secondsRemaining <= 5 && secondsRemaining > 0)
             {
                 PopTimerText();
+
+                // Start clock tick sound if not already playing
+                if (!isClockTickActive && secondsRemaining == 5)
+                {
+                    StartClockTick();
+                }
+            }
+            else
+            {
+                // Stop clock tick if seconds > 5
+                if (isClockTickActive && secondsRemaining > 5)
+                {
+                    StopClockTick();
+                }
             }
         }
 
@@ -76,11 +92,18 @@ public class BetTimerController : MonoBehaviour
             bool showIndicator = secondsRemaining <= 5 && secondsRemaining > 0;
             last5SecIndicator.SetActive(showIndicator);
         }
+
+        // Stop clock tick when timer hits 0
+        if (secondsRemaining == 0)
+        {
+            StopClockTick();
+        }
     }
 
     internal void ShowBetLocked()
     {
         StopCountdown();
+        StopClockTick();
 
         currentState = BetTimerState.Locked;
 
@@ -93,6 +116,7 @@ public class BetTimerController : MonoBehaviour
     internal void ShowNextRound(int secondsUntilNextRound)
     {
         StopCountdown();
+        StopClockTick();
 
         currentState = BetTimerState.NextRound;
         currentSeconds = secondsUntilNextRound;
@@ -120,6 +144,7 @@ public class BetTimerController : MonoBehaviour
     internal void HideAll()
     {
         StopCountdown();
+        StopClockTick();
 
         currentState = BetTimerState.Hidden;
 
@@ -172,6 +197,28 @@ public class BetTimerController : MonoBehaviour
                 bettingTimer_Text.transform.DOScale(1f, heartbeatDuration)
                     .SetEase(Ease.InBack);
             });
+    }
+    #endregion
+
+    #region Audio Integration
+    private void StartClockTick()
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.StartClockTick();
+            isClockTickActive = true;
+            Debug.Log("[BetTimerController] Clock tick started");
+        }
+    }
+
+    private void StopClockTick()
+    {
+        if (AudioManager.Instance != null && isClockTickActive)
+        {
+            AudioManager.Instance.StopClockTick();
+            isClockTickActive = false;
+            Debug.Log("[BetTimerController] Clock tick stopped");
+        }
     }
     #endregion
 }

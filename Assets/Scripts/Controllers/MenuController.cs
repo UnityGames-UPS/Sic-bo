@@ -45,13 +45,35 @@ public class MenuController : MonoBehaviour
     #region Setup
     private void SetupButtons()
     {
-        if (mainCloseButton) mainCloseButton.onClick.AddListener(CloseMenu);
+        if (mainCloseButton) mainCloseButton.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            CloseMenu();
+        });
 
-        if (historyNavButton) historyNavButton.onClick.AddListener(ShowHistoryPanel);
-        if (infoNavButton) infoNavButton.onClick.AddListener(ShowInfoPanel);
+        if (historyNavButton) historyNavButton.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            ShowHistoryPanel();
+        });
 
-        if (forwardButton) forwardButton.onClick.AddListener(NextInfoPage);
-        if (backwardButton) backwardButton.onClick.AddListener(PreviousInfoPage);
+        if (infoNavButton) infoNavButton.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            ShowInfoPanel();
+        });
+
+        if (forwardButton) forwardButton.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
+            NextInfoPage();
+        });
+
+        if (backwardButton) backwardButton.onClick.AddListener(() =>
+        {
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
+            PreviousInfoPage();
+        });
     }
     #endregion
 

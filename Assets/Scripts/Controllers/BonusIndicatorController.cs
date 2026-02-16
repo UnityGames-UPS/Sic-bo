@@ -294,7 +294,10 @@ public class BonusIndicatorController : MonoBehaviour
         fallSeq.AppendCallback(() =>
         {
             indicator.gameObject.SetActive(true);   // 1 - parent on
-         
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayBonusSpawn();
+            }
         });
 
         // Scale down to rest size — starts the same frame as the callback above
@@ -356,7 +359,10 @@ public class BonusIndicatorController : MonoBehaviour
         if (!currentMultipliers.TryGetValue(betOption, out List<int> multipliers)) return;
 
         indicator.isWon = true;
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayBonusHit();
+        }
         // Animate all rows to green; when done, run the hold-then-exit sequence
         indicator.AnimateToGreen(
             greenNumberSprites,

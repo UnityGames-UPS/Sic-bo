@@ -812,7 +812,10 @@ public class BetController : MonoBehaviour
     private void HandleOpponentBet(BetPlacedData data)
     {
         if (data == null || data.amount == 0 || opponentChipManager == null) return;
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayChipAdd();
+        }
         // Initialize opponent tracking if needed
         if (!opponentBets.ContainsKey(data.username))
             opponentBets[data.username] = new Dictionary<string, double>();
@@ -1308,7 +1311,10 @@ public class BetController : MonoBehaviour
         if (ChipSelector_Panel) ChipSelector_Panel.SetActive(true);
         if (ChipSelector_BlackBG) ChipSelector_BlackBG.SetActive(true);
         isChipSelectorOpen = true;
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayChipSelectionOpen();
+        }
         AnimateChipsOpen();
     }
 
@@ -1375,6 +1381,10 @@ public class BetController : MonoBehaviour
 
     private void OnChipSelected(int index)
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayButtonClick();
+        }
         SelectChipAt(index);
         CloseChipSelector();
     }
@@ -1537,7 +1547,10 @@ public class BetController : MonoBehaviour
             uiController?.ShowInGamePopup("Please wait...");
             return;
         }
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayButtonClick();
+        }
         isProcessingBetAction = true;
         currentBetAction = "UNDO";
         receivedBroadcastCount = 0;
@@ -1552,7 +1565,10 @@ public class BetController : MonoBehaviour
             uiController?.ShowInGamePopup("Please wait...");
             return;
         }
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayButtonClick();
+        }
         isProcessingBetAction = true;
         currentBetAction = "CANCEL";
         receivedBroadcastCount = 0;
@@ -1567,7 +1583,10 @@ public class BetController : MonoBehaviour
             uiController?.ShowInGamePopup("Please wait...");
             return;
         }
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayButtonClick();
+        }
         isProcessingBetAction = true;
         currentBetAction = "DOUBLE";
         receivedBroadcastCount = 0;
@@ -1588,7 +1607,10 @@ public class BetController : MonoBehaviour
             uiController?.ShowInGamePopup("No previous bets to repeat");
             return;
         }
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayButtonClick();
+        }
         isProcessingBetAction = true;
         currentBetAction = "REPEAT";
         receivedBroadcastCount = 0;

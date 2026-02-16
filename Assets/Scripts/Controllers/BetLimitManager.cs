@@ -77,22 +77,46 @@ public class BetLimitManager : MonoBehaviour
     private void SetupButtonListeners()
     {
         if (openPanelButton != null)
-            openPanelButton.onClick.AddListener(OpenPanel);
+            openPanelButton.onClick.AddListener(() =>
+            {
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayPopupOpen();
+                OpenPanel();
+            });
 
         if (closePanelButton != null)
-            closePanelButton.onClick.AddListener(ClosePanel);
+            closePanelButton.onClick.AddListener(() =>
+            {
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+                ClosePanel();
+            });
 
         if (casualButton != null)
-            casualButton.onClick.AddListener(() => OnRoomButtonClicked("casual"));
+            casualButton.onClick.AddListener(() =>
+            {
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+                OnRoomButtonClicked("casual");
+            });
 
         if (noviceButton != null)
-            noviceButton.onClick.AddListener(() => OnRoomButtonClicked("novice"));
+            noviceButton.onClick.AddListener(() =>
+            {
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+                OnRoomButtonClicked("novice");
+            });
 
         if (expertButton != null)
-            expertButton.onClick.AddListener(() => OnRoomButtonClicked("expert"));
+            expertButton.onClick.AddListener(() =>
+            {
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+                OnRoomButtonClicked("expert");
+            });
 
         if (highRollerButton != null)
-            highRollerButton.onClick.AddListener(() => OnRoomButtonClicked("high_roller"));
+            highRollerButton.onClick.AddListener(() =>
+            {
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+                OnRoomButtonClicked("high_roller");
+            });
     }
     #endregion
 

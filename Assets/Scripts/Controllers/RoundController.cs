@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using DG.Tweening;
 
 /// <summary>
-/// Manages round flow and dice display with SERVER-SYNCED dice box animation
+/// Manages round flow and dice display with SERVER-SYNCED dice box animation - AUDIO INTEGRATED
 /// Updated to handle mid-round joins properly
 /// </summary>
 public class RoundController : MonoBehaviour
@@ -31,6 +31,9 @@ public class RoundController : MonoBehaviour
 
     [Header("Dice Box Animation")]
     [SerializeField] private DiceBoxAnimationController diceBoxAnimController;
+
+    [Header("Audio Settings")]
+    [SerializeField] private float diceResultSoundDelay = 0.5f;
     #endregion
 
     #region Private Fields
@@ -101,6 +104,12 @@ public class RoundController : MonoBehaviour
         // Clear win highlights from previous round
         betController?.ClearAllWinHighlights();
 
+        // AUDIO: Play round start sound
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayRoundStart();
+        }
+
         // Start the dice box animation cycle WITH SERVER SYNC
         if (diceBoxAnimController != null)
         {
@@ -163,6 +172,7 @@ public class RoundController : MonoBehaviour
             Debug.LogWarning("[RoundController] No animation controller - showing dice immediately");
             SetDiceValues(data);
             ShowResult(data.sum, data.matchSide);
+            PlayDiceResultSounds(data);
         }
     }
 
@@ -219,6 +229,15 @@ public class RoundController : MonoBehaviour
 
             // Show result text
             ShowResult(currentDiceResult.sum, currentDiceResult.matchSide);
+
+            // AUDIO: Play dice show sound
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayDiceShow();
+            }
+
+            // AUDIO: Play dice result sounds in sequence
+            PlayDiceResultSounds(currentDiceResult);
 
             // Optional: Add pop animation when dice appear
             if (DiceContainer)
@@ -294,6 +313,22 @@ public class RoundController : MonoBehaviour
         if (ResultPanel) ResultPanel.SetActive(true);
 
         Debug.Log($"[RoundController] Result displayed: Sum={sum}, Side={matchSide}");
+    }
+    #endregion
+
+    #region Private Methods - Audio
+    private void PlayDiceResultSounds(DiceResultData data)
+    {
+        if (AudioManager.Instance != null)
+        {
+            // Play dice sounds in sequence with delay
+            AudioManager.Instance.PlayDiceResultSequence(
+                data.dice1,
+                data.dice2,
+                data.dice3,
+                diceResultSoundDelay
+            );
+        }
     }
     #endregion
 
