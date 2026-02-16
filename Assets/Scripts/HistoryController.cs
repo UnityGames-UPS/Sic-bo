@@ -15,6 +15,8 @@ public class HistoryController : MonoBehaviour
     [SerializeField] private TMP_Text PageInfo_Text;
     [SerializeField] private Button PrevPage_Button;
     [SerializeField] private Button NextPage_Button;
+    [SerializeField] private Button Prev5Page_Button;
+    [SerializeField] private Button Next5Page_Button;
     [SerializeField] private Button Close_Button;
 
     [Header("References")]
@@ -43,6 +45,8 @@ public class HistoryController : MonoBehaviour
     {
         if (PrevPage_Button) PrevPage_Button.onClick.AddListener(OnPrevPageClicked);
         if (NextPage_Button) NextPage_Button.onClick.AddListener(OnNextPageClicked);
+        if (Prev5Page_Button) Prev5Page_Button.onClick.AddListener(OnPrev5PageClicked);
+        if (Next5Page_Button) Next5Page_Button.onClick.AddListener(OnNext5PageClicked);
         if (Close_Button) Close_Button.onClick.AddListener(HideHistoryPanel);
     }
 
@@ -123,7 +127,13 @@ public class HistoryController : MonoBehaviour
             RequestPage(currentPage - 1);
         }
     }
-
+    private void OnPrev5PageClicked()
+    {
+        if (currentPage > 5)
+        {
+            RequestPage(currentPage - 5);
+        }
+    }
     private void OnNextPageClicked()
     {
         if (currentPage < totalPages)
@@ -136,6 +146,18 @@ public class HistoryController : MonoBehaviour
             {
                 uiController.ShowErrorPopup("No more history available");
             }
+        }
+    }
+
+    private void OnNext5PageClicked()
+    {
+        if (currentPage + 5 <= totalPages)
+        {
+            RequestPage(currentPage + 5);
+        }
+        else
+        {
+            RequestPage(totalPages);
         }
     }
     #endregion
@@ -187,6 +209,18 @@ public class HistoryController : MonoBehaviour
         {
             bool canGoNext = currentPage < totalPages && !isWaitingForData;
             NextPage_Button.interactable = canGoNext;
+        }
+
+        if (Prev5Page_Button)
+        {
+            bool canGoPrev5 = currentPage > 5 && !isWaitingForData;
+            Prev5Page_Button.interactable = canGoPrev5;
+        }
+
+        if (Next5Page_Button)
+        {
+            bool canGoNext5 = currentPage + 5 <= totalPages && !isWaitingForData;
+            Next5Page_Button.interactable = canGoNext5;
         }
     }
     #endregion

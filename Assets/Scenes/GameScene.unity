@@ -67034,7 +67034,7 @@ MonoBehaviour:
   winExitEase: 26
   supportDecimalMultipliers: 1
   showDebugLogs: 0
-  forceWinAnimation: 1
+  forceWinAnimation: 0
 --- !u!4 &1209887416
 Transform:
   m_ObjectHideFlags: 0
@@ -76817,6 +76817,8 @@ MonoBehaviour:
   PageInfo_Text: {fileID: 441199768}
   PrevPage_Button: {fileID: 347676783}
   NextPage_Button: {fileID: 1823976401}
+  Prev5Page_Button: {fileID: 1240287092}
+  Next5Page_Button: {fileID: 328449307}
   Close_Button: {fileID: 1835620902}
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}

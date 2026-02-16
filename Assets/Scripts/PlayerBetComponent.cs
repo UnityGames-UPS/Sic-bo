@@ -1,16 +1,19 @@
-using UnityEngine;
+﻿using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
 using DG.Tweening;
+using UnityEngine.UI;
 
 /// <summary>
-/// Manages bet display for a single betting area
+/// Manages bet display for a single betting area with win animations
+/// FIXED: Counting animation is protected from being overridden
 /// </summary>
 public class PlayerBetComponent : MonoBehaviour
 {
     #region Serialized Fields
     [Header("Total Bet Display")]
     [SerializeField] private TMP_Text totalBetAmountText;
+    [SerializeField] private Image betAmountBackground;
 
     [Header("Chip Pool")]
     [SerializeField] private List<Chip> initialChips = new List<Chip>(6);
@@ -25,6 +28,16 @@ public class PlayerBetComponent : MonoBehaviour
     [SerializeField] private float popDuration = 0.15f;
     [SerializeField] private Vector2 randomOffsetRange = new Vector2(10f, 13f);
 
+    [Header("Win Animation Settings")]
+    [SerializeField] private float countingDuration = 1.5f;
+    [SerializeField] private float maxBackgroundScale = 1.15f;
+    [SerializeField] private Ease countingEase = Ease.OutQuad;
+
+    [Header("Pop Animation Settings")]
+    [SerializeField] private float popInScale = 1.2f;
+    [SerializeField] private float popInDuration = 0.3f;
+    [SerializeField] private Ease popEase = Ease.OutBack;
+
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = false;
     #endregion
@@ -36,15 +49,55 @@ public class PlayerBetComponent : MonoBehaviour
     private List<BetData> bets = new List<BetData>();
     private double totalBetAmount = 0;
     private List<double> availableChipValues = new List<double>();
+
+    // Animation fields
+    private Vector3 originalBackgroundScale;
+    private Tween countingTween;
+    private Tween scaleTween;
+    private Sequence popSequence;
+    private bool hasStoredOriginalScale = false;
+    private bool isAnimatingWin = false; // NEW: Prevents UpdateTotalDisplay from interfering
     #endregion
 
     #region Unity Lifecycle
+    private void Awake()
+    {
+        if (betAmountBackground != null)
+        {
+            originalBackgroundScale = betAmountBackground.transform.localScale;
+            hasStoredOriginalScale = true;
+
+            if (showDebugLogs)
+            {
+                Debug.Log($"[PlayerBetComponent] Awake - Stored original scale: {originalBackgroundScale}");
+            }
+        }
+
+        if (totalBetAmountText == null)
+        {
+            Debug.LogError("[PlayerBetComponent] totalBetAmountText is NULL! Counting animation won't work!");
+        }
+    }
+
+    private void OnEnable()
+    {
+        if (betAmountBackground != null)
+        {
+            StartCoroutine(PlayPopAfterFrame());
+        }
+    }
+
+    private System.Collections.IEnumerator PlayPopAfterFrame()
+    {
+        yield return null;
+        PlayPopAnimation();
+    }
+
     private void OnValidate()
     {
         if (initialChips.Count == 0)
         {
             initialChips.AddRange(GetComponentsInChildren<Chip>(true));
-
             if (initialChips.Count > 6)
             {
                 initialChips.RemoveRange(6, initialChips.Count - 6);
@@ -54,6 +107,10 @@ public class PlayerBetComponent : MonoBehaviour
 
     private void OnDestroy()
     {
+        countingTween?.Kill();
+        scaleTween?.Kill();
+        popSequence?.Kill();
+
         foreach (var chip in allChips)
         {
             if (chip != null)
@@ -90,7 +147,7 @@ public class PlayerBetComponent : MonoBehaviour
 
         if (showDebugLogs)
         {
-            Debug.Log($"[PlayerBetComponent] Initialized with {chipSprites.Length} sprites, {allChips.Count} initial chips");
+            Debug.Log($"[PlayerBetComponent] Initialized - totalBetAmountText is {(totalBetAmountText != null ? "ASSIGNED" : "NULL")}");
         }
     }
 
@@ -132,6 +189,39 @@ public class PlayerBetComponent : MonoBehaviour
         AddSingleChip(amount, chipIndex);
     }
 
+    /// <summary>
+    /// Animate win using winRatio - counts from bet amount to win amount
+    /// </summary>
+    public void AnimateWinWithRatio(double winRatio)
+    {
+        if (totalBetAmountText == null)
+        {
+            Debug.LogError("[PlayerBetComponent] Cannot animate - totalBetAmountText is NULL!");
+            return;
+        }
+
+        if (totalBetAmount <= 0)
+        {
+            Debug.LogWarning($"[PlayerBetComponent] Cannot animate - no bet placed (amount = {totalBetAmount})");
+            return;
+        }
+
+        if (winRatio <= 0)
+        {
+            Debug.LogWarning($"[PlayerBetComponent] Cannot animate - invalid winRatio: {winRatio}");
+            return;
+        }
+
+        double startAmount = totalBetAmount;
+        double endAmount = totalBetAmount * winRatio;
+
+        Debug.Log($"[PlayerBetComponent] WIN ANIMATION: Bet={startAmount:F2}, Ratio=1:{winRatio}, Final={endAmount:F2}");
+
+        // Play animations
+        PlayCountingAnimation(startAmount, endAmount);
+        PlayBackgroundScaleAnimation();
+    }
+
     public void RemoveLastBet()
     {
         if (bets.Count == 0) return;
@@ -140,15 +230,12 @@ public class PlayerBetComponent : MonoBehaviour
         BetData lastBet = bets[lastIndex];
 
         totalBetAmount -= lastBet.amount;
-
         bets.RemoveAt(lastIndex);
 
         if (lastIndex < allChips.Count && allChips[lastIndex] != null)
         {
             Chip chip = allChips[lastIndex];
-
             chip.transform.DOKill();
-
             chip.SetActive(false);
         }
 
@@ -162,6 +249,11 @@ public class PlayerBetComponent : MonoBehaviour
 
     public void Clear()
     {
+        countingTween?.Kill();
+        scaleTween?.Kill();
+        popSequence?.Kill();
+
+        isAnimatingWin = false;
         bets.Clear();
         totalBetAmount = 0;
 
@@ -191,8 +283,12 @@ public class PlayerBetComponent : MonoBehaviour
             }
         }
 
-        UpdateTotalDisplay();
+        if (betAmountBackground != null && hasStoredOriginalScale)
+        {
+            betAmountBackground.transform.localScale = originalBackgroundScale;
+        }
 
+        UpdateTotalDisplay();
         gameObject.SetActive(false);
     }
 
@@ -206,7 +302,7 @@ public class PlayerBetComponent : MonoBehaviour
     #endregion
 
     #region Private Methods - Chip Management
-    private void AddSingleChip(double amount, int chipIndex)
+    private void AddSingleChip(double amount, int chipIndex, bool skipDisplay = false)
     {
         if (chipIndex < 0 || chipIndex >= chipSprites.Length)
         {
@@ -243,7 +339,10 @@ public class PlayerBetComponent : MonoBehaviour
             AnimateChipDrop(chip, finalPosition);
         }
 
-        UpdateTotalDisplay();
+        if (!skipDisplay)
+        {
+            UpdateTotalDisplay();
+        }
 
         if (!gameObject.activeSelf)
         {
@@ -275,7 +374,6 @@ public class PlayerBetComponent : MonoBehaviour
         }
 
         allChips.Add(newChip);
-
         return newChip;
     }
 
@@ -322,11 +420,152 @@ public class PlayerBetComponent : MonoBehaviour
 
         dropSequence.Play();
     }
+
+    /// <summary>
+    /// Counting animation with value updates every frame
+    /// </summary>
+    private void PlayCountingAnimation(double fromAmount, double toAmount)
+    {
+        if (totalBetAmountText == null)
+        {
+            Debug.LogError("[PlayerBetComponent] COUNTING FAILED - totalBetAmountText is NULL!");
+            return;
+        }
+
+        countingTween?.Kill();
+        isAnimatingWin = true;
+
+        Debug.Log($"[PlayerBetComponent] COUNTING START: {fromAmount:F2} → {toAmount:F2}");
+        Debug.Log($"[PlayerBetComponent] Duration: {countingDuration}s, Ease: {countingEase}");
+
+        // Set initial value immediately
+        totalBetAmountText.text = GameUtilities.FormatCurrency(fromAmount);
+
+        // Skip animation if amounts are same
+        if (Mathf.Approximately((float)fromAmount, (float)toAmount))
+        {
+            Debug.Log("[PlayerBetComponent] Amounts are equal - skipping animation");
+            totalBetAmountText.text = GameUtilities.FormatCurrency(toAmount);
+            isAnimatingWin = false;
+            return;
+        }
+
+        int updateCount = 0;
+
+        countingTween = DOVirtual.Float(
+            (float)fromAmount,
+            (float)toAmount,
+            countingDuration,
+            value =>
+            {
+                if (totalBetAmountText != null)
+                {
+                    string formattedValue = GameUtilities.FormatCurrency(value);
+                    totalBetAmountText.text = formattedValue;
+                    updateCount++;
+
+                    if (updateCount % 5 == 0)
+                    {
+                        Debug.Log($"[PlayerBetComponent] Update {updateCount}: {value:F2} → '{formattedValue}'");
+                    }
+                }
+            })
+        .SetEase(countingEase)
+        .SetUpdate(true) // Use unscaled time
+        .OnStart(() =>
+        {
+            Debug.Log($"[PlayerBetComponent] ✓ Counting animation STARTED");
+        })
+        .OnComplete(() =>
+        {
+            // Ensure final value is set correctly
+            if (totalBetAmountText != null)
+            {
+                totalBetAmountText.text = GameUtilities.FormatCurrency(toAmount);
+            }
+            isAnimatingWin = false;
+            Debug.Log($"[PlayerBetComponent] ✓ Counting animation COMPLETE");
+            Debug.Log($"[PlayerBetComponent] Total updates: {updateCount}");
+            Debug.Log($"[PlayerBetComponent] Final text: '{totalBetAmountText.text}'");
+        })
+        .SetAutoKill(true)
+        .Play(); // Explicitly play the tween
+
+        Debug.Log($"[PlayerBetComponent] DOVirtual.Float created and playing");
+    }
+
+    /// <summary>
+    /// Background scale animation
+    /// </summary>
+    private void PlayBackgroundScaleAnimation()
+    {
+        if (betAmountBackground == null || !hasStoredOriginalScale)
+        {
+            return;
+        }
+
+        scaleTween?.Kill();
+
+        Transform bgTransform = betAmountBackground.transform;
+        Vector3 targetScale = originalBackgroundScale * maxBackgroundScale;
+
+        bgTransform.localScale = originalBackgroundScale;
+
+        Sequence scaleSequence = DOTween.Sequence();
+
+        scaleSequence.Append(
+            bgTransform.DOScale(targetScale, countingDuration * 0.6f)
+                .SetEase(Ease.OutQuad)
+        );
+
+        scaleSequence.AppendInterval(countingDuration * 0.1f);
+
+        scaleSequence.Append(
+            bgTransform.DOScale(originalBackgroundScale, countingDuration * 0.3f)
+                .SetEase(Ease.InQuad)
+        );
+
+        scaleTween = scaleSequence;
+    }
+
+    private void PlayPopAnimation()
+    {
+        if (betAmountBackground == null) return;
+
+        popSequence?.Kill();
+
+        Transform bgTransform = betAmountBackground.transform;
+        Vector3 targetOriginalScale = hasStoredOriginalScale ? originalBackgroundScale : Vector3.one;
+
+        bgTransform.localScale = targetOriginalScale;
+
+        popSequence = DOTween.Sequence();
+
+        popSequence.Append(
+            bgTransform.DOScale(targetOriginalScale * popInScale, popInDuration)
+                .SetEase(popEase)
+        );
+
+        popSequence.Append(
+            bgTransform.DOScale(targetOriginalScale, popInDuration * 0.7f)
+                .SetEase(Ease.InBack)
+        );
+    }
     #endregion
 
     #region Private Methods - Display
     private void UpdateTotalDisplay()
     {
+        // Don't update display if we're animating a win
+        if (isAnimatingWin)
+        {
+            if (showDebugLogs)
+            {
+                Debug.Log("[PlayerBetComponent] UpdateTotalDisplay skipped - win animation in progress");
+            }
+            return;
+        }
+
         if (totalBetAmountText != null)
         {
             if (bets.Count > 0)
@@ -339,6 +578,13 @@ public class PlayerBetComponent : MonoBehaviour
                 totalBetAmountText.gameObject.SetActive(false);
             }
         }
+    }
+    #endregion
+
+    #region Public API - Manual Animation Trigger
+    public void TriggerPopAnimation()
+    {
+        PlayPopAnimation();
     }
     #endregion
 }

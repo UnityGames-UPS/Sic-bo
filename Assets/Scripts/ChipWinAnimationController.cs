@@ -5,19 +5,8 @@ using DG.Tweening;
 
 /// <summary>
 /// Real-money casino style chip win animation.
-///
-/// FLOW:
-///   PreSpawnDealerPool() → Called at Start: spawns 20–30 chips at dealer area, all hidden (scale 0).
-///
-///   PlayDiceResultAnimation(winAreas) → Called after dice result if player won:
-///       Pops a proportional number of chips from the dealer pool, slides them to
-///       each winning bet area with a stagger. These chips sit on top of the table chips.
-///
-///   PlayCashoutAnimation() → Called at cashout event:
-///       All chips on bet areas (win chips + a few extra representing the player's placed bet)
-///       arc gracefully to the player name / balance target, scale down and vanish.
-///
-///   ResetAll() → Called at round start to hide everything cleanly.
+/// COMPLETE VERSION: Gets winRatio for each bet area and triggers counting animation
+/// Animation starts when chips are getting close to the bet area (not after landing)
 /// </summary>
 public class ChipWinAnimationController : MonoBehaviour
 {
@@ -28,6 +17,8 @@ public class ChipWinAnimationController : MonoBehaviour
     [SerializeField] private Sprite[] chipSprites;
     [SerializeField] private Canvas targetCanvas;
     [SerializeField] private RectTransform playerNameTarget;
+    [SerializeField] private BetController betController; // Reference to BetController
+    [SerializeField] private GameManager gameManager; // Reference to GameManager for winRatio
 
     [Header("Pool")]
     [SerializeField] private int dealerPoolSize = 25;
@@ -47,6 +38,11 @@ public class ChipWinAnimationController : MonoBehaviour
 
     [Header("Chip Visual")]
     [SerializeField] private float chipWorkingScale = 0.85f;
+
+    [Header("Win Animation Settings")]
+    [SerializeField] private float animationStartPercent = 0.6f; // Start animation when chips are 60% to target
+    [SerializeField] private bool enableWinAnimations = true;
+    [SerializeField] private bool showDebugLogs = false;
     #endregion
 
     #region Private Fields
@@ -102,7 +98,6 @@ public class ChipWinAnimationController : MonoBehaviour
             if (chip == null) continue;
             chip.DOKill();
 
-            // Return stray chips (moved to canvas root during animation) back to dealer
             if (chip.parent != dealerSpawnPoint)
                 chip.SetParent(dealerSpawnPoint, worldPositionStays: false);
 
@@ -124,18 +119,15 @@ public class ChipWinAnimationController : MonoBehaviour
 
         for (int i = 0; i < dealerPoolSize; i++)
         {
-            // Parent directly inside the dealer object – chips live at the dealer position,
-            // not scattered across the root canvas.
             GameObject go = Instantiate(chipPrefab, dealerSpawnPoint);
             RectTransform rt = go.GetComponent<RectTransform>();
             if (rt == null) { Destroy(go); continue; }
 
-            // Small local scatter so they look like a natural stacked pile
             rt.localPosition = new Vector3(
                 Random.Range(-dealerScatterX, dealerScatterX),
                 Random.Range(-dealerScatterY, dealerScatterY),
                 0f);
-            rt.localScale = Vector3.zero; // invisible until animation starts
+            rt.localScale = Vector3.zero;
 
             if (chipSprites != null && chipSprites.Length > 0)
                 SetSprite(rt, Random.Range(2, chipSprites.Length));
@@ -146,15 +138,14 @@ public class ChipWinAnimationController : MonoBehaviour
     }
     #endregion
 
-    #region Phase 2 – Dealer → Bet Areas
+    #region Phase 2 – Dealer → Bet Areas WITH WIN COUNTING
     private IEnumerator CR_DealerToBetAreas(List<WinAreaData> winAreas)
     {
         isAnimating = true;
 
-        // Canvas root needed so chips can travel anywhere on screen
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : dealerSpawnPoint.parent;
 
-        // How many chips per area (proportional to win, clamped 1–6)
+        // How many chips per area
         double totalWin = 0;
         foreach (var a in winAreas) totalWin += a.winAmount;
 
@@ -179,7 +170,6 @@ public class ChipWinAnimationController : MonoBehaviour
 
                 SetSprite(chip, SpriteIndex(area.winAmount));
 
-                // Activate while still a child of dealerSpawnPoint – pop in there
                 chip.gameObject.SetActive(true);
                 chip.localPosition = new Vector3(
                     Random.Range(-dealerScatterX, dealerScatterX),
@@ -187,7 +177,6 @@ public class ChipWinAnimationController : MonoBehaviour
                 chip.localScale = Vector3.zero;
                 chip.DOScale(chipWorkingScale, 0.18f).SetEase(Ease.OutBack);
 
-                // Destination: canvas-space position of the target bet area + scatter
                 Vector2 dest = GetCanvasPosition(targetRT) + new Vector2(
                     Random.Range(-betAreaScatterX, betAreaScatterX),
                     Random.Range(-betAreaScatterY, betAreaScatterY));
@@ -200,20 +189,97 @@ public class ChipWinAnimationController : MonoBehaviour
         // Let pop-in settle
         yield return new WaitForSeconds(0.22f);
 
-        // Re-parent to canvas root BEFORE sliding (worldPositionStays preserves screen position)
+        // Re-parent to canvas root BEFORE sliding
         foreach (var (chip, _) in assignments)
             chip.SetParent(canvasRoot, worldPositionStays: true);
 
-        // Slide to bet areas with stagger
+        // Start sliding chips AND trigger animations when chips are partway there
+        float chipFlightTime = 0f;
+        float animationTriggerTime = dealerToBetDuration * animationStartPercent;
+        bool animationsTriggered = false;
+
         foreach (var (chip, dest) in assignments)
         {
             chip.DOAnchorPos(dest, dealerToBetDuration).SetEase(Ease.OutQuad);
             yield return new WaitForSeconds(chipStaggerDelay);
+            chipFlightTime += chipStaggerDelay;
+
+            // Trigger animations when first chip is partway to destination
+            if (enableWinAnimations && !animationsTriggered && chipFlightTime >= animationTriggerTime)
+            {
+                animationsTriggered = true;
+
+                if (showDebugLogs)
+                {
+                    Debug.Log($"[ChipWinAnimation] Triggering win counting animations (chips {animationStartPercent * 100}% to target)");
+                }
+
+                // Trigger all win animations at once
+                foreach (var area in winAreas)
+                {
+                    TriggerWinCountingAnimation(area);
+                }
+            }
         }
 
+        // Wait for chips to finish
         yield return new WaitForSeconds(dealerToBetDuration);
+
         isAnimating = false;
         winCoroutine = null;
+    }
+
+    /// <summary>
+    /// COMPLETE: Get winRatio for bet area and trigger counting animation
+    /// Counts from betAmount to (betAmount × winRatio)
+    /// </summary>
+    private void TriggerWinCountingAnimation(WinAreaData winArea)
+    {
+        if (betController == null || gameManager == null)
+        {
+            if (showDebugLogs)
+            {
+                Debug.LogWarning("[ChipWinAnimation] BetController or GameManager is null!");
+            }
+            return;
+        }
+
+        // Get PlayerBetComponent for this bet option
+        PlayerBetComponent playerBetComp = betController.GetPlayerBetComponent(winArea.betOption);
+
+        if (playerBetComp == null)
+        {
+            if (showDebugLogs)
+            {
+                Debug.LogWarning($"[ChipWinAnimation] No PlayerBetComponent for {winArea.betOption}");
+            }
+            return;
+        }
+
+        // Get win ratio from wager data
+        BetWager wager = gameManager.GetWagerForBetOption(winArea.betOption);
+        if (wager == null || wager.payout == null || wager.payout.Count < 2)
+        {
+            if (showDebugLogs)
+            {
+                Debug.LogWarning($"[ChipWinAnimation] No wager data for {winArea.betOption}");
+            }
+            return;
+        }
+
+        // Win ratio is payout[1] (e.g., for 1:10, winRatio = 10)
+        double winRatio = wager.payout[1];
+
+        if (showDebugLogs)
+        {
+            Debug.Log($"[ChipWinAnimation] Win animation for {winArea.betOption}:");
+            Debug.Log($"  Bet Amount: ${winArea.betAmount:F2}");
+            Debug.Log($"  Win Ratio: 1:{winRatio}");
+            Debug.Log($"  Final Amount: ${winArea.betAmount * winRatio:F2}");
+        }
+
+        // Trigger the counting animation with win ratio!
+        playerBetComp.AnimateWinWithRatio(winRatio);
     }
     #endregion
 
@@ -224,10 +290,9 @@ public class ChipWinAnimationController : MonoBehaviour
 
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : dealerSpawnPoint.parent;
 
-        // Chips already on the table (win chips, already parented to canvas root)
         var toSweep = new List<RectTransform>(activeWinChips);
 
-        // A few extra chips from the dealer pool represent the player's placed bet returning
+        // Extra chips from dealer pool
         int extraNeeded = Mathf.Min(3, dealerPool.Count);
         var extraChips = new List<RectTransform>();
         foreach (var chip in dealerPool)
@@ -235,7 +300,6 @@ public class ChipWinAnimationController : MonoBehaviour
             if (extraNeeded <= 0) break;
             if (activeWinChips.Contains(chip)) continue;
 
-            // Pop in while still a child of dealerSpawnPoint
             chip.gameObject.SetActive(true);
             chip.localPosition = new Vector3(
                 Random.Range(-dealerScatterX, dealerScatterX),
@@ -249,14 +313,12 @@ public class ChipWinAnimationController : MonoBehaviour
 
         yield return new WaitForSeconds(0.18f);
 
-        // Re-parent extras to canvas root so they can fly freely
         foreach (var chip in extraChips)
         {
             chip.SetParent(canvasRoot, worldPositionStays: true);
             toSweep.Add(chip);
         }
 
-        // Target is the player name / balance area in canvas space
         Vector2 playerPos = GetCanvasPosition(playerNameTarget);
 
         foreach (var chip in toSweep)
@@ -280,7 +342,6 @@ public class ChipWinAnimationController : MonoBehaviour
                 {
                     if (chip == null) return;
                     chip.gameObject.SetActive(false);
-                    // Return chip to dealer pool parent so ResetAll works correctly
                     chip.SetParent(dealerSpawnPoint, worldPositionStays: false);
                     chip.localPosition = Vector3.zero;
                 });
@@ -296,15 +357,10 @@ public class ChipWinAnimationController : MonoBehaviour
     #endregion
 
     #region Helpers
-    /// <summary>
-    /// Converts a RectTransform's world position into an anchoredPosition relative to
-    /// the root canvas, so DOAnchorPos works correctly regardless of parent hierarchy.
-    /// </summary>
     private Vector2 GetCanvasPosition(RectTransform rt)
     {
         if (rt == null || targetCanvas == null) return Vector2.zero;
 
-        // Convert to screen point then back to canvas local point
         Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(
             targetCanvas.worldCamera, rt.position);
 
@@ -339,12 +395,14 @@ public class ChipWinAnimationController : MonoBehaviour
         if (dealerSpawnPoint == null) Debug.LogError("[ChipWinAnimation] dealerSpawnPoint not assigned!");
         if (chipPrefab == null) Debug.LogError("[ChipWinAnimation] chipPrefab not assigned!");
         if (playerNameTarget == null) Debug.LogError("[ChipWinAnimation] playerNameTarget not assigned!");
+        if (betController == null) Debug.LogWarning("[ChipWinAnimation] BetController not assigned!");
+        if (gameManager == null) Debug.LogWarning("[ChipWinAnimation] GameManager not assigned!");
     }
     #endregion
 }
 
 
-/// <summary>Data for a single winning bet area, built in BetController.</summary>
+/// <summary>Data for a single winning bet area.</summary>
 [System.Serializable]
 public class WinAreaData
 {

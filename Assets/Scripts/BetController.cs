@@ -1294,6 +1294,7 @@ public class BetController : MonoBehaviour
     #endregion
 
     #region Private Methods - Chip Selector & Animations
+
     private void ToggleChipSelector()
     {
         if (!isBettingEnabled) return;
@@ -1648,6 +1649,76 @@ public class BetController : MonoBehaviour
         Debug.Log($"[BetController] Pool: {componentPool.Count} total, {available} inactive");
         foreach (var kvp in activeComponents)
             Debug.Log($"  Active component: {kvp.Key}");
+    }
+
+    internal PlayerBetComponent GetPlayerBetComponent(string betOption)
+    {
+        // Check if this betOption has an active PlayerBetComponent
+        if (activeComponents.ContainsKey(betOption))
+        {
+            return activeComponents[betOption];
+        }
+
+        // If no active component, try to get the bet area and its component
+        BaseBetArea betArea = GetBetAreaByOption(betOption);
+        if (betArea != null && betArea.playerBetComponent != null)
+        {
+            return betArea.playerBetComponent;
+        }
+
+        return null;
+    }
+    private BaseBetArea GetBetAreaByOption(string betOption)
+    {
+        // Main bets
+        if (betOption == "small") return SmallArea;
+        if (betOption == "big") return BigArea;
+        if (betOption == "odd") return OddArea;
+        if (betOption == "even") return EvenArea;
+
+        // Triple dice areas (specific_3_1 to specific_3_6)
+        if (betOption.StartsWith("specific_3_"))
+        {
+            string numberStr = betOption.Substring(11);
+            if (int.TryParse(numberStr, out int number) && number >= 1 && number <= 6)
+            {
+                int index = number - 1;
+                if (index < TripleDiceAreas.Count)
+                {
+                    return TripleDiceAreas[index];
+                }
+            }
+        }
+
+        // Single dice areas (single_1 to single_6)
+        if (betOption.StartsWith("single_"))
+        {
+            string numberStr = betOption.Substring(7);
+            if (int.TryParse(numberStr, out int number) && number >= 1 && number <= 6)
+            {
+                int index = number - 1;
+                if (index < SingleDiceAreas.Count)
+                {
+                    return SingleDiceAreas[index];
+                }
+            }
+        }
+
+        // Sum areas (sum_4 to sum_17)
+        if (betOption.StartsWith("sum_"))
+        {
+            string numberStr = betOption.Substring(4);
+            if (int.TryParse(numberStr, out int sum) && sum >= 4 && sum <= 17)
+            {
+                int index = sum - 4;
+                if (index < SumAreas.Count)
+                {
+                    return SumAreas[index];
+                }
+            }
+        }
+
+        return null;
     }
     #endregion
 

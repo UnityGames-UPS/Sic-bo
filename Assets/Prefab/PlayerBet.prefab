@@ -1515,6 +1515,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   totalBetAmountText: {fileID: 988426897547336688}
+  betAmountBackground: {fileID: 2542555228313576419}
+  coinImage: {fileID: 1726179647255284139}
   initialChips:
   - {fileID: 9060092636311103641}
   - {fileID: 562575847814840046}
@@ -1528,6 +1530,16 @@ MonoBehaviour:
   popScale: 1.15
   popDuration: 0.15
   randomOffsetRange: {x: 10, y: 13}
+  countingDuration: 0.8
+  flashColor: {r: 1, g: 1, b: 0.6, a: 1}
+  flashDuration: 0.5
+  flashCount: 2
+  coinRotation: 360
+  coinScalePunch: 0.3
+  popInScale: 1.1
+  popInDuration: 0.1
+  popEase: 27
+  playPopOnFirstEnable: 1
   showDebugLogs: 0
 --- !u!1 &9138753353062400486
 GameObject:
