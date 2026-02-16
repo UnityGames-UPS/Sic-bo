@@ -62,9 +62,18 @@ public class BonusIndicator : MonoBehaviour
 
     #region Unity Lifecycle
     private void Awake()
+    { 
+        EnsureInitialized();
+    }
+
+    /// <summary>
+    /// Lazy-initializes allRows. Called before every method that uses allRows
+    /// because Awake() may not have run yet (prefab root starts inactive).
+    /// </summary>
+    private void EnsureInitialized()
     {
-        allRows = new IndicatorRow[] { row1, row2, row3 };
-        HideAllRows();
+        if (allRows == null)
+            allRows = new IndicatorRow[] { row1, row2, row3 };
     }
     #endregion
 
@@ -76,6 +85,7 @@ public class BonusIndicator : MonoBehaviour
     internal void Setup(int[] multipliers, Sprite[] numberSprites, Sprite multiplierSprite,
         Sprite bgSprite = null, Sprite dotSprite = null, bool isWonState = false)
     {
+        EnsureInitialized();
         HideAllRows();
 
         if (mainBgImage != null && bgSprite != null)
@@ -104,6 +114,7 @@ public class BonusIndicator : MonoBehaviour
     internal void Setup(float[] multipliers, Sprite[] numberSprites, Sprite multiplierSprite,
         Sprite brownDotSprite, Sprite greenDotSprite, bool isWonState, Sprite bgSprite = null)
     {
+        EnsureInitialized();
         HideAllRows();
 
         if (mainBgImage != null && bgSprite != null)
@@ -135,6 +146,7 @@ public class BonusIndicator : MonoBehaviour
         Sprite greenBgSprite, Sprite greenDotSprite, float scaleOutDuration, float scaleInDuration,
         Action onComplete = null)
     {
+        EnsureInitialized();
         if (numberHolder == null) return;
         numberHolder.transform.DOKill();
         EnableBackgroundAnim();
@@ -172,6 +184,7 @@ public class BonusIndicator : MonoBehaviour
     /// </summary>
     internal void HideAllRows()
     {
+        EnsureInitialized();
         if (allRows != null)
         {
             foreach (var row in allRows)
@@ -196,6 +209,7 @@ public class BonusIndicator : MonoBehaviour
     /// </summary>
     internal Transform GetRowTransform(int rowIndex)
     {
+        EnsureInitialized();
         if (rowIndex >= 0 && rowIndex < allRows.Length && allRows[rowIndex] != null)
         {
             return allRows[rowIndex].rowObject?.transform;
@@ -228,14 +242,16 @@ public class BonusIndicator : MonoBehaviour
         {
             // X2
             // 3 rows: -40, 2 rows: -20, 1 row: 0
-            row.layoutGroup.spacing = totalRowCount == 3 ? -40.0f : (totalRowCount == 2 ? -20.0f : 0f);
+            if (row.layoutGroup != null)
+                row.layoutGroup.spacing = totalRowCount == 3 ? -40.0f : (totalRowCount == 2 ? -20.0f : 0f);
             SetDigit(row.number1Image, s[0], numberSprites);
         }
         else if (s.Length == 2)
         {
             // X12
             // 3 rows: -30, 2 rows: -10, 1 row: 0
-            row.layoutGroup.spacing = totalRowCount == 3 ? -30.0f : (totalRowCount == 2 ? -10.0f : 0f);
+            if (row.layoutGroup != null)
+                row.layoutGroup.spacing = totalRowCount == 3 ? -30.0f : (totalRowCount == 2 ? -10.0f : 0f);
             SetDigit(row.number1Image, s[0], numberSprites);
             SetDigit(row.number2Image, s[1], numberSprites);
         }
@@ -243,7 +259,8 @@ public class BonusIndicator : MonoBehaviour
         {
             // X123
             // 3 rows: -20, 2 rows: -5, 1 row: 0
-            row.layoutGroup.spacing = totalRowCount == 3 ? -20.0f : (totalRowCount == 2 ? 0f : 0f);
+            if (row.layoutGroup != null)
+                row.layoutGroup.spacing = totalRowCount == 3 ? -20.0f : (totalRowCount == 2 ? 0f : 0f);
             SetDigit(row.number1Image, s[0], numberSprites);
             SetDigit(row.number2Image, s[1], numberSprites);
             SetDigit(row.number3Image, s[2], numberSprites);
@@ -252,7 +269,8 @@ public class BonusIndicator : MonoBehaviour
         {
             // X1234
             // 3 rows: -10, 2 rows: 0, 1 row: 0
-            row.layoutGroup.spacing = totalRowCount == 3 ? -10.0f : 0f;
+            if (row.layoutGroup != null)
+                row.layoutGroup.spacing = totalRowCount == 3 ? -10.0f : 0f;
             SetDigit(row.number1Image, s[0], numberSprites);
             SetDigit(row.number2Image, s[1], numberSprites);
             SetDigit(row.number3Image, s[2], numberSprites);
@@ -294,7 +312,8 @@ public class BonusIndicator : MonoBehaviour
         {
             // X2.5 (single digit + decimal)
             // 3 rows: -10, 2 rows: -5, 1 row: 0
-            row.layoutGroup.spacing = totalRowCount == 3 ? -10.0f : (totalRowCount == 2 ? -5.0f : 0f);
+            if (row.layoutGroup != null)
+                row.layoutGroup.spacing = totalRowCount == 3 ? -10.0f : (totalRowCount == 2 ? -5.0f : 0f);
             SetDigit(row.number1Image, whole[0], numberSprites);
             SetImage(row.number2Image, dotSprite);
             SetDigit(row.number3Image, dec, numberSprites);
@@ -303,7 +322,8 @@ public class BonusIndicator : MonoBehaviour
         {
             // X12.5 (two digits + decimal)
             // 3 rows: -10, 2 rows: -5, 1 row: 0
-            row.layoutGroup.spacing = totalRowCount == 3 ? -10.0f : (totalRowCount == 2 ? -5.0f : 0f);
+            if (row.layoutGroup != null)
+                row.layoutGroup.spacing = totalRowCount == 3 ? -10.0f : (totalRowCount == 2 ? -5.0f : 0f);
             SetDigit(row.number1Image, whole[0], numberSprites);
             SetDigit(row.number2Image, whole[1], numberSprites);
             SetImage(row.number3Image, dotSprite);
@@ -313,7 +333,8 @@ public class BonusIndicator : MonoBehaviour
         {
             // X123 or X123.5 (three+ digits)
             // 3 rows: -10, 2 rows: 0, 1 row: 0
-            row.layoutGroup.spacing = totalRowCount == 3 ? -10.0f : 0f;
+            if (row.layoutGroup != null)
+                row.layoutGroup.spacing = totalRowCount == 3 ? -10.0f : 0f;
             SetDigit(row.number1Image, whole[0], numberSprites);
             SetDigit(row.number2Image, whole[1], numberSprites);
             SetDigit(row.number3Image, whole[2], numberSprites);

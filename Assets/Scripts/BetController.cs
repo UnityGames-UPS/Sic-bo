@@ -1420,7 +1420,7 @@ public class BetController : MonoBehaviour
             ChipAreaPanel.DOAnchorPosY(-200f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
 
         if (TotalStakePanel != null)
-            TotalStakePanel.DOAnchorPosY(40f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
+            TotalStakePanel.DOAnchorPosY(0f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
     }
 
     private void AnimateBetUnlocked()
