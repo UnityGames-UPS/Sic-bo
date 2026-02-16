@@ -343,8 +343,8 @@ public class DiceBoxAnimationController : MonoBehaviour
         currentState = DiceBoxState.Shaking;
         Debug.Log("[DiceBoxAnim] Playing shake animation");
 
-        // AUDIO: Play shake sound only if starting from beginning (startTime == 0)
-        if (startTime == 0f && AudioManager.Instance != null)
+       
+        if ( AudioManager.Instance != null)
         {
             AudioManager.Instance.PlayShake();
             Debug.Log("[DiceBoxAnim] Shake sound played");

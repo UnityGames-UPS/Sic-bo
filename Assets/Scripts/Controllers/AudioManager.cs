@@ -8,6 +8,11 @@ using UnityEngine.UI;
 /// Centralized audio manager for Sic Bo game with 4 synced toggles
 /// Handles all sounds with proper synchronization and focus management
 /// Works for both WebGL and APK platforms
+/// 
+/// AUDIO SOURCE ROUTING:
+/// - SFX1: UI sounds, chip sounds, round start, clock tick (general gameplay)
+/// - SFX2: Dice box animation sounds ONLY (shake, box open/close, dice show, dice results)
+/// This separation prevents animation sounds from being blocked by UI/game sounds
 /// </summary>
 public class AudioManager : MonoBehaviour
 {
@@ -100,28 +105,19 @@ public class AudioManager : MonoBehaviour
     #region Unity Lifecycle
     private void Awake()
     {
-        // Singleton pattern
-        if (instance != null && instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        instance = this;
-        DontDestroyOnLoad(gameObject);
-
         InitializeAudioSources();
         LoadAudioSettings();
     }
 
     private void Start()
-    {print("AudioManager started");
+    {
+        print("AudioManager started");
         SetupToggleListeners();
         UpdateAllToggles();
         PlayBackgroundMusic();
     }
 
-   private void OnApplicationFocus(bool hasFocus)
+    private void OnApplicationFocus(bool hasFocus)
     {
         isAppFocused = hasFocus;
 
@@ -135,7 +131,7 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-   private void OnApplicationPause(bool pauseStatus)
+    private void OnApplicationPause(bool pauseStatus)
     {
         if (pauseStatus)
         {
@@ -146,7 +142,7 @@ public class AudioManager : MonoBehaviour
             OnApplicationResume();
         }
     }
-   
+
     private void OnDestroy()
     {
         if (clockTickCoroutine != null)
@@ -453,14 +449,14 @@ public class AudioManager : MonoBehaviour
     {
         if (bgMusicSource == null || bgMusicClip == null) return;
 
-       
-            bgMusicSource.clip = bgMusicClip;
-            bgMusicSource.volume = bgMusicVolume;
-            bgMusicSource.loop = true;
-            bgMusicSource.Play();
 
-            Debug.Log("[AudioManager] Background music started");
-        
+        bgMusicSource.clip = bgMusicClip;
+        bgMusicSource.volume = bgMusicVolume;
+        bgMusicSource.loop = true;
+        bgMusicSource.Play();
+
+        Debug.Log("[AudioManager] Background music started");
+
     }
 
     internal void StopBackgroundMusic()
@@ -570,6 +566,9 @@ public class AudioManager : MonoBehaviour
     #endregion
 
     #region Internal API - Animation Sounds
+    // NOTE: All animation sounds use SFX2 source to prevent conflicts with UI/game sounds on SFX1
+    // This ensures shake, box open/close, and dice sounds always play even when other sounds are active
+
     internal void PlayRoundStart()
     {
         PlaySfx(roundStartSound);
@@ -577,26 +576,29 @@ public class AudioManager : MonoBehaviour
 
     internal void PlayShake()
     {
-        PlaySfx(shakeSound);
+        print ("[AudioManager] Playing shake sound");
+        PlayAnimationSfx(shakeSound);
     }
 
     internal void PlayBoxOpen()
     {
-        PlaySfx(boxOpenSound);
+        PlayAnimationSfx(boxOpenSound);
     }
 
     internal void PlayBoxClose()
     {
-        PlaySfx(boxCloseSound);
+        PlayAnimationSfx(boxCloseSound);
     }
 
     internal void PlayDiceShow()
     {
-        PlaySfx(diceShowSound);
+        PlayAnimationSfx(diceShowSound);
     }
     #endregion
 
     #region Internal API - Dice Result Sounds
+    // NOTE: Dice result sounds use SFX2 source to prevent conflicts with other game sounds
+
     internal void PlayDiceResultSequence(int dice1, int dice2, int dice3, float delayBetweenDice = 0.5f)
     {
         StartCoroutine(PlayDiceSequenceCoroutine(dice1, dice2, dice3, delayBetweenDice));
@@ -631,7 +633,7 @@ public class AudioManager : MonoBehaviour
 
         if (clip != null)
         {
-            PlaySfx(clip);
+            PlayAnimationSfx(clip);
             Debug.Log($"[AudioManager] Playing dice sound: {diceValue}");
         }
     }
@@ -650,23 +652,29 @@ public class AudioManager : MonoBehaviour
     #endregion
 
     #region Private Methods - Core SFX Playback
+    /// <summary>
+    /// Play general SFX on SFX1 source (UI, chips, round start, clock tick)
+    /// </summary>
     private void PlaySfx(AudioClip clip)
     {
         if (!isSfxEnabled || clip == null || !isAppFocused) return;
 
-        // Try to use the first available SFX source
-        if (sfxSource1 != null && !sfxSource1.isPlaying)
+        if (sfxSource1 != null)
         {
             sfxSource1.PlayOneShot(clip, sfxVolume);
         }
-        else if (sfxSource2 != null && !sfxSource2.isPlaying)
+    }
+
+    /// <summary>
+    /// Play animation SFX on SFX2 source (shake, box open/close, dice show, dice results)
+    /// </summary>
+    private void PlayAnimationSfx(AudioClip clip)
+    {
+        if (!isSfxEnabled || clip == null || !isAppFocused) return;
+
+        if (sfxSource2 != null)
         {
             sfxSource2.PlayOneShot(clip, sfxVolume);
-        }
-        else if (sfxSource1 != null)
-        {
-            // If both are playing, use source 1 (it will overlap)
-            sfxSource1.PlayOneShot(clip, sfxVolume);
         }
     }
     #endregion

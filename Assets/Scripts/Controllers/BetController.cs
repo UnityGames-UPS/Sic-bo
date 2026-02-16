@@ -1320,6 +1320,10 @@ public class BetController : MonoBehaviour
 
     private void CloseChipSelector()
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayChipSelectionOpen();
+        }
         AnimateChipsClose(() =>
         {
             if (ChipSelector_Panel) ChipSelector_Panel.SetActive(false);
@@ -1381,10 +1385,7 @@ public class BetController : MonoBehaviour
 
     private void OnChipSelected(int index)
     {
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlayButtonClick();
-        }
+       
         SelectChipAt(index);
         CloseChipSelector();
     }
