@@ -91,6 +91,14 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text WinAmount_Text;
     [SerializeField] private GameObject WinPanel;
 
+    [Header("Loading Screen")]
+    [SerializeField] private GameObject LoadingScreen_Object;
+    [SerializeField] private TMP_Text LoadingMessage_Text;
+
+    [Header("Player Avatar")]
+    [SerializeField] private Image PlayerAvatar_HomeScreen;
+    [SerializeField] private Image PlayerAvatar_GameScreen;
+    [SerializeField] private Sprite[] playerAvatarSprites;
 
     [Header("Animation Settings")]
     [SerializeField] private float slideDistance = 1000f;
@@ -119,6 +127,8 @@ public class UIController : MonoBehaviour
     private Vector2[] menuButtonOriginalPositions;
     private RectTransform menuPanelContainerRect;
     private Vector2 panelOriginalPosition;
+
+    private int selectedAvatarIndex = -1;
     #endregion
 
     #region Unity Lifecycle
@@ -128,6 +138,17 @@ public class UIController : MonoBehaviour
         ShowHomeScreen();
         InitializePopups();
         InitializeSideMenuAnimation();
+
+        if (LoadingScreen_Object != null)
+        {
+            LoadingScreen_Object.SetActive(false);
+        }
+
+        if (playerAvatarSprites != null && playerAvatarSprites.Length > 0)
+        {
+            selectedAvatarIndex = Random.Range(0, playerAvatarSprites.Length);
+            UpdatePlayerAvatars();
+        }
 
         // Initialize leaderboard controller
         if (leaderboardController != null)
@@ -406,12 +427,14 @@ public class UIController : MonoBehaviour
     {
         HideAllScreens();
         if (HomeScreen) HomeScreen.SetActive(true);
+        if (selectedAvatarIndex >= 0) UpdatePlayerAvatars();
     }
 
     internal void ShowGameScreen()
     {
         HideAllScreens();
         if (GameScreen) GameScreen.SetActive(true);
+        if (selectedAvatarIndex >= 0) UpdatePlayerAvatars();
     }
     #endregion
 
@@ -787,5 +810,30 @@ public class UIController : MonoBehaviour
     }
 
 
+    #endregion
+
+    #region Loading Screen
+    internal void ShowLoadingScreen(string message)
+    {
+        if (LoadingScreen_Object == null) return;
+        if (LoadingMessage_Text != null) LoadingMessage_Text.text = message;
+        LoadingScreen_Object.SetActive(true);
+    }
+
+    internal void HideLoadingScreen()
+    {
+        if (LoadingScreen_Object != null) LoadingScreen_Object.SetActive(false);
+    }
+    #endregion
+
+    #region Player Avatar
+    private void UpdatePlayerAvatars()
+    {
+        if (playerAvatarSprites == null || selectedAvatarIndex >= playerAvatarSprites.Length) return;
+
+        Sprite avatar = playerAvatarSprites[selectedAvatarIndex];
+        if (PlayerAvatar_HomeScreen != null) PlayerAvatar_HomeScreen.sprite = avatar;
+        if (PlayerAvatar_GameScreen != null) PlayerAvatar_GameScreen.sprite = avatar;
+    }
     #endregion
 }

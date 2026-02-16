@@ -78,6 +78,8 @@ public class GameManager : MonoBehaviour
     {
         if (payload == null) return;
 
+        uiController.HideLoadingScreen();
+
         uiController.UpdateTotalPlayerCount(payload.playerCount);
 
         // Always try to update leaderboards - LeaderboardController will handle null/empty cases
@@ -103,7 +105,7 @@ public class GameManager : MonoBehaviour
         else
         {
             CurrentRoundId = null;
-            uiController.UpdateRoundId(null); 
+            uiController.UpdateRoundId(null);
             uiController.UpdateRoundPhase("WAITING");
             Debug.Log("[GameManager] No active round - showing waiting state");
         }
@@ -412,6 +414,8 @@ public class GameManager : MonoBehaviour
     #region Public API - Room Management
     internal void JoinRoom(string roomName)
     {
+        uiController.ShowLoadingScreen("Joining Room...");
+
         CurrentRoom = roomName;
 
         List<double> chipValues = GetChipValuesForRoom(roomName);
@@ -436,6 +440,8 @@ public class GameManager : MonoBehaviour
 
     internal void LeaveRoom()
     {
+        uiController.ShowLoadingScreen("Returning to Lobby...");
+
         betController.DisableBetting();
         betController.ClearAllBets();
         betController.ClearAllWinHighlights();
@@ -493,6 +499,8 @@ public class GameManager : MonoBehaviour
     internal void ExitGame()
     {
         Debug.Log("[GameManager] ExitGame called");
+
+        uiController.ShowLoadingScreen("Exiting Game...");
 
         // 1. Activate raycast blocker (prevent user input)
         if (raycastBlocker != null)

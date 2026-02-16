@@ -21,8 +21,17 @@ public class RoundController : MonoBehaviour
 
     [Header("Result Display")]
     [SerializeField] private TMPro.TMP_Text Sum_Text;
-    [SerializeField] private TMPro.TMP_Text MatchSide_Text;
     [SerializeField] private GameObject ResultPanel;
+
+    [Header("Result Indicators - Images")]
+    [SerializeField] private GameObject SmallImage;
+    [SerializeField] private GameObject BigImage;
+    [SerializeField] private GameObject OddImage;
+    [SerializeField] private GameObject EvenImage;
+
+    [Header("Sum Text Colors")]
+    [SerializeField] private Color oddSumColor = Color.red;
+    [SerializeField] private Color evenSumColor = Color.black;
 
     [Header("References")]
     [SerializeField] private UIController uiController;
@@ -33,7 +42,7 @@ public class RoundController : MonoBehaviour
     [SerializeField] private DiceBoxAnimationController diceBoxAnimController;
 
     [Header("Audio Settings")]
-    [SerializeField] private float diceResultSoundDelay = 0.5f;
+    [SerializeField] private float diceResultSoundDelay = 1.0f;
     #endregion
 
     #region Private Fields
@@ -183,6 +192,13 @@ public class RoundController : MonoBehaviour
     {
         if (DiceContainer) DiceContainer.SetActive(false);
         if (ResultPanel) ResultPanel.SetActive(false);
+
+        // Hide all indicator images
+        if (SmallImage) SmallImage.SetActive(false);
+        if (BigImage) BigImage.SetActive(false);
+        if (OddImage) OddImage.SetActive(false);
+        if (EvenImage) EvenImage.SetActive(false);
+
         currentDiceResult = null;
         diceResultReceived = false;
     }
@@ -308,11 +324,57 @@ public class RoundController : MonoBehaviour
 
     private void ShowResult(int sum, string matchSide)
     {
-        if (Sum_Text) Sum_Text.text = sum.ToString();
-        if (MatchSide_Text) MatchSide_Text.text = matchSide.ToUpper();
+        // Set sum text
+        if (Sum_Text)
+        {
+            Sum_Text.text = sum.ToString();
+
+            // Color-code sum text based on odd/even
+            bool isOdd = (sum % 2 != 0);
+            Sum_Text.color = isOdd ? oddSumColor : evenSumColor;
+
+            Debug.Log($"[RoundController] Sum {sum} is {(isOdd ? "ODD" : "EVEN")} - color set to {(isOdd ? "red" : "black")}");
+        }
+
+        // Hide all indicator images first
+        if (SmallImage) SmallImage.SetActive(false);
+        if (BigImage) BigImage.SetActive(false);
+        if (OddImage) OddImage.SetActive(false);
+        if (EvenImage) EvenImage.SetActive(false);
+
+        // Determine and show correct indicators based on sum
+        bool isOddSum = (sum % 2 != 0);
+        bool isSmall = (sum >= 4 && sum <= 10);
+        bool isBig = (sum >= 11 && sum <= 17);
+
+        // Show Small or Big indicator
+        if (isSmall && SmallImage)
+        {
+            SmallImage.SetActive(true);
+            Debug.Log("[RoundController] Showing SMALL indicator");
+        }
+        else if (isBig && BigImage)
+        {
+            BigImage.SetActive(true);
+            Debug.Log("[RoundController] Showing BIG indicator");
+        }
+
+        // Show Odd or Even indicator
+        if (isOddSum && OddImage)
+        {
+            OddImage.SetActive(true);
+            Debug.Log("[RoundController] Showing ODD indicator");
+        }
+        else if (!isOddSum && EvenImage)
+        {
+            EvenImage.SetActive(true);
+            Debug.Log("[RoundController] Showing EVEN indicator");
+        }
+
+        // Show result panel
         if (ResultPanel) ResultPanel.SetActive(true);
 
-        Debug.Log($"[RoundController] Result displayed: Sum={sum}, Side={matchSide}");
+        Debug.Log($"[RoundController] Result displayed: Sum={sum}, Small={isSmall}, Big={isBig}, Odd={isOddSum}");
     }
     #endregion
 

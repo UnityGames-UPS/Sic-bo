@@ -2362,6 +2362,7 @@ RectTransform:
   - {fileID: 1684252281}
   - {fileID: 1960438065}
   - {fileID: 831605812}
+  - {fileID: 736710311}
   - {fileID: 1125485399}
   - {fileID: 1400909897}
   - {fileID: 1859320717}
@@ -5015,7 +5016,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 95477668}
   chipText: {fileID: 716459345}
-  <chipIndex>k__BackingField: 0
 --- !u!1 &96190417
 GameObject:
   m_ObjectHideFlags: 0
@@ -6752,7 +6752,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2100000, guid: dd49d4cdf0ba8054fba9792c47a30d0a, type: 2}
   m_Color: {r: 1, g: 1, b: 1, a: 0.392}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -8467,7 +8467,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 1073676483, guid: ec4029ed54bb447aab4c46ee8fcfa3e5, type: 3}
+  m_Sprite: {fileID: 21300000, guid: d85a908b7edd94d8898a0dad897c5fac, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -10994,6 +10994,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 156000646}
+  - {fileID: 1957545909}
   - {fileID: 2071535772}
   - {fileID: 328741472}
   - {fileID: 983036252}
@@ -12101,7 +12102,6 @@ MonoBehaviour:
   forwardButton: {fileID: 1137672764}
   backwardButton: {fileID: 553171836}
   historyController: {fileID: 1390679434}
-  currentInfoPage: 0
 --- !u!4 &226403982
 Transform:
   m_ObjectHideFlags: 0
@@ -12344,9 +12344,6 @@ MonoBehaviour:
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
-  indexOfTexture: 0
-  idealFrameRate: 0.041666668
-  delayBetweenAnimation: 0
   AnimationSpeed: 30
   delayBetweenLoop: 7
 --- !u!114 &232886554
@@ -14637,39 +14634,181 @@ MonoBehaviour:
   - {fileID: -986765258395856084, guid: 812e41effb206e5459d8de386322bf00, type: 3}
   - {fileID: 5536666578610334598, guid: 812e41effb206e5459d8de386322bf00, type: 3}
   playerBetComponentPrefab: {fileID: 6533872760909248499, guid: ff5bc9a87632184408d08a043fc2796c, type: 3}
-  SmallArea: {Button: {fileID: 1656661461}, WinImage: {fileID: 1160551662}, PlayerBetContainer: {fileID: 1656661458}, OpponentBetContainer: {fileID: 861123213}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 1636588718}}
-  BigArea: {Button: {fileID: 1289539970}, WinImage: {fileID: 1585875243}, PlayerBetContainer: {fileID: 1289539967}, OpponentBetContainer: {fileID: 1791954683}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 1133700712}}
-  OddArea: {Button: {fileID: 1937846151}, WinImage: {fileID: 1581366387}, PlayerBetContainer: {fileID: 1937846150}, OpponentBetContainer: {fileID: 1665363948}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 1665363949}}
-  EvenArea: {Button: {fileID: 10433631}, WinImage: {fileID: 359686567}, PlayerBetContainer: {fileID: 10433630}, OpponentBetContainer: {fileID: 96630690}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 1300435204}}
+  SmallArea:
+    Button: {fileID: 1656661461}
+    WinImage: {fileID: 1160551662}
+    PlayerBetContainer: {fileID: 1656661458}
+    OpponentBetContainer: {fileID: 861123213}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1636588718}
+  BigArea:
+    Button: {fileID: 1289539970}
+    WinImage: {fileID: 1585875243}
+    PlayerBetContainer: {fileID: 1289539967}
+    OpponentBetContainer: {fileID: 1791954683}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1133700712}
+  OddArea:
+    Button: {fileID: 1937846151}
+    WinImage: {fileID: 1581366387}
+    PlayerBetContainer: {fileID: 1937846150}
+    OpponentBetContainer: {fileID: 1665363948}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1665363949}
+  EvenArea:
+    Button: {fileID: 10433631}
+    WinImage: {fileID: 359686567}
+    PlayerBetContainer: {fileID: 10433630}
+    OpponentBetContainer: {fileID: 96630690}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1300435204}
   TripleDiceAreas:
-  - {Button: {fileID: 2034449703}, WinImage: {fileID: 325381760}, PlayerBetContainer: {fileID: 2034449702}, OpponentBetContainer: {fileID: 992041089}, playerBetComponent: {fileID: 0}}
-  - {Button: {fileID: 1501146516}, WinImage: {fileID: 81813565}, PlayerBetContainer: {fileID: 1501146515}, OpponentBetContainer: {fileID: 62267762}, playerBetComponent: {fileID: 0}}
-  - {Button: {fileID: 509634683}, WinImage: {fileID: 1223103450}, PlayerBetContainer: {fileID: 509634682}, OpponentBetContainer: {fileID: 707838575}, playerBetComponent: {fileID: 0}}
-  - {Button: {fileID: 1511002051}, WinImage: {fileID: 1803255852}, PlayerBetContainer: {fileID: 1511002050}, OpponentBetContainer: {fileID: 1023092082}, playerBetComponent: {fileID: 0}}
-  - {Button: {fileID: 1504720330}, WinImage: {fileID: 1694399932}, PlayerBetContainer: {fileID: 1504720329}, OpponentBetContainer: {fileID: 1918455490}, playerBetComponent: {fileID: 0}}
-  - {Button: {fileID: 93434211}, WinImage: {fileID: 1732600266}, PlayerBetContainer: {fileID: 93434209}, OpponentBetContainer: {fileID: 325540097}, playerBetComponent: {fileID: 0}}
+  - Button: {fileID: 2034449703}
+    WinImage: {fileID: 325381760}
+    PlayerBetContainer: {fileID: 2034449702}
+    OpponentBetContainer: {fileID: 992041089}
+    playerBetComponent: {fileID: 0}
+  - Button: {fileID: 1501146516}
+    WinImage: {fileID: 81813565}
+    PlayerBetContainer: {fileID: 1501146515}
+    OpponentBetContainer: {fileID: 62267762}
+    playerBetComponent: {fileID: 0}
+  - Button: {fileID: 509634683}
+    WinImage: {fileID: 1223103450}
+    PlayerBetContainer: {fileID: 509634682}
+    OpponentBetContainer: {fileID: 707838575}
+    playerBetComponent: {fileID: 0}
+  - Button: {fileID: 1511002051}
+    WinImage: {fileID: 1803255852}
+    PlayerBetContainer: {fileID: 1511002050}
+    OpponentBetContainer: {fileID: 1023092082}
+    playerBetComponent: {fileID: 0}
+  - Button: {fileID: 1504720330}
+    WinImage: {fileID: 1694399932}
+    PlayerBetContainer: {fileID: 1504720329}
+    OpponentBetContainer: {fileID: 1918455490}
+    playerBetComponent: {fileID: 0}
+  - Button: {fileID: 93434211}
+    WinImage: {fileID: 1732600266}
+    PlayerBetContainer: {fileID: 93434209}
+    OpponentBetContainer: {fileID: 325540097}
+    playerBetComponent: {fileID: 0}
   SingleDiceAreas:
-  - {Button: {fileID: 1157701830}, WinImage: {fileID: 347533608}, PlayerBetContainer: {fileID: 1157701829}, OpponentBetContainer: {fileID: 351290798}, playerBetComponent: {fileID: 0}}
-  - {Button: {fileID: 2115471507}, WinImage: {fileID: 634739700}, PlayerBetContainer: {fileID: 2115471506}, OpponentBetContainer: {fileID: 1386453491}, playerBetComponent: {fileID: 0}}
-  - {Button: {fileID: 1583946627}, WinImage: {fileID: 1266227254}, PlayerBetContainer: {fileID: 1583946626}, OpponentBetContainer: {fileID: 583561960}, playerBetComponent: {fileID: 0}}
-  - {Button: {fileID: 1362166606}, WinImage: {fileID: 1788027494}, PlayerBetContainer: {fileID: 1362166605}, OpponentBetContainer: {fileID: 211908142}, playerBetComponent: {fileID: 0}}
-  - {Button: {fileID: 1023310842}, WinImage: {fileID: 3550362}, PlayerBetContainer: {fileID: 1023310841}, OpponentBetContainer: {fileID: 512431065}, playerBetComponent: {fileID: 0}}
-  - {Button: {fileID: 2098396716}, WinImage: {fileID: 1405595829}, PlayerBetContainer: {fileID: 669258925}, OpponentBetContainer: {fileID: 624604217}, playerBetComponent: {fileID: 0}}
+  - Button: {fileID: 1157701830}
+    WinImage: {fileID: 347533608}
+    PlayerBetContainer: {fileID: 1157701829}
+    OpponentBetContainer: {fileID: 351290798}
+    playerBetComponent: {fileID: 0}
+  - Button: {fileID: 2115471507}
+    WinImage: {fileID: 634739700}
+    PlayerBetContainer: {fileID: 2115471506}
+    OpponentBetContainer: {fileID: 1386453491}
+    playerBetComponent: {fileID: 0}
+  - Button: {fileID: 1583946627}
+    WinImage: {fileID: 1266227254}
+    PlayerBetContainer: {fileID: 1583946626}
+    OpponentBetContainer: {fileID: 583561960}
+    playerBetComponent: {fileID: 0}
+  - Button: {fileID: 1362166606}
+    WinImage: {fileID: 1788027494}
+    PlayerBetContainer: {fileID: 1362166605}
+    OpponentBetContainer: {fileID: 211908142}
+    playerBetComponent: {fileID: 0}
+  - Button: {fileID: 1023310842}
+    WinImage: {fileID: 3550362}
+    PlayerBetContainer: {fileID: 1023310841}
+    OpponentBetContainer: {fileID: 512431065}
+    playerBetComponent: {fileID: 0}
+  - Button: {fileID: 2098396716}
+    WinImage: {fileID: 1405595829}
+    PlayerBetContainer: {fileID: 669258925}
+    OpponentBetContainer: {fileID: 624604217}
+    playerBetComponent: {fileID: 0}
   SumAreas:
-  - {Button: {fileID: 892113643}, WinImage: {fileID: 2018279354}, PlayerBetContainer: {fileID: 892113642}, OpponentBetContainer: {fileID: 1151581388}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 102222237}}
-  - {Button: {fileID: 724560961}, WinImage: {fileID: 1699524969}, PlayerBetContainer: {fileID: 724560960}, OpponentBetContainer: {fileID: 1567671481}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 629947806}}
-  - {Button: {fileID: 2100954598}, WinImage: {fileID: 1771331039}, PlayerBetContainer: {fileID: 2100954597}, OpponentBetContainer: {fileID: 1945692655}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 1139783686}}
-  - {Button: {fileID: 1336080792}, WinImage: {fileID: 1918099540}, PlayerBetContainer: {fileID: 1336080791}, OpponentBetContainer: {fileID: 561781646}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 1499186612}}
-  - {Button: {fileID: 2144231937}, WinImage: {fileID: 446756773}, PlayerBetContainer: {fileID: 2144231936}, OpponentBetContainer: {fileID: 830806501}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 402140791}}
-  - {Button: {fileID: 301394110}, WinImage: {fileID: 1631431969}, PlayerBetContainer: {fileID: 301394109}, OpponentBetContainer: {fileID: 1368388925}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 857887911}}
-  - {Button: {fileID: 1244234797}, WinImage: {fileID: 396464062}, PlayerBetContainer: {fileID: 1244234796}, OpponentBetContainer: {fileID: 1548861677}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 1876140615}}
-  - {Button: {fileID: 579249747}, WinImage: {fileID: 1525047210}, PlayerBetContainer: {fileID: 579249746}, OpponentBetContainer: {fileID: 310402341}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 1776458736}}
-  - {Button: {fileID: 993873213}, WinImage: {fileID: 1252403219}, PlayerBetContainer: {fileID: 993873212}, OpponentBetContainer: {fileID: 701052022}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 1556175322}}
-  - {Button: {fileID: 65678576}, WinImage: {fileID: 150979233}, PlayerBetContainer: {fileID: 65678575}, OpponentBetContainer: {fileID: 1543165240}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 2033856453}}
-  - {Button: {fileID: 159044044}, WinImage: {fileID: 1572997385}, PlayerBetContainer: {fileID: 159044043}, OpponentBetContainer: {fileID: 815779849}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 506666814}}
-  - {Button: {fileID: 680200043}, WinImage: {fileID: 90355267}, PlayerBetContainer: {fileID: 680200042}, OpponentBetContainer: {fileID: 310718199}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 896344755}}
-  - {Button: {fileID: 399784777}, WinImage: {fileID: 719128781}, PlayerBetContainer: {fileID: 399784776}, OpponentBetContainer: {fileID: 446503831}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 796313035}}
-  - {Button: {fileID: 2031837198}, WinImage: {fileID: 984479912}, PlayerBetContainer: {fileID: 2031837197}, OpponentBetContainer: {fileID: 1395066146}, playerBetComponent: {fileID: 0}, WinRatio_Text: {fileID: 1968157371}}
+  - Button: {fileID: 892113643}
+    WinImage: {fileID: 2018279354}
+    PlayerBetContainer: {fileID: 892113642}
+    OpponentBetContainer: {fileID: 1151581388}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 102222237}
+  - Button: {fileID: 724560961}
+    WinImage: {fileID: 1699524969}
+    PlayerBetContainer: {fileID: 724560960}
+    OpponentBetContainer: {fileID: 1567671481}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 629947806}
+  - Button: {fileID: 2100954598}
+    WinImage: {fileID: 1771331039}
+    PlayerBetContainer: {fileID: 2100954597}
+    OpponentBetContainer: {fileID: 1945692655}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1139783686}
+  - Button: {fileID: 1336080792}
+    WinImage: {fileID: 1918099540}
+    PlayerBetContainer: {fileID: 1336080791}
+    OpponentBetContainer: {fileID: 561781646}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1499186612}
+  - Button: {fileID: 2144231937}
+    WinImage: {fileID: 446756773}
+    PlayerBetContainer: {fileID: 2144231936}
+    OpponentBetContainer: {fileID: 830806501}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 402140791}
+  - Button: {fileID: 301394110}
+    WinImage: {fileID: 1631431969}
+    PlayerBetContainer: {fileID: 301394109}
+    OpponentBetContainer: {fileID: 1368388925}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 857887911}
+  - Button: {fileID: 1244234797}
+    WinImage: {fileID: 396464062}
+    PlayerBetContainer: {fileID: 1244234796}
+    OpponentBetContainer: {fileID: 1548861677}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1876140615}
+  - Button: {fileID: 579249747}
+    WinImage: {fileID: 1525047210}
+    PlayerBetContainer: {fileID: 579249746}
+    OpponentBetContainer: {fileID: 310402341}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1776458736}
+  - Button: {fileID: 993873213}
+    WinImage: {fileID: 1252403219}
+    PlayerBetContainer: {fileID: 993873212}
+    OpponentBetContainer: {fileID: 701052022}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1556175322}
+  - Button: {fileID: 65678576}
+    WinImage: {fileID: 150979233}
+    PlayerBetContainer: {fileID: 65678575}
+    OpponentBetContainer: {fileID: 1543165240}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 2033856453}
+  - Button: {fileID: 159044044}
+    WinImage: {fileID: 1572997385}
+    PlayerBetContainer: {fileID: 159044043}
+    OpponentBetContainer: {fileID: 815779849}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 506666814}
+  - Button: {fileID: 680200043}
+    WinImage: {fileID: 90355267}
+    PlayerBetContainer: {fileID: 680200042}
+    OpponentBetContainer: {fileID: 310718199}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 896344755}
+  - Button: {fileID: 399784777}
+    WinImage: {fileID: 719128781}
+    PlayerBetContainer: {fileID: 399784776}
+    OpponentBetContainer: {fileID: 446503831}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 796313035}
+  - Button: {fileID: 2031837198}
+    WinImage: {fileID: 984479912}
+    PlayerBetContainer: {fileID: 2031837197}
+    OpponentBetContainer: {fileID: 1395066146}
+    playerBetComponent: {fileID: 0}
+    WinRatio_Text: {fileID: 1968157371}
   RepeatPanelMain: {fileID: 2082428799}
   RepeatPanel: {fileID: 1184101825}
   Repeat_Button: {fileID: 1893757666}
@@ -14687,193 +14826,6 @@ MonoBehaviour:
   uiController: {fileID: 1759262012}
   bonusIndicatorController: {fileID: 1209887415}
   opponentChipManager: {fileID: 1594718133}
-  componentPool: []
-  isPoolInitialized: 0
-  currentChipValues: []
-  existingChips: []
-  originalChipPositions: []
-  centerPosition: {x: 0, y: 0, z: 0}
-  selectedChipIndex: 0
-  currentTotalBet: 0
-  isBettingEnabled: 0
-  isChipSelectorOpen: 0
-  betHistory: []
-  previousRoundBets: []
-  wagerData:
-    main_bets:
-      small:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      big:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      odd:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      even:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-    side_bets:
-      single_match_1:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      single_match_2:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      single_match_3:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      specific_3:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      specific_2:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-    op_bets:
-      sum_4:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_5:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_6:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_7:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_8:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_9:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_10:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_11:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_12:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_13:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_14:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_15:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_16:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_17:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-  currentLevel: 
-  minBetAmount: 0
-  maxBetAmount: 0
-  placedBetInPreviousRound: 0
-  hasPlacedBetThisRound: 0
-  isProcessingBetAction: 0
-  pendingBetOption: 
-  currentBetAction: 
-  receivedBroadcastCount: 0
-  currentPlayerUsername: 
 --- !u!4 &275686508
 Transform:
   m_ObjectHideFlags: 0
@@ -15232,6 +15184,81 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 286041325}
+  m_CullTransparentMesh: 1
+--- !u!1 &288508438
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 288508439}
+  - component: {fileID: 288508441}
+  - component: {fileID: 288508440}
+  m_Layer: 5
+  m_Name: Even
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &288508439
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 288508438}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1864915840}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: -117}
+  m_SizeDelta: {x: 189.99, y: 60}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &288508440
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 288508438}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 1789822566, guid: b8544e37126db4083b29afeef66af8e8, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &288508441
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 288508438}
   m_CullTransparentMesh: 1
 --- !u!1 &289332951
 GameObject:
@@ -16807,9 +16834,6 @@ MonoBehaviour:
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
-  indexOfTexture: 0
-  idealFrameRate: 0.041666668
-  delayBetweenAnimation: 0
   AnimationSpeed: 30
   delayBetweenLoop: 0
 --- !u!1 &299772548
@@ -17777,7 +17801,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -465, y: 579.6}
+  m_AnchoredPosition: {x: -465, y: 561.9}
   m_SizeDelta: {x: 150, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &319385144
@@ -23345,218 +23369,9 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: d23997dfae6f4b71b41614ec5bbf0b13
+  testToken: 83cd96770ede4cceacc4ec968e1cb41e
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
-  <InitialData>k__BackingField:
-    betOptions: []
-    roundInterval: 0
-    diceInterval: 0
-    diceLimit: 0
-    statsLimit: 0
-    bets:
-      casual: []
-      novice: 
-      expert: 
-      high_roller: 
-    levels: []
-    wagers:
-      main_bets:
-        small:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        big:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        odd:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        even:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-      side_bets:
-        single_match_1:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        single_match_2:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        single_match_3:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        specific_3:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        specific_2:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-      op_bets:
-        sum_4:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_5:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_6:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_7:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_8:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_9:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_10:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_11:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_12:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_13:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_14:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_15:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_16:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-        sum_17:
-          payout: []
-          max_bet_limit:
-            casual: 0
-            novice: 0
-            expert: 0
-            high_roller: 0
-    lobby:
-      casual: 0
-      novice: 0
-      expert: 0
-      high_roller: 0
-    leaderboards:
-      richest: []
-      winners: []
-    bonusMultipliers:
-      small: 0
-      big: 0
-      odd: 0
-      even: 0
-  <PlayerData>k__BackingField:
-    balance: 0
-    username: 
-  <IsInitialized>k__BackingField: 0
-  SocketURI: 
-  nameSpace: playground-multiplayer
-  myAuth: 
-  savedToken: 
-  isConnected: 0
-  hasEverConnected: 0
-  isExiting: 0
-  isWaitingForInitData: 0
-  isBeingDestroyed: 0
-  hasFocus: 1
-  focusLostTime: 0
-  CurrentRoomId: 
-  lastPongTime: 0
-  waitingForPong: 0
-  missedPongs: 0
 --- !u!4 &410521237
 Transform:
   m_ObjectHideFlags: 0
@@ -23813,9 +23628,6 @@ MonoBehaviour:
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
-  indexOfTexture: 0
-  idealFrameRate: 0.041666668
-  delayBetweenAnimation: 0
   AnimationSpeed: 80
   delayBetweenLoop: 5
 --- !u!114 &411921023
@@ -27141,7 +26953,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 491663329}
   chipText: {fileID: 2123216024}
-  <chipIndex>k__BackingField: 0
 --- !u!114 &491663328
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -28576,9 +28387,6 @@ MonoBehaviour:
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
-  indexOfTexture: 0
-  idealFrameRate: 0.041666668
-  delayBetweenAnimation: 0
   AnimationSpeed: 80
   delayBetweenLoop: 5
 --- !u!114 &513939474
@@ -33454,7 +33262,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &627080573
 RectTransform:
   m_ObjectHideFlags: 0
@@ -33467,11 +33275,11 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 627421082}
+  m_Father: {fileID: 1864915840}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -35}
   m_SizeDelta: {x: 182.95, y: 56}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &627080574
@@ -33494,7 +33302,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 11
+  m_text: 'Small
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
   m_sharedMaterial: {fileID: 2870210248413001566, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
@@ -33586,7 +33396,7 @@ GameObject:
   - component: {fileID: 627421084}
   - component: {fileID: 627421083}
   m_Layer: 5
-  m_Name: One (4)
+  m_Name: Small
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -33603,13 +33413,12 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 627080573}
+  m_Children: []
   m_Father: {fileID: 1864915840}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -61.1}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 189.99, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &627421083
@@ -33632,9 +33441,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -259195289, guid: 8085119362a3a410b894740fe3724184, type: 3}
+  m_Sprite: {fileID: 749505256, guid: b8544e37126db4083b29afeef66af8e8, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -37963,6 +37772,7 @@ RectTransform:
   - {fileID: 484612475}
   - {fileID: 72157365}
   - {fileID: 776184814}
+  - {fileID: 1102152399}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -41191,6 +41001,96 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 735533010}
   m_CullTransparentMesh: 1
+--- !u!1 &736710310
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 736710311}
+  - component: {fileID: 736710314}
+  - component: {fileID: 736710313}
+  - component: {fileID: 736710312}
+  m_Layer: 5
+  m_Name: Procedural Image
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &736710311
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 736710310}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 46738961}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 10.200001, y: 681.20013}
+  m_SizeDelta: {x: 400, y: 400}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &736710312
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 736710310}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ffade7edb5b1df45a6c3642149606c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &736710313
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 736710310}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41f1c5417c9d7ab4b84e531f83f60a4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 3f91331724a9da84197e9b6d94f0483c, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+  borderWidth: 0
+  falloffDistance: 1
+--- !u!222 &736710314
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 736710310}
+  m_CullTransparentMesh: 1
 --- !u!1 &738993359
 GameObject:
   m_ObjectHideFlags: 0
@@ -42353,32 +42253,90 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   resultRows:
-  - {rowContainer: {fileID: 1777392890}, sumText: {fileID: 990711531}, bigImage: {fileID: 251705974}, smallImage: {fileID: 1143246718}, dice1Image: {fileID: 1201542104}, dice2Image: {fileID: 192621210}, dice3Image: {fileID: 506216270}, _transform: {fileID: 0}}
-  - {rowContainer: {fileID: 909508162}, sumText: {fileID: 549312499}, bigImage: {fileID: 1358769724}, smallImage: {fileID: 1498004856}, dice1Image: {fileID: 650513177}, dice2Image: {fileID: 636198110}, dice3Image: {fileID: 1541037313}, _transform: {fileID: 0}}
-  - {rowContainer: {fileID: 988386463}, sumText: {fileID: 604304733}, bigImage: {fileID: 499096992}, smallImage: {fileID: 300803164}, dice1Image: {fileID: 381752900}, dice2Image: {fileID: 711194599}, dice3Image: {fileID: 1648217217}, _transform: {fileID: 0}}
-  - {rowContainer: {fileID: 294870230}, sumText: {fileID: 1334735379}, bigImage: {fileID: 1747156932}, smallImage: {fileID: 639488364}, dice1Image: {fileID: 1432446020}, dice2Image: {fileID: 1733412197}, dice3Image: {fileID: 388705153}, _transform: {fileID: 0}}
-  - {rowContainer: {fileID: 1460489796}, sumText: {fileID: 2121895782}, bigImage: {fileID: 210870920}, smallImage: {fileID: 553262623}, dice1Image: {fileID: 1621981211}, dice2Image: {fileID: 50827735}, dice3Image: {fileID: 1970830457}, _transform: {fileID: 0}}
-  - {rowContainer: {fileID: 1486668054}, sumText: {fileID: 289543074}, bigImage: {fileID: 1876886824}, smallImage: {fileID: 670723558}, dice1Image: {fileID: 99192795}, dice2Image: {fileID: 1382849615}, dice3Image: {fileID: 258535599}, _transform: {fileID: 0}}
-  - {rowContainer: {fileID: 250381850}, sumText: {fileID: 84564756}, bigImage: {fileID: 210870920}, smallImage: {fileID: 985459881}, dice1Image: {fileID: 1621981211}, dice2Image: {fileID: 50827735}, dice3Image: {fileID: 1970830457}, _transform: {fileID: 0}}
-  - {rowContainer: {fileID: 1818232338}, sumText: {fileID: 759808014}, bigImage: {fileID: 896896671}, smallImage: {fileID: 10408679}, dice1Image: {fileID: 1664375694}, dice2Image: {fileID: 2050684930}, dice3Image: {fileID: 1375503428}, _transform: {fileID: 0}}
-  - {rowContainer: {fileID: 1646695995}, sumText: {fileID: 1489513442}, bigImage: {fileID: 173488090}, smallImage: {fileID: 976370678}, dice1Image: {fileID: 893514418}, dice2Image: {fileID: 1437001681}, dice3Image: {fileID: 294926384}, _transform: {fileID: 0}}
-  - {rowContainer: {fileID: 1593584296}, sumText: {fileID: 1216675925}, bigImage: {fileID: 1267762919}, smallImage: {fileID: 254376936}, dice1Image: {fileID: 1170896041}, dice2Image: {fileID: 1218574689}, dice3Image: {fileID: 1429350902}, _transform: {fileID: 0}}
-  - {rowContainer: {fileID: 499130706}, sumText: {fileID: 2073227756}, bigImage: {fileID: 1519377970}, smallImage: {fileID: 1736370703}, dice1Image: {fileID: 229471027}, dice2Image: {fileID: 1141575535}, dice3Image: {fileID: 1032850337}, _transform: {fileID: 0}}
+  - rowContainer: {fileID: 1777392890}
+    sumText: {fileID: 990711531}
+    bigImage: {fileID: 251705974}
+    smallImage: {fileID: 1143246718}
+    dice1Image: {fileID: 1201542104}
+    dice2Image: {fileID: 192621210}
+    dice3Image: {fileID: 506216270}
+  - rowContainer: {fileID: 909508162}
+    sumText: {fileID: 549312499}
+    bigImage: {fileID: 1358769724}
+    smallImage: {fileID: 1498004856}
+    dice1Image: {fileID: 650513177}
+    dice2Image: {fileID: 636198110}
+    dice3Image: {fileID: 1541037313}
+  - rowContainer: {fileID: 988386463}
+    sumText: {fileID: 604304733}
+    bigImage: {fileID: 499096992}
+    smallImage: {fileID: 300803164}
+    dice1Image: {fileID: 381752900}
+    dice2Image: {fileID: 711194599}
+    dice3Image: {fileID: 1648217217}
+  - rowContainer: {fileID: 294870230}
+    sumText: {fileID: 1334735379}
+    bigImage: {fileID: 1747156932}
+    smallImage: {fileID: 639488364}
+    dice1Image: {fileID: 1432446020}
+    dice2Image: {fileID: 1733412197}
+    dice3Image: {fileID: 388705153}
+  - rowContainer: {fileID: 1460489796}
+    sumText: {fileID: 2121895782}
+    bigImage: {fileID: 210870920}
+    smallImage: {fileID: 553262623}
+    dice1Image: {fileID: 1621981211}
+    dice2Image: {fileID: 50827735}
+    dice3Image: {fileID: 1970830457}
+  - rowContainer: {fileID: 1486668054}
+    sumText: {fileID: 289543074}
+    bigImage: {fileID: 1876886824}
+    smallImage: {fileID: 670723558}
+    dice1Image: {fileID: 99192795}
+    dice2Image: {fileID: 1382849615}
+    dice3Image: {fileID: 258535599}
+  - rowContainer: {fileID: 250381850}
+    sumText: {fileID: 84564756}
+    bigImage: {fileID: 210870920}
+    smallImage: {fileID: 985459881}
+    dice1Image: {fileID: 1621981211}
+    dice2Image: {fileID: 50827735}
+    dice3Image: {fileID: 1970830457}
+  - rowContainer: {fileID: 1818232338}
+    sumText: {fileID: 759808014}
+    bigImage: {fileID: 896896671}
+    smallImage: {fileID: 10408679}
+    dice1Image: {fileID: 1664375694}
+    dice2Image: {fileID: 2050684930}
+    dice3Image: {fileID: 1375503428}
+  - rowContainer: {fileID: 1646695995}
+    sumText: {fileID: 1489513442}
+    bigImage: {fileID: 173488090}
+    smallImage: {fileID: 976370678}
+    dice1Image: {fileID: 893514418}
+    dice2Image: {fileID: 1437001681}
+    dice3Image: {fileID: 294926384}
+  - rowContainer: {fileID: 1593584296}
+    sumText: {fileID: 1216675925}
+    bigImage: {fileID: 1267762919}
+    smallImage: {fileID: 254376936}
+    dice1Image: {fileID: 1170896041}
+    dice2Image: {fileID: 1218574689}
+    dice3Image: {fileID: 1429350902}
+  - rowContainer: {fileID: 499130706}
+    sumText: {fileID: 2073227756}
+    bigImage: {fileID: 1519377970}
+    smallImage: {fileID: 1736370703}
+    dice1Image: {fileID: 229471027}
+    dice2Image: {fileID: 1141575535}
+    dice3Image: {fileID: 1032850337}
   slideDuration: 0.3
   slideEase: 9
   scaleAnimationDuration: 0.5
   chainDelay: 0.1
   scaleEase: 27
-  evenSumColor:
-    r: 0.1
-    g: 0.1
-    b: 0.1
-    a: 1
-  oddSumColor:
-    r: 0.8
-    g: 0.1
-    b: 0.1
-    a: 1
+  evenSumColor: {r: 0.1, g: 0.1, b: 0.1, a: 1}
+  oddSumColor: {r: 0.8, g: 0.1, b: 0.1, a: 1}
   dice1Sprite: {fileID: -1751106082, guid: 2e147c329247c408ebe882c66130a1d9, type: 3}
   dice2Sprite: {fileID: -1493796882, guid: 2e147c329247c408ebe882c66130a1d9, type: 3}
   dice3Sprite: {fileID: -561091582, guid: 2e147c329247c408ebe882c66130a1d9, type: 3}
@@ -42386,8 +42344,6 @@ MonoBehaviour:
   dice5Sprite: {fileID: 1320610689, guid: 2e147c329247c408ebe882c66130a1d9, type: 3}
   dice6Sprite: {fileID: -5551808395782546969, guid: 47939d68273e2d04385f5c369d717519, type: 3}
   enableDebugLogs: 1
-  originalRowPositions: []
-  rowWidth: 0
 --- !u!4 &760194024
 Transform:
   m_ObjectHideFlags: 0
@@ -44985,9 +44941,6 @@ MonoBehaviour:
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
-  indexOfTexture: 0
-  idealFrameRate: 0.041666668
-  delayBetweenAnimation: 0
   AnimationSpeed: 80
   delayBetweenLoop: 5
 --- !u!114 &810301401
@@ -46301,9 +46254,9 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 909203833}
   - {fileID: 1740187749}
   - {fileID: 1864915840}
-  - {fileID: 909203833}
   m_Father: {fileID: 46738961}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -49821,7 +49774,6 @@ GameObject:
   m_Component:
   - component: {fileID: 909203833}
   - component: {fileID: 909203837}
-  - component: {fileID: 909203836}
   - component: {fileID: 909203835}
   - component: {fileID: 909203834}
   m_Layer: 5
@@ -49839,7 +49791,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 909203832}
   m_LocalRotation: {x: -0, y: -0, z: 0.000000007788051, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -21060.002}
+  m_LocalPosition: {x: 0, y: 0, z: -21060.004}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -49847,7 +49799,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0.00012207031}
+  m_AnchoredPosition: {x: 10.2, y: 0}
   m_SizeDelta: {x: 430, y: 430}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &909203834
@@ -49894,18 +49846,6 @@ MonoBehaviour:
   m_PixelsPerUnitMultiplier: 1
   borderWidth: 0
   falloffDistance: 1
---- !u!114 &909203836
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 909203832}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dacc8a2ff207fca49bdaf5d45a943d80, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!222 &909203837
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -50793,7 +50733,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -317.62677, y: -496.0001}
+  m_AnchoredPosition: {x: -317.62677, y: -417.91}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &927545313
@@ -53277,7 +53217,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 465, y: 579.6}
+  m_AnchoredPosition: {x: 465, y: 580}
   m_SizeDelta: {x: 74, y: 75}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &980207986
@@ -53783,12 +53723,12 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1233470639}
+  m_Father: {fileID: 1864915840}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 80, y: 80}
+  m_AnchoredPosition: {x: 0, y: 102}
+  m_SizeDelta: {x: 104.45, y: 90}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &985951530
 MonoBehaviour:
@@ -53819,8 +53759,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
-  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+    rgba: 4278190335
+  m_fontColor: {r: 1, g: 0, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -53837,8 +53777,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36
-  m_fontSizeBase: 36
+  m_fontSize: 75
+  m_fontSizeBase: 75
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -59487,6 +59427,83 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1100343453}
   m_CullTransparentMesh: 1
+--- !u!1 &1102152398
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1102152399}
+  - component: {fileID: 1102152401}
+  - component: {fileID: 1102152400}
+  m_Layer: 0
+  m_Name: LoadingScreen
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &1102152399
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1102152398}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1659736133}
+  - {fileID: 2101235281}
+  m_Father: {fileID: 674617745}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 1080, y: 1920}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1102152400
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1102152398}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 3160d78466564451792e515001bb35ed, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1102152401
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1102152398}
+  m_CullTransparentMesh: 1
 --- !u!1 &1102714799
 GameObject:
   m_ObjectHideFlags: 0
@@ -60722,6 +60739,81 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1119448858}
+  m_CullTransparentMesh: 1
+--- !u!1 &1119504920
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1119504921}
+  - component: {fileID: 1119504923}
+  - component: {fileID: 1119504922}
+  m_Layer: 5
+  m_Name: Big
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1119504921
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1119504920}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1864915840}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 189.99, y: 60}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1119504922
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1119504920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: -1150470044, guid: b8544e37126db4083b29afeef66af8e8, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1119504923
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1119504920}
   m_CullTransparentMesh: 1
 --- !u!1 &1121229174
 GameObject:
@@ -66835,6 +66927,81 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1197836069}
   m_CullTransparentMesh: 1
+--- !u!1 &1199594325
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1199594326}
+  - component: {fileID: 1199594328}
+  - component: {fileID: 1199594327}
+  m_Layer: 5
+  m_Name: Odd
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1199594326
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1199594325}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1864915840}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: -117}
+  m_SizeDelta: {x: 189.99, y: 60}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1199594327
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1199594325}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 1857912858, guid: b8544e37126db4083b29afeef66af8e8, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 1
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1199594328
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1199594325}
+  m_CullTransparentMesh: 1
 --- !u!1 &1201098973
 GameObject:
   m_ObjectHideFlags: 0
@@ -67380,7 +67547,6 @@ MonoBehaviour:
   supportDecimalMultipliers: 1
   showDebugLogs: 0
   forceWinAnimation: 0
-  isPoolInitialized: 0
 --- !u!4 &1209887416
 Transform:
   m_ObjectHideFlags: 0
@@ -68685,82 +68851,6 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1232119308}
-  m_CullTransparentMesh: 1
---- !u!1 &1233470638
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1233470639}
-  - component: {fileID: 1233470641}
-  - component: {fileID: 1233470640}
-  m_Layer: 5
-  m_Name: One (3)
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1233470639
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1233470638}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 985951529}
-  m_Father: {fileID: 1864915840}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 60, y: 60}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1233470640
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1233470638}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: -259195289, guid: 8085119362a3a410b894740fe3724184, type: 3}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
---- !u!222 &1233470641
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1233470638}
   m_CullTransparentMesh: 1
 --- !u!1 &1234855721
 GameObject:
@@ -73185,14 +73275,6 @@ MonoBehaviour:
   diceVisibleAtOpeningFrame: 51
   diceHiddenAtClosingFrame: 28
   diceContainer: {fileID: 1740187748}
-  currentState: 0
-  isAnimating: 0
-  roundStartTime: 0
-  bettingEndTime: 0
-  serverTimeOffset: 0
-  hasPlayedShakeSound: 0
-  hasPlayedBoxOpenSound: 0
-  hasPlayedBoxCloseSound: 0
 --- !u!4 &1317873483
 Transform:
   m_ObjectHideFlags: 0
@@ -74787,43 +74869,75 @@ MonoBehaviour:
   highRollerMinBetText: {fileID: 1165957822}
   highRollerMaxBetText: {fileID: 191870158}
   mainBetsTexts:
-  - {minText: {fileID: 1480801857}, maxText: {fileID: 459102478}}
-  - {minText: {fileID: 943330833}, maxText: {fileID: 2111452618}}
-  - {minText: {fileID: 103980922}, maxText: {fileID: 1972684227}}
-  - {minText: {fileID: 718625424}, maxText: {fileID: 1180030879}}
+  - minText: {fileID: 1480801857}
+    maxText: {fileID: 459102478}
+  - minText: {fileID: 943330833}
+    maxText: {fileID: 2111452618}
+  - minText: {fileID: 103980922}
+    maxText: {fileID: 1972684227}
+  - minText: {fileID: 718625424}
+    maxText: {fileID: 1180030879}
   specific3Texts:
-  - {minText: {fileID: 927545315}, maxText: {fileID: 1790115450}}
-  - {minText: {fileID: 1880183123}, maxText: {fileID: 294334392}}
-  - {minText: {fileID: 1329966301}, maxText: {fileID: 105527978}}
-  - {minText: {fileID: 937585246}, maxText: {fileID: 777182070}}
-  - {minText: {fileID: 72302026}, maxText: {fileID: 1230428}}
-  - {minText: {fileID: 2041292273}, maxText: {fileID: 1384776496}}
+  - minText: {fileID: 927545315}
+    maxText: {fileID: 1790115450}
+  - minText: {fileID: 1880183123}
+    maxText: {fileID: 294334392}
+  - minText: {fileID: 1329966301}
+    maxText: {fileID: 105527978}
+  - minText: {fileID: 937585246}
+    maxText: {fileID: 777182070}
+  - minText: {fileID: 72302026}
+    maxText: {fileID: 1230428}
+  - minText: {fileID: 2041292273}
+    maxText: {fileID: 1384776496}
   singleNumberTexts:
-  - {minText: {fileID: 683982827}, maxText: {fileID: 258079864}}
-  - {minText: {fileID: 1564008919}, maxText: {fileID: 1515063153}}
-  - {minText: {fileID: 88754110}, maxText: {fileID: 978883225}}
-  - {minText: {fileID: 570436143}, maxText: {fileID: 1105006573}}
-  - {minText: {fileID: 361854745}, maxText: {fileID: 1965964471}}
-  - {minText: {fileID: 96978805}, maxText: {fileID: 201090062}}
+  - minText: {fileID: 683982827}
+    maxText: {fileID: 258079864}
+  - minText: {fileID: 1564008919}
+    maxText: {fileID: 1515063153}
+  - minText: {fileID: 88754110}
+    maxText: {fileID: 978883225}
+  - minText: {fileID: 570436143}
+    maxText: {fileID: 1105006573}
+  - minText: {fileID: 361854745}
+    maxText: {fileID: 1965964471}
+  - minText: {fileID: 96978805}
+    maxText: {fileID: 201090062}
   sumBetsTexts:
-  - {minText: {fileID: 2118278449}, maxText: {fileID: 632083606}}
-  - {minText: {fileID: 1064845584}, maxText: {fileID: 735533012}}
-  - {minText: {fileID: 1444749767}, maxText: {fileID: 328008487}}
-  - {minText: {fileID: 720536968}, maxText: {fileID: 951481441}}
-  - {minText: {fileID: 665228688}, maxText: {fileID: 1109658703}}
-  - {minText: {fileID: 857840217}, maxText: {fileID: 1478179942}}
-  - {minText: {fileID: 980063986}, maxText: {fileID: 694447025}}
-  - {minText: {fileID: 2116096951}, maxText: {fileID: 1074608986}}
-  - {minText: {fileID: 1691185130}, maxText: {fileID: 673272726}}
-  - {minText: {fileID: 1349883589}, maxText: {fileID: 64261866}}
-  - {minText: {fileID: 1708039557}, maxText: {fileID: 1629641207}}
-  - {minText: {fileID: 1937743677}, maxText: {fileID: 1082443550}}
-  - {minText: {fileID: 570811495}, maxText: {fileID: 1991910030}}
-  - {minText: {fileID: 10002069}, maxText: {fileID: 888546355}}
+  - minText: {fileID: 2118278449}
+    maxText: {fileID: 632083606}
+  - minText: {fileID: 1064845584}
+    maxText: {fileID: 735533012}
+  - minText: {fileID: 1444749767}
+    maxText: {fileID: 328008487}
+  - minText: {fileID: 720536968}
+    maxText: {fileID: 951481441}
+  - minText: {fileID: 665228688}
+    maxText: {fileID: 1109658703}
+  - minText: {fileID: 857840217}
+    maxText: {fileID: 1478179942}
+  - minText: {fileID: 980063986}
+    maxText: {fileID: 694447025}
+  - minText: {fileID: 2116096951}
+    maxText: {fileID: 1074608986}
+  - minText: {fileID: 1691185130}
+    maxText: {fileID: 673272726}
+  - minText: {fileID: 1349883589}
+    maxText: {fileID: 64261866}
+  - minText: {fileID: 1708039557}
+    maxText: {fileID: 1629641207}
+  - minText: {fileID: 1937743677}
+    maxText: {fileID: 1082443550}
+  - minText: {fileID: 570811495}
+    maxText: {fileID: 1991910030}
+  - minText: {fileID: 10002069}
+    maxText: {fileID: 888546355}
   popupDuration: 0.3
   popupCurve:
+    serializedVersion: 2
     m_Curve:
-    - time: 0
+    - serializedVersion: 3
+      time: 0
       value: 0
       inSlope: 0
       outSlope: 0
@@ -74831,7 +74945,8 @@ MonoBehaviour:
       weightedMode: 0
       inWeight: 0
       outWeight: 0
-    - time: 1
+    - serializedVersion: 3
+      time: 1
       value: 1
       inSlope: 0
       outSlope: 0
@@ -74842,179 +74957,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  wagersData:
-    main_bets:
-      small:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      big:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      odd:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      even:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-    side_bets:
-      single_match_1:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      single_match_2:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      single_match_3:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      specific_3:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      specific_2:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-    op_bets:
-      sum_4:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_5:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_6:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_7:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_8:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_9:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_10:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_11:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_12:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_13:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_14:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_15:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_16:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_17:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-  betsData:
-    casual: []
-    novice: 
-    expert: 
-    high_roller: 
-  betOptions: []
-  currentSelectedRoom: casual
-  playerCurrentRoom: 
 --- !u!4 &1345149127
 Transform:
   m_ObjectHideFlags: 0
@@ -77316,10 +77258,6 @@ MonoBehaviour:
   Close_Button: {fileID: 1835620902}
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
-  currentPage: 1
-  totalPages: 1
-  currentHistoryData: []
-  isWaitingForData: 0
 --- !u!4 &1390679435
 Transform:
   m_ObjectHideFlags: 0
@@ -80791,9 +80729,6 @@ MonoBehaviour:
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
-  indexOfTexture: 0
-  idealFrameRate: 0.041666668
-  delayBetweenAnimation: 0
   AnimationSpeed: 80
   delayBetweenLoop: 5
 --- !u!114 &1473828209
@@ -84319,9 +84254,6 @@ MonoBehaviour:
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
-  indexOfTexture: 0
-  idealFrameRate: 0.041666668
-  delayBetweenAnimation: 0
   AnimationSpeed: 30
   delayBetweenLoop: 0
 --- !u!1 &1538251274
@@ -87623,7 +87555,6 @@ MonoBehaviour:
   betAreaScatterY: 10
   chipScale: 0.8
   targetCanvas: {fileID: 674617748}
-  activeOpponentChips: []
 --- !u!4 &1594718134
 Transform:
   m_ObjectHideFlags: 0
@@ -88829,25 +88760,18 @@ MonoBehaviour:
   - {fileID: 1320610689, guid: 2e147c329247c408ebe882c66130a1d9, type: 3}
   - {fileID: -5551808395782546969, guid: 47939d68273e2d04385f5c369d717519, type: 3}
   Sum_Text: {fileID: 985951530}
-  MatchSide_Text: {fileID: 627080574}
   ResultPanel: {fileID: 1864915839}
+  SmallImage: {fileID: 627421081}
+  BigImage: {fileID: 1119504920}
+  OddImage: {fileID: 1199594325}
+  EvenImage: {fileID: 288508438}
+  oddSumColor: {r: 1, g: 0, b: 0, a: 1}
+  evenSumColor: {r: 0, g: 0, b: 0, a: 1}
   uiController: {fileID: 1759262012}
   betController: {fileID: 275686507}
   gameManager: {fileID: 1673436615}
   diceBoxAnimController: {fileID: 1317873481}
   diceResultSoundDelay: 0.5
-  currentRoundId: 
-  isRoundActive: 0
-  currentDiceResult:
-    roundId: 
-    dice1: 0
-    dice2: 0
-    dice3: 0
-    sum: 0
-    matchSide: 
-  diceResultReceived: 0
-  currentRoundStartTime: 0
-  currentBettingEndTime: 0
 --- !u!4 &1629638715
 Transform:
   m_ObjectHideFlags: 0
@@ -90803,6 +90727,143 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1657080579}
   m_CullTransparentMesh: 1
+--- !u!1 &1659736132
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1659736133}
+  - component: {fileID: 1659736135}
+  - component: {fileID: 1659736134}
+  m_Layer: 0
+  m_Name: Text
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1659736133
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1659736132}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1102152399}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: -250}
+  m_SizeDelta: {x: 700, y: 200}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1659736134
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1659736132}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_text: New Text waitting
+  m_isRightToLeft: 0
+  m_fontAsset: {fileID: 11400000, guid: 1fc74994964f09e4fa29c9981dab8feb, type: 2}
+  m_sharedMaterial: {fileID: 811190782665100601, guid: 1fc74994964f09e4fa29c9981dab8feb, type: 2}
+  m_fontSharedMaterials: []
+  m_fontMaterial: {fileID: 0}
+  m_fontMaterials: []
+  m_fontColor32:
+    serializedVersion: 2
+    rgba: 4278190080
+  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
+  m_enableVertexGradient: 0
+  m_colorMode: 3
+  m_fontColorGradient:
+    topLeft: {r: 1, g: 1, b: 1, a: 1}
+    topRight: {r: 1, g: 1, b: 1, a: 1}
+    bottomLeft: {r: 1, g: 1, b: 1, a: 1}
+    bottomRight: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColorGradientPreset: {fileID: 0}
+  m_spriteAsset: {fileID: 0}
+  m_tintAllSprites: 0
+  m_StyleSheet: {fileID: 0}
+  m_TextStyleHashCode: -1183493901
+  m_overrideHtmlColors: 0
+  m_faceColor:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontSize: 60
+  m_fontSizeBase: 70
+  m_fontWeight: 400
+  m_enableAutoSizing: 1
+  m_fontSizeMin: 18
+  m_fontSizeMax: 60
+  m_fontStyle: 0
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
+  m_textAlignment: 65535
+  m_characterSpacing: 0
+  m_characterHorizontalScale: 1
+  m_wordSpacing: 0
+  m_lineSpacing: 0
+  m_lineSpacingMax: 0
+  m_paragraphSpacing: 0
+  m_charWidthMaxAdj: 0
+  m_TextWrappingMode: 1
+  m_wordWrappingRatios: 0.4
+  m_overflowMode: 0
+  m_linkedTextComponent: {fileID: 0}
+  parentLinkedComponent: {fileID: 0}
+  m_enableKerning: 0
+  m_ActiveFontFeatures: 6e72656b
+  m_enableExtraPadding: 0
+  checkPaddingRequired: 0
+  m_isRichText: 1
+  m_EmojiFallbackSupport: 1
+  m_parseCtrlCharacters: 1
+  m_isOrthographic: 1
+  m_isCullingEnabled: 0
+  m_horizontalMapping: 0
+  m_verticalMapping: 0
+  m_uvLineOffset: 0
+  m_geometrySortingOrder: 0
+  m_IsTextObjectScaleStatic: 0
+  m_VertexBufferAutoSizeReduction: 0
+  m_useMaxVisibleDescender: 1
+  m_pageToDisplay: 1
+  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_isUsingLegacyAnimationComponent: 0
+  m_isVolumetricText: 0
+  m_hasFontAssetChanged: 0
+  m_baseMaterial: {fileID: 0}
+  m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!222 &1659736135
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1659736132}
+  m_CullTransparentMesh: 1
 --- !u!1 &1664375692
 GameObject:
   m_ObjectHideFlags: 0
@@ -91192,176 +91253,6 @@ MonoBehaviour:
   resultPlaneController: {fileID: 760194023}
   socketManager: {fileID: 410521236}
   raycastBlocker: {fileID: 776184813}
-  <CurrentRoom>k__BackingField: 
-  <PlayerUsername>k__BackingField: 
-  <CurrentBalance>k__BackingField: 0
-  <CurrentRoundId>k__BackingField: 
-  <CurrentWagers>k__BackingField:
-    main_bets:
-      small:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      big:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      odd:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      even:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-    side_bets:
-      single_match_1:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      single_match_2:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      single_match_3:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      specific_3:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      specific_2:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-    op_bets:
-      sum_4:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_5:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_6:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_7:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_8:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_9:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_10:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_11:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_12:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_13:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_14:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_15:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_16:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_17:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-  showDebugLogs: 1
 --- !u!4 &1673436616
 Transform:
   m_ObjectHideFlags: 0
@@ -93269,8 +93160,6 @@ MonoBehaviour:
   visibleTime: 2.5
   fadeTime: 0.5
   loopDelay: 7
-  img: {fileID: 0}
-  rect: {fileID: 0}
 --- !u!114 &1708496858
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -93346,9 +93235,6 @@ MonoBehaviour:
   nextRoundTimer_Text: {fileID: 1763384587}
   heartbeatScale: 1.15
   heartbeatDuration: 0.15
-  currentState: 0
-  currentSeconds: 0
-  isClockTickActive: 0
 --- !u!4 &1713741161
 Transform:
   m_ObjectHideFlags: 0
@@ -93924,7 +93810,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 1727007356}
   chipText: {fileID: 1690209068}
-  <chipIndex>k__BackingField: 0
 --- !u!1 &1732600266
 GameObject:
   m_ObjectHideFlags: 0
@@ -94432,7 +94317,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 10.2, y: 0.00012207031}
+  m_AnchoredPosition: {x: 10.2, y: 0.000061035156}
   m_SizeDelta: {x: 464, y: 464}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1740332146
@@ -95721,6 +95606,15 @@ MonoBehaviour:
   QuitNo_Button: {fileID: 1758985363}
   WinAmount_Text: {fileID: 507807961}
   WinPanel: {fileID: 507807958}
+  LoadingScreen_Object: {fileID: 1102152398}
+  LoadingMessage_Text: {fileID: 1659736134}
+  PlayerAvatar_HomeScreen: {fileID: 156000647}
+  PlayerAvatar_GameScreen: {fileID: 2104891914}
+  playerAvatarSprites:
+  - {fileID: 21300000, guid: d85a908b7edd94d8898a0dad897c5fac, type: 3}
+  - {fileID: 21300000, guid: 081179f4d459e449691133d4b9eda624, type: 3}
+  - {fileID: 21300000, guid: 8796806dabdb44c189bd860792897b56, type: 3}
+  - {fileID: 21300000, guid: 2827ecdfc61d74a8abff4ad17c406e58, type: 3}
   slideDistance: 1000
   slideDuration: 0.3
   inGamePopupDisplayTime: 1
@@ -95728,182 +95622,6 @@ MonoBehaviour:
   menuController: {fileID: 226403981}
   betTimerController: {fileID: 1713741160}
   leaderboardController: {fileID: 1759262014}
-  playerName: 
-  gameWagers:
-    main_bets:
-      small:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      big:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      odd:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      even:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-    side_bets:
-      single_match_1:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      single_match_2:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      single_match_3:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      specific_3:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      specific_2:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-    op_bets:
-      sum_4:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_5:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_6:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_7:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_8:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_9:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_10:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_11:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_12:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_13:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_14:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_15:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_16:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-      sum_17:
-        payout: []
-        max_bet_limit:
-          casual: 0
-          novice: 0
-          expert: 0
-          high_roller: 0
-  gameBets:
-    casual: []
-    novice: 
-    expert: 
-    high_roller: 
-  isAnotherDeviceError: 0
-  menuButtonRects: []
-  menuButtonOriginalPositions: []
-  menuPanelContainerRect: {fileID: 0}
-  panelOriginalPosition: {x: 0, y: 0}
 --- !u!4 &1759262013
 Transform:
   m_ObjectHideFlags: 0
@@ -95953,7 +95671,6 @@ MonoBehaviour:
   minRandomOffset: 0
   maxRandomOffset: 2
   leaderboardParent: {fileID: 1125485398}
-  isInitialized: 0
 --- !u!1 &1761495608
 GameObject:
   m_ObjectHideFlags: 0
@@ -96732,7 +96449,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1765690011
 RectTransform:
   m_ObjectHideFlags: 0
@@ -98688,9 +98405,6 @@ MonoBehaviour:
   textRect: {fileID: 907657951}
   parentRect: {fileID: 1793243685}
   speed: 300
-  startX: 0
-  endX: 0
-  centerX: 0
 --- !u!1 &1793892496
 GameObject:
   m_ObjectHideFlags: 0
@@ -101509,7 +101223,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1864915840
 RectTransform:
   m_ObjectHideFlags: 0
@@ -101522,14 +101236,18 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1233470639}
+  - {fileID: 985951529}
+  - {fileID: 627080573}
   - {fileID: 627421082}
+  - {fileID: 1119504921}
+  - {fileID: 1199594326}
+  - {fileID: 288508439}
   m_Father: {fileID: 831605812}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 17.6, y: 123.49}
-  m_SizeDelta: {x: 370.4, y: 100}
+  m_AnchoredPosition: {x: -210.6, y: 0}
+  m_SizeDelta: {x: 206.99, y: 293.67}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1867882078
 GameObject:
@@ -105402,12 +105120,12 @@ MonoBehaviour:
   arrowButtonSound: {fileID: 8300000, guid: 29a442712010df64fb361b1634b276c3, type: 3}
   chipselectionOpenSound: {fileID: 8300000, guid: 74e76ddfe26b58c49985e8b04cbbab8d, type: 3}
   clockTickSound: {fileID: 8300000, guid: 566c0be5c7d7f77478307c999b0e807a, type: 3}
-  playerBetPlaceSound: {fileID: 8300000, guid: 6b36b015bc9484fd0b205a6d5bb987d8, type: 3}
+  playerBetPlaceSound: {fileID: 8300000, guid: b5eeff11556e9b6499015e569dad8302, type: 3}
   chipAddSound: {fileID: 8300000, guid: 1bac9fd858d92864588618b2c0a402cd, type: 3}
   roundStartSound: {fileID: 8300000, guid: 9352eea40f18f7d4da453a933d08435f, type: 3}
   shakeSound: {fileID: 8300000, guid: 100b33daa8a8d5b4f80114c75fef7dda, type: 3}
   boxOpenSound: {fileID: 8300000, guid: 0ba051f8abaebcf43b14c1d5f4daa2c4, type: 3}
-  boxCloseSound: {fileID: 8300000, guid: 6b36b015bc9484fd0b205a6d5bb987d8, type: 3}
+  boxCloseSound: {fileID: 8300000, guid: 6f896fe42ef8a764b934115d249b584f, type: 3}
   diceShowSound: {fileID: 8300000, guid: 1f67dfe1dfca74a45a5dcf5313665955, type: 3}
   diceOneSound: {fileID: 8300000, guid: b7b7cc070c0e187419add5681858efa7, type: 3}
   diceTwoSound: {fileID: 8300000, guid: 7ace8db1b0b09894398bc284c2ff0a28, type: 3}
@@ -105652,6 +105370,81 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1957507508}
+  m_CullTransparentMesh: 1
+--- !u!1 &1957545908
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1957545909}
+  - component: {fileID: 1957545911}
+  - component: {fileID: 1957545910}
+  m_Layer: 0
+  m_Name: Frame
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1957545909
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1957545908}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 206849247}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -246.5, y: 0.49996948}
+  m_SizeDelta: {x: 175, y: 175}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1957545910
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1957545908}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 2142097961, guid: f5d095dfa446143b4bc0a4f48c58dfca, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1957545911
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1957545908}
   m_CullTransparentMesh: 1
 --- !u!1 &1960438064
 GameObject:
@@ -107572,7 +107365,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 1980096436}
   chipText: {fileID: 1976261504}
-  <chipIndex>k__BackingField: 0
 --- !u!1 &1980352778
 GameObject:
   m_ObjectHideFlags: 0
@@ -108943,8 +108735,6 @@ MonoBehaviour:
   visibleTime: 2.5
   fadeTime: 0.5
   loopDelay: 7
-  img: {fileID: 0}
-  rect: {fileID: 0}
 --- !u!114 &2003021840
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -110864,7 +110654,6 @@ MonoBehaviour:
   animationStartPercent: 0.6
   enableWinAnimations: 1
   showDebugLogs: 0
-  isAnimating: 0
 --- !u!4 &2046684978
 Transform:
   m_ObjectHideFlags: 0
@@ -112444,7 +112233,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2082428800
 RectTransform:
   m_ObjectHideFlags: 0
@@ -113169,7 +112958,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 2099097514}
   chipText: {fileID: 797732118}
-  <chipIndex>k__BackingField: 0
 --- !u!1 &2100954596
 GameObject:
   m_ObjectHideFlags: 0
@@ -113293,6 +113081,118 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2100954596}
+  m_CullTransparentMesh: 1
+--- !u!1 &2101235280
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2101235281}
+  - component: {fileID: 2101235284}
+  - component: {fileID: 2101235283}
+  - component: {fileID: 2101235282}
+  m_Layer: 0
+  m_Name: Diesanimation
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &2101235281
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2101235280}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1102152399}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 1080, y: 1920}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &2101235282
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2101235280}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb9b87d516696c448b7f9db59ef906a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  textureArray:
+  - {fileID: 21300000, guid: a58cd180185a8cc43afcf071758759aa, type: 3}
+  - {fileID: 21300000, guid: 40a31b08996aa3747ad7c8b02243c152, type: 3}
+  - {fileID: 21300000, guid: 18211e7efbcd8e840b04d65dd96d9f5c, type: 3}
+  - {fileID: 21300000, guid: 6e30b6be20a39dc4a85fc3f6ac67a963, type: 3}
+  - {fileID: 21300000, guid: 0b9f8462e91bca247b2508fd2b473468, type: 3}
+  - {fileID: 21300000, guid: c3bb87323914fe349ba7e6aeecd61f88, type: 3}
+  - {fileID: 21300000, guid: d1c329e11e0330c4c88d26ca2e2fa0a9, type: 3}
+  - {fileID: 21300000, guid: 6a5ea7ec2d604d54eacbba5a502b824f, type: 3}
+  - {fileID: 21300000, guid: fb2ee559f2b72694a923a28969049ff5, type: 3}
+  - {fileID: 21300000, guid: 99da0214e407cc2428bae9b0c597c339, type: 3}
+  - {fileID: 21300000, guid: 9d1150c488f83a742acb0e46cf65390a, type: 3}
+  - {fileID: 21300000, guid: 80841f6e5a9584f4e934b85f7fc8f8c3, type: 3}
+  - {fileID: 21300000, guid: a95e218b74b611f46b50be0ddc1e0151, type: 3}
+  - {fileID: 21300000, guid: 905cb15b49b381f48905500bce85e338, type: 3}
+  - {fileID: 21300000, guid: 4e90bd93a4c62764c99a0cf659d4fb35, type: 3}
+  rendererDelegate: {fileID: 2101235283}
+  useSharedMaterial: 1
+  doLoopAnimation: 1
+  StartOnAwake: 0
+  StartonEnable: 1
+  currentAnimationState: 0
+  AnimationSpeed: 5
+  delayBetweenLoop: 0
+--- !u!114 &2101235283
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2101235280}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: a58cd180185a8cc43afcf071758759aa, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &2101235284
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2101235280}
   m_CullTransparentMesh: 1
 --- !u!1 &2104891912
 GameObject:
@@ -116493,7 +116393,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 2145760457}
   chipText: {fileID: 921935017}
-  <chipIndex>k__BackingField: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

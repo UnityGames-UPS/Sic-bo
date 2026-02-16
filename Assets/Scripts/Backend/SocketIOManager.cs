@@ -80,6 +80,11 @@ public class SocketIOManager : MonoBehaviour
 
     private void Start()
     {
+        if (uiController != null)
+        {
+            uiController.ShowLoadingScreen("Initializing Game...");
+        }
+
         if (!ValidateToken()) return;
         OpenSocket();
     }
@@ -334,6 +339,8 @@ public class SocketIOManager : MonoBehaviour
                 InitialData = response.gameData;
                 PlayerData = response.player;
                 IsInitialized = true;
+
+                uiController?.HideLoadingScreen();
 
                 if (initTimeoutRoutine != null)
                 {
@@ -878,6 +885,8 @@ public class SocketIOManager : MonoBehaviour
 
             if (response != null && response.success && response.payload != null)
             {
+                uiController?.HideLoadingScreen();
+
                 // Update room ID
                 if (!string.IsNullOrEmpty(response.payload.roomId))
                 {
