@@ -35,6 +35,10 @@ public class DiceBoxAnimationController : MonoBehaviour
     [SerializeField] private int diceVisibleAtOpeningFrame = 51;
     [SerializeField] private int diceHiddenAtClosingFrame = 28;
     [SerializeField] private GameObject diceContainer;
+
+    [Header("Speed Control")]
+    [Tooltip("Speed multiplier applied to post-result animations (closing + zoom out) when a new round starts before the cycle finishes. 3 = 3x faster.")]
+    [SerializeField] private float fastForwardSpeed = 3f;
     #endregion
 
     #region Private Fields
@@ -56,6 +60,15 @@ public class DiceBoxAnimationController : MonoBehaviour
     private bool hasPlayedShakeSound = false;
     private bool hasPlayedBoxOpenSound = false;
     private bool hasPlayedBoxCloseSound = false;
+
+    // Live playback speed - coroutines read this every frame so it can be changed at runtime
+    private float playbackSpeed = 1f;
+
+    // Pending round - queued while post-result animations are playing
+    private bool hasPendingRound = false;
+    private long pendingRoundStartTimestamp;
+    private long pendingBettingEndTimestamp;
+    private long pendingServerTime;
     #endregion
 
     #region Unity Lifecycle
@@ -86,9 +99,30 @@ public class DiceBoxAnimationController : MonoBehaviour
         Debug.Log($"[DiceBoxAnim] Betting ends at: {bettingEndTimestamp}");
         Debug.Log($"[DiceBoxAnim] Current server time: {currentServerTime}");
 
+        // If we're in a post-result animation (Opening, Open, Closing, ZoomingOut),
+        // don't kill the coroutine - instead fast-forward it and queue the new round.
+        // The new round will start automatically when OnZoomOutComplete fires.
+        if (currentState == DiceBoxState.Opening ||
+            currentState == DiceBoxState.Open ||
+            currentState == DiceBoxState.Closing ||
+            currentState == DiceBoxState.ZoomingOut)
+        {
+            Debug.Log($"[DiceBoxAnim] New round queued - fast-forwarding current {currentState} animation at {fastForwardSpeed}x speed");
+            playbackSpeed = fastForwardSpeed;
+            hasPendingRound = true;
+            pendingRoundStartTimestamp = roundStartTimestamp;
+            pendingBettingEndTimestamp = bettingEndTimestamp;
+            pendingServerTime = currentServerTime;
+            return;
+        }
+
+        // Normal start - reset speed and clear any stale pending round
+        playbackSpeed = 1f;
+        hasPendingRound = false;
+
         StopAllAnimations();
 
-        // Reset audio flags - CRITICAL for new round
+        // Reset audio flags
         hasPlayedShakeSound = false;
         hasPlayedBoxOpenSound = false;
         hasPlayedBoxCloseSound = false;
@@ -249,7 +283,7 @@ public class DiceBoxAnimationController : MonoBehaviour
             // Start shake but skip ahead
             float timeIntoShake = elapsedSeconds;
             Debug.Log($"[DiceBoxAnim] Joining during SHAKE phase ({timeIntoShake:F2}s into shake)");
-            
+
             // Mark shake sound as played since we're joining mid-shake
             hasPlayedShakeSound = true;
             PlayShakeAnimation(timeIntoShake);
@@ -259,7 +293,7 @@ public class DiceBoxAnimationController : MonoBehaviour
             // Start idle but skip ahead
             float timeIntoIdle = elapsedSeconds - shakeEnd;
             Debug.Log($"[DiceBoxAnim] Joining during IDLE phase ({timeIntoIdle:F2}s into idle)");
-            
+
             // Mark shake sound as played
             hasPlayedShakeSound = true;
             PlayIdleAnimation(timeIntoIdle);
@@ -269,7 +303,7 @@ public class DiceBoxAnimationController : MonoBehaviour
             // Start zoom in but skip ahead
             float timeIntoZoomIn = elapsedSeconds - idleEnd;
             Debug.Log($"[DiceBoxAnim] Joining during ZOOM IN phase ({timeIntoZoomIn:F2}s into zoom in)");
-            
+
             hasPlayedShakeSound = true;
             PlayZoomInAnimation(timeIntoZoomIn);
         }
@@ -278,7 +312,7 @@ public class DiceBoxAnimationController : MonoBehaviour
             // Start opening but skip ahead
             float timeIntoOpening = elapsedSeconds - zoomInEnd;
             Debug.Log($"[DiceBoxAnim] Joining during OPENING phase ({timeIntoOpening:F2}s into opening)");
-            
+
             hasPlayedShakeSound = true;
             // Mark box open as played since we're joining mid-open
             hasPlayedBoxOpenSound = true;
@@ -288,17 +322,17 @@ public class DiceBoxAnimationController : MonoBehaviour
         {
             // Jump to hold open state
             Debug.Log($"[DiceBoxAnim] Joining during HOLD OPEN phase");
-            
+
             hasPlayedShakeSound = true;
             hasPlayedBoxOpenSound = true;
-            
+
             // Set to final frame of opening sequence
             if (openingSequence != null && openingSequence.Count > 0)
             {
                 SetDisplayToFrame(openingSequence, openingSequence.Count - 1);
             }
             currentState = DiceBoxState.Open;
-            
+
             // Start hold timer
             float remainingHoldTime = holdOpenEnd - elapsedSeconds;
             animationCoroutine = StartCoroutine(HoldOpenThenClose(remainingHoldTime));
@@ -308,7 +342,7 @@ public class DiceBoxAnimationController : MonoBehaviour
             // Start closing but skip ahead
             float timeIntoClosing = elapsedSeconds - holdOpenEnd;
             Debug.Log($"[DiceBoxAnim] Joining during CLOSING phase ({timeIntoClosing:F2}s into closing)");
-            
+
             hasPlayedShakeSound = true;
             hasPlayedBoxOpenSound = true;
             // Mark box close as played since we're joining mid-close
@@ -320,7 +354,7 @@ public class DiceBoxAnimationController : MonoBehaviour
             // Start zoom out but skip ahead
             float timeIntoZoomOut = elapsedSeconds - closingEnd;
             Debug.Log($"[DiceBoxAnim] Joining during ZOOM OUT phase ({timeIntoZoomOut:F2}s into zoom out)");
-            
+
             hasPlayedShakeSound = true;
             hasPlayedBoxOpenSound = true;
             hasPlayedBoxCloseSound = true;
@@ -341,10 +375,11 @@ public class DiceBoxAnimationController : MonoBehaviour
     private void PlayShakeAnimation(float startTime = 0f)
     {
         currentState = DiceBoxState.Shaking;
+        playbackSpeed = 1f; // Ensure normal speed for new cycle
         Debug.Log("[DiceBoxAnim] Playing shake animation");
 
-       
-        if ( AudioManager.Instance != null)
+
+        if (AudioManager.Instance != null)
         {
             AudioManager.Instance.PlayShake();
             Debug.Log("[DiceBoxAnim] Shake sound played");
@@ -488,9 +523,21 @@ public class DiceBoxAnimationController : MonoBehaviour
     {
         Debug.Log("[DiceBoxAnim] Zoom out complete - cycle finished");
         currentState = DiceBoxState.Waiting;
+        playbackSpeed = 1f; // Always reset speed after cycle
 
         // Notify that full cycle is complete
         onAnimationCycleComplete?.Invoke();
+
+        // If a new round was queued while we were animating, start it now
+        if (hasPendingRound)
+        {
+            Debug.Log("[DiceBoxAnim] Starting queued pending round after cycle complete");
+            hasPendingRound = false;
+            // Use corrected current server time so elapsed calculation is accurate
+            long correctedServerTime = (long)(Time.realtimeSinceStartup * 1000) + serverTimeOffset;
+            // Re-call the public method now that state is safe
+            StartAnimationCycleWithServerSync(pendingRoundStartTimestamp, pendingBettingEndTimestamp, correctedServerTime);
+        }
     }
     #endregion
 
@@ -514,30 +561,26 @@ public class DiceBoxAnimationController : MonoBehaviour
         }
 
         isAnimating = true;
-        float frameDelay = duration / sequence.Count;
+        float baseFrameDelay = duration / sequence.Count;
 
         // Calculate starting frame based on startTime
-        int startFrame = Mathf.FloorToInt(startTime / frameDelay);
-        float timeIntoStartFrame = startTime - (startFrame * frameDelay);
+        int startFrame = Mathf.FloorToInt(startTime / baseFrameDelay);
+        float timeIntoStartFrame = startTime - (startFrame * baseFrameDelay);
 
-        // Wait for remaining time in start frame
+        // Wait for remaining time in start frame (adjusted for current speed)
         if (timeIntoStartFrame > 0 && startFrame < sequence.Count)
         {
-            float remainingFrameTime = frameDelay - timeIntoStartFrame;
+            float remainingFrameTime = (baseFrameDelay - timeIntoStartFrame) / Mathf.Max(playbackSpeed, 0.01f);
 
-            // Display the start frame
             if (reverse)
             {
                 int reverseIndex = sequence.Count - 1 - startFrame;
                 if (reverseIndex >= 0 && reverseIndex < sequence.Count)
-                {
                     SetDisplayToFrame(sequence, reverseIndex);
-                }
             }
             else
             {
                 SetDisplayToFrame(sequence, startFrame);
-                // Check dice visibility for this frame
                 CheckDiceVisibilityTriggers(startFrame);
             }
 
@@ -549,44 +592,37 @@ public class DiceBoxAnimationController : MonoBehaviour
         {
             if (reverse)
             {
-                // Play backwards
                 for (int i = sequence.Count - 1 - startFrame; i >= 0; i--)
                 {
                     if (animationImage && sequence[i])
-                    {
                         animationImage.sprite = sequence[i];
-                    }
-                    yield return new WaitForSeconds(frameDelay);
+
+                    // Read speed live each frame
+                    yield return new WaitForSeconds(baseFrameDelay / Mathf.Max(playbackSpeed, 0.01f));
                 }
             }
             else
             {
-                // Play forwards
                 for (int i = startFrame; i < sequence.Count; i++)
                 {
                     if (animationImage && sequence[i])
-                    {
                         animationImage.sprite = sequence[i];
-                    }
 
-                    // Check for dice visibility triggers at specific frames
                     CheckDiceVisibilityTriggers(i);
 
-                    yield return new WaitForSeconds(frameDelay);
+                    // Read speed live each frame
+                    yield return new WaitForSeconds(baseFrameDelay / Mathf.Max(playbackSpeed, 0.01f));
                 }
             }
 
-            startFrame = 0; // Reset for loop iterations
+            startFrame = 0;
         } while (loop && isAnimating);
 
         isAnimating = false;
         animationCoroutine = null;
 
-        // Call completion callback if not looping
         if (!loop)
-        {
             onComplete?.Invoke();
-        }
     }
 
     private void CheckDiceVisibilityTriggers(int currentFrame)

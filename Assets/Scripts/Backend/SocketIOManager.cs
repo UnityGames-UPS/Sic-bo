@@ -44,7 +44,7 @@ public class SocketIOManager : MonoBehaviour
     private bool isConnected = false;
     private bool hasEverConnected = false;
     private bool isExiting = false;
-    private bool isWaitingForInitData = false;
+    private bool isWaitingForInitData = false;  // FIX: Now properly used in two-phase timeout
     private bool isBeingDestroyed = false;
     private bool hasFocus = true;
     private float focusLostTime = 0f;
@@ -91,6 +91,8 @@ public class SocketIOManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        Debug.Log("[SOCKET] Destroying");
+
         isBeingDestroyed = true;
         isExiting = true;
         CleanupRoutines();
@@ -137,6 +139,7 @@ public class SocketIOManager : MonoBehaviour
 #if UNITY_EDITOR
         if (string.IsNullOrEmpty(testToken) || testToken.Length < 10)
         {
+            Debug.LogError("[VALIDATION] Invalid test token");
             ShowErrorAndBlock("Test token is required in editor mode");
             return false;
         }
@@ -180,7 +183,8 @@ public class SocketIOManager : MonoBehaviour
         float timeout = 15f;
         float elapsed = 0f;
 
-        while (myAuth == null && elapsed < timeout && !isBeingDestroyed)
+  
+        while ((myAuth == null || SocketURI == null) && elapsed < timeout && !isBeingDestroyed)
         {
             elapsed += Time.deltaTime;
             yield return null;
@@ -190,21 +194,14 @@ public class SocketIOManager : MonoBehaviour
 
         if (myAuth == null)
         {
+            Debug.LogError("[AUTH] Token timeout");
             ShowErrorAndBlock("Authentication failed. Please refresh the page.");
             yield break;
         }
 
-        elapsed = 0f;
-        while (SocketURI == null && elapsed < timeout && !isBeingDestroyed)
-        {
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        if (isBeingDestroyed) yield break;
-
         if (SocketURI == null)
         {
+            Debug.LogError("[AUTH] URI timeout");
             ShowErrorAndBlock("Connection configuration failed. Please refresh.");
             yield break;
         }
@@ -231,6 +228,7 @@ public class SocketIOManager : MonoBehaviour
         RegisterEventHandlers();
         manager.Open();
 
+        // FIX: Phase 1 timeout (connection only) starts here, same as Plinko
         if (gameObject.activeInHierarchy && !isBeingDestroyed)
         {
             initTimeoutRoutine = StartCoroutine(ConnectionAndInitTimeout());
@@ -264,6 +262,13 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
 
+        // FIX: Cancel the connection-phase timeout immediately on connect (matches Plinko)
+        if (initTimeoutRoutine != null)
+        {
+            StopCoroutine(initTimeoutRoutine);
+            initTimeoutRoutine = null;
+        }
+
         isConnected = true;
         hasEverConnected = true;
         missedPongs = 0;
@@ -272,6 +277,16 @@ public class SocketIOManager : MonoBehaviour
         Debug.Log("[SOCKET] Connected");
 
         StartPingPongChecks();
+
+        // FIX: Start phase 2 (init data timeout) only after connection succeeds
+        if (!IsInitialized)
+        {
+            isWaitingForInitData = true;
+            if (gameObject.activeInHierarchy && !isBeingDestroyed)
+            {
+                initTimeoutRoutine = StartCoroutine(InitDataTimeout());
+            }
+        }
     }
 
     private void OnDisconnected()
@@ -279,6 +294,7 @@ public class SocketIOManager : MonoBehaviour
         if (isBeingDestroyed || isExiting) return;
 
         isConnected = false;
+        IsInitialized = false; // FIX: Reset so re-init works correctly on reconnect
         ResetPingRoutine();
 
         Debug.LogWarning("[SOCKET] Disconnected");
@@ -287,12 +303,23 @@ public class SocketIOManager : MonoBehaviour
         {
             uiController?.ShowDisconnectPopup();
         }
+
+        // FIX: Start disconnect timer like Plinko (handles prolonged disconnection)
+        if (disconnectTimerCoroutine == null && gameObject.activeInHierarchy && !isBeingDestroyed)
+        {
+            disconnectTimerCoroutine = StartCoroutine(DisconnectTimer());
+        }
     }
 
     private void OnError(Error error)
     {
         if (isBeingDestroyed) return;
         Debug.LogError($"[SOCKET] Error: {error.message}");
+
+        // FIX: Notify platform of socket error, same as Plinko
+#if UNITY_WEBGL && !UNITY_EDITOR
+        JSManager?.SendCustomMessage("error");
+#endif
     }
     #endregion
 
@@ -307,7 +334,6 @@ public class SocketIOManager : MonoBehaviour
         {
             RoomPayload payload = JsonConvert.DeserializeObject<RoomPayload>(json);
 
-            // Track room ID
             if (!string.IsNullOrEmpty(payload.roomId))
             {
                 CurrentRoomId = payload.roomId;
@@ -330,6 +356,14 @@ public class SocketIOManager : MonoBehaviour
 
         Debug.Log($"[RESPONSE] game:init {json}");
 
+        // FIX: Cancel init timeout FIRST before any parsing (matches Plinko pattern)
+        isWaitingForInitData = false;
+        if (initTimeoutRoutine != null)
+        {
+            StopCoroutine(initTimeoutRoutine);
+            initTimeoutRoutine = null;
+        }
+
         try
         {
             SicBoRoot response = JsonConvert.DeserializeObject<SicBoRoot>(json);
@@ -340,21 +374,28 @@ public class SocketIOManager : MonoBehaviour
                 PlayerData = response.player;
                 IsInitialized = true;
 
+                // FIX: Send OnEnter to platform — this was the ROOT CAUSE of the error
+#if UNITY_WEBGL && !UNITY_EDITOR
+                JSManager?.SendCustomMessage("OnEnter");
+#endif
+
                 uiController?.HideLoadingScreen();
-
-                if (initTimeoutRoutine != null)
-                {
-                    StopCoroutine(initTimeoutRoutine);
-                    initTimeoutRoutine = null;
-                }
-
                 RaycastBlocker?.SetActive(false);
                 gameManager.OnInitDataReceived();
+
+                Debug.Log("[INIT] Game ready");
+            }
+            else
+            {
+                // FIX: Surface the actual problem instead of silently failing
+                Debug.LogError($"[INIT] Missing fields — gameData:{response?.gameData != null} player:{response?.player != null}");
+                ShowErrorAndBlock("Failed to initialize game session.");
             }
         }
         catch (Exception e)
         {
             Debug.LogError($"[INIT] Parse error: {e.Message}");
+            ShowErrorAndBlock("Failed to initialize game session.");
         }
     }
 
@@ -507,8 +548,7 @@ public class SocketIOManager : MonoBehaviour
         {
             uiController?.CloseReconnectPopup();
             Debug.Log("[PING-PONG] Connection restored");
-        }
-
+        }   
         missedPongs = 0;
         Debug.Log("[PING-PONG] Pong received");
     }
@@ -518,21 +558,6 @@ public class SocketIOManager : MonoBehaviour
         if (isBeingDestroyed) return;
         Debug.LogError($"[ERROR] {json}");
 
-        // IMPORTANT: Distinguish between game logic rejections and actual errors
-        //
-        // GAME LOGIC REJECTIONS (use ShowInGamePopup):
-        //   - Bet limit reached
-        //   - Insufficient balance
-        //   - Betting not active/locked
-        //   - Invalid bet option
-        //   - Round not found
-        //   → These are normal game flow, show brief notification that auto-closes
-        //
-        // ACTUAL ERRORS (use ShowErrorAndBlock):
-        //   - Server internal errors
-        //   - Database errors
-        //   - Unexpected failures
-        //   → These require user attention and may need page refresh
 
         string message = TryParseErrorMessage(json);
 
@@ -550,29 +575,24 @@ public class SocketIOManager : MonoBehaviour
 
         if (isGameLogicError)
         {
-            // Game notification - auto-closes after 1 second
             uiController?.ShowInGamePopup(message);
         }
         else
         {
-            // Actual error - blocks UI until user acknowledges
             ShowErrorAndBlock(string.IsNullOrEmpty(message)
                 ? "An error occurred. Please refresh."
                 : message);
         }
     }
 
-
     private string TryParseErrorMessage(string json)
     {
         if (string.IsNullOrEmpty(json)) return string.Empty;
 
-        // Plain string (not JSON object)
         if (!json.TrimStart().StartsWith("{")) return json;
 
         try
         {
-            // Minimal parse – just look for a "message" field
             var obj = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
             if (obj != null)
             {
@@ -584,7 +604,7 @@ public class SocketIOManager : MonoBehaviour
         }
         catch { /* Ignore parse errors */ }
 
-        return json; // fall back to raw string
+        return json;
     }
 
     private void OnForceDisconnect(string json)
@@ -734,7 +754,6 @@ public class SocketIOManager : MonoBehaviour
 
         try
         {
-            // Parse the response wrapper first
             SicBoRoot response = JsonConvert.DeserializeObject<SicBoRoot>(json);
 
             if (response != null && response.success && response.payload != null)
@@ -758,9 +777,6 @@ public class SocketIOManager : MonoBehaviour
         try
         {
             BetAckResponse response = JsonConvert.DeserializeObject<BetAckResponse>(json);
-
-            // Pass response to GameManager which handles success/failure properly
-            // This ensures "Limit reached" uses ShowInGamePopup, not ShowErrorPopup
             gameManager.OnBetActionResponse(response);
         }
         catch (Exception e)
@@ -887,7 +903,6 @@ public class SocketIOManager : MonoBehaviour
             {
                 uiController?.HideLoadingScreen();
 
-                // Update room ID
                 if (!string.IsNullOrEmpty(response.payload.roomId))
                 {
                     string oldRoomId = CurrentRoomId;
@@ -895,7 +910,6 @@ public class SocketIOManager : MonoBehaviour
                     Debug.Log($"[ROOM] Returned to lobby - New room: {CurrentRoomId}, Old room: {response.payload.oldRoomId}");
                 }
 
-                // Update balance if present
                 if (response.payload.balance > 0)
                 {
                     PlayerData = new Player { balance = response.payload.balance, username = PlayerData?.username };
@@ -937,13 +951,14 @@ public class SocketIOManager : MonoBehaviour
             SocketURI = data.socketURL;
             myAuth = data.cookie;
 
-            if (!string.IsNullOrEmpty(data.nameSpace))
+            /*if (!string.IsNullOrEmpty(data.nameSpace))
             {
                 nameSpace = data.nameSpace;
-            }
+            }*/
 
             if (string.IsNullOrEmpty(myAuth))
             {
+                Debug.LogError("[AUTH] Empty token received");
                 ShowErrorAndBlock("Invalid authentication data");
             }
         }
@@ -956,12 +971,18 @@ public class SocketIOManager : MonoBehaviour
     #endregion
 
     #region Coroutines
+    // FIX: Renamed and split into two targeted coroutines matching Plinko's two-phase pattern
+
+    /// <summary>
+    /// Phase 1: Wait for socket connection (runs from SetupSocketManager)
+    /// Phase 2 (InitDataTimeout) is started from OnConnected
+    /// </summary>
     private IEnumerator ConnectionAndInitTimeout()
     {
-        float timeout = 30f;
+        float connectionTimeout = 15f;
         float elapsed = 0f;
 
-        while (!IsInitialized && elapsed < timeout && !isBeingDestroyed)
+        while (!isConnected && elapsed < connectionTimeout && !isExiting && !isBeingDestroyed)
         {
             elapsed += Time.deltaTime;
             yield return null;
@@ -969,9 +990,35 @@ public class SocketIOManager : MonoBehaviour
 
         if (isBeingDestroyed) yield break;
 
-        if (!IsInitialized)
+        if (!isConnected && !isExiting)
         {
-            ShowErrorAndBlock("Connection timeout. Please refresh.");
+            Debug.LogError("[SOCKET] Connection timeout");
+            ShowErrorAndBlock("Connection failed. Please check your network.");
+        }
+
+        initTimeoutRoutine = null;
+    }
+
+    /// <summary>
+    /// Phase 2: Wait for game:init data after connection succeeds (started from OnConnected)
+    /// </summary>
+    private IEnumerator InitDataTimeout()
+    {
+        float initTimeout = 10f;
+        float elapsed = 0f;
+
+        while (isWaitingForInitData && elapsed < initTimeout && !isExiting && !isBeingDestroyed)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (isBeingDestroyed) yield break;
+
+        if (isWaitingForInitData && !isExiting)
+        {
+            Debug.LogError("[INIT] Init data timeout");
+            ShowErrorAndBlock("Failed to receive game data. Please refresh.");
         }
 
         initTimeoutRoutine = null;
@@ -985,6 +1032,8 @@ public class SocketIOManager : MonoBehaviour
 
             if (isBeingDestroyed || isExiting || !isConnected) break;
 
+        
+
             if (waitingForPong)
             {
                 missedPongs++;
@@ -997,7 +1046,8 @@ public class SocketIOManager : MonoBehaviour
 
                 if (missedPongs >= MaxMissedPongs)
                 {
-                    Debug.Log("[PING-PONG] Connection lost");
+                    Debug.LogError("[PING-PONG] Connection lost - max pongs missed");
+                    isConnected = false;
                     uiController?.ShowDisconnectPopup();
                     break;
                 }
@@ -1009,14 +1059,51 @@ public class SocketIOManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// FIX: Disconnect timer - forces exit after prolonged disconnection (matches Plinko)
+    /// </summary>
+    private IEnumerator DisconnectTimer()
+    {
+        float elapsed = 0f;
+
+        while (elapsed < disconnectDelay && !isConnected && !isExiting && !isBeingDestroyed)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (isBeingDestroyed) yield break;
+
+        if (!isConnected && !isExiting)
+        {
+            Debug.LogError("[DISCONNECT] Timeout - forcing exit");
+            ShowErrorAndBlock("You have been disconnected too long. Please refresh.");
+        }
+
+        disconnectTimerCoroutine = null;
+    }
+
     private IEnumerator FocusTimeoutCheck()
     {
-        while (!hasFocus && !isBeingDestroyed)
+        while (!hasFocus && !isExiting && !isBeingDestroyed)
         {
-            if (Time.time - focusLostTime > maxBackgroundTime)
+            float timeInBackground = Time.time - focusLostTime;
+
+            if (timeInBackground >= maxBackgroundTime)
             {
-                Debug.LogWarning("[FOCUS] Max background time exceeded");
-                uiController?.ShowDisconnectPopup();
+                Debug.LogError("[FOCUS] Background timeout");
+
+                isConnected = false;
+                ResetPingRoutine();
+
+                if (manager != null)
+                {
+                    try { manager.Close(); }
+                    catch (Exception e) { Debug.LogWarning($"[FOCUS] Error: {e.Message}"); }
+                }
+
+                ShowErrorAndBlock("Game timed out due to inactivity. Please refresh.");
+                focusCheckRoutine = null;
                 yield break;
             }
 
@@ -1058,13 +1145,13 @@ public class SocketIOManager : MonoBehaviour
 
     /// <summary>
     /// Shows error popup and blocks UI with raycast blocker.
-    /// 
+    ///
     /// USE ONLY FOR ACTUAL ERRORS:
     /// - Connection timeout
     /// - Authentication failure
     /// - Socket errors
     /// - Configuration errors
-    /// 
+    ///
     /// DO NOT USE FOR:
     /// - Bet limit reached (use ShowInGamePopup in UIController)
     /// - Insufficient balance (use ShowInGamePopup in UIController)
