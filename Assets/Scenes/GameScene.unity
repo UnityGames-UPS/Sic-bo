@@ -23403,7 +23403,7 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: cd63402c144b4fed8289f9705b0ddd2a
+  testToken: 1baaa782181a430880010beae6ca9c68
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
 --- !u!4 &410521237
@@ -42479,8 +42479,6 @@ MonoBehaviour:
   scaleAnimationDuration: 0.5
   chainDelay: 0.1
   scaleEase: 27
-  evenSumColor: {r: 0.1, g: 0.1, b: 0.1, a: 1}
-  oddSumColor: {r: 0.8, g: 0.1, b: 0.1, a: 1}
   dice1Sprite: {fileID: -1751106082, guid: 2e147c329247c408ebe882c66130a1d9, type: 3}
   dice2Sprite: {fileID: -1493796882, guid: 2e147c329247c408ebe882c66130a1d9, type: 3}
   dice3Sprite: {fileID: -561091582, guid: 2e147c329247c408ebe882c66130a1d9, type: 3}
@@ -87526,7 +87524,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: -81.05}
+  m_AnchoredPosition: {x: 0, y: -81.04999}
   m_SizeDelta: {x: 1080, y: 122.76}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1588594257

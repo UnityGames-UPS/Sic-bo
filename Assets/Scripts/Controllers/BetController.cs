@@ -277,7 +277,7 @@ public class BetController : MonoBehaviour
     #region Public API - Round Management
     internal void OnRoundStart()
     {
-        ClearAllBets();
+        ClearAllBets(true);
     }
 
     internal void OnRoundEnd()
@@ -296,10 +296,7 @@ public class BetController : MonoBehaviour
             ChipAreaPanel.DOAnchorPosY(-200f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
         }
     }
-    internal void ResetAllComponents()
-    {
-        ClearAllBets();
-    }
+ 
     #endregion
 
     #region Setup
@@ -560,7 +557,7 @@ public class BetController : MonoBehaviour
             placedBetInPreviousRound = false;
         }
     }
-    internal void ClearAllBets()
+    internal void ClearAllBets(bool opponentbetclear)
     {
         areaBets.Clear();
         currentTotalBet = 0;
@@ -575,8 +572,11 @@ public class BetController : MonoBehaviour
         foreach (var area in TripleDiceAreas) ClearArea(area);
         foreach (var area in SingleDiceAreas) ClearArea(area);
         foreach (var area in SumAreas) ClearArea(area);
-        ClearAllOpponentBets();
 
+        if (opponentbetclear)
+        {
+            ClearAllOpponentBets();
+        }
         UpdateTotalBet();
         HideBetActionsPanel();
     }

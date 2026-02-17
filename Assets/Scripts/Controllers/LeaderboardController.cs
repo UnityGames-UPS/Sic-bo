@@ -14,26 +14,30 @@ public class LeaderboardController : MonoBehaviour
     [SerializeField] private List<LeaderboardPlayerBlock> winnersBlocks = new List<LeaderboardPlayerBlock>(3);
 
     [Header("Avatar Images (Random Selection)")]
-    [SerializeField] private Sprite[] playerAvatars; 
+    [SerializeField] private Sprite[] playerAvatars;
 
     [Header("Animation Settings")]
-    [SerializeField] private float nameDuration = 2f; // How long to HOLD name visible before fading out
-    [SerializeField] private float balanceDuration = 2f; // How long to HOLD balance visible before fading out
-    [SerializeField] private float fadeSpeed = 0.3f; // Speed of fade in/out animations (lower = faster)
-    [SerializeField] private float loopInterval = 0f; // Pause between complete cycles (0 = no pause)
-    [SerializeField] private float slideDistance = 300f; // How far to slide out
-    [SerializeField] private float slideDuration = 0.5f; // Slide animation time
-    [SerializeField] private float minRandomOffset = 0f; // Min random timing offset
-    [SerializeField] private float maxRandomOffset = 2f; // Max random timing offset
+    [SerializeField] private float nameDuration = 2f;
+    [SerializeField] private float balanceDuration = 2f;
+    [SerializeField] private float fadeSpeed = 0.3f;
+    [SerializeField] private float loopInterval = 0f;
+    [SerializeField] private float slideDistance = 300f;
+    [SerializeField] private float slideDuration = 0.5f;
+    [SerializeField] private float minRandomOffset = 0f;
+    [SerializeField] private float maxRandomOffset = 2f;
 
     [Header("Parent Container (Optional)")]
-    [SerializeField] private GameObject leaderboardParent; // Optional parent GameObject to show/hide entire leaderboard
+    [SerializeField] private GameObject leaderboardParent;
     #endregion
 
     #region Private Fields
     private Dictionary<int, LeaderboardEntry> currentRichest = new Dictionary<int, LeaderboardEntry>();
     private Dictionary<int, LeaderboardEntry> currentWinners = new Dictionary<int, LeaderboardEntry>();
-    private List<Coroutine> animationCoroutines = new List<Coroutine>();
+
+    // FIX: Track coroutines per-block instead of one flat list.
+    // Key = block instance ID, Value = list of running coroutines for that block.
+    private Dictionary<int, List<Coroutine>> blockCoroutines = new Dictionary<int, List<Coroutine>>();
+
     private bool isInitialized = false;
     #endregion
 
@@ -45,53 +49,29 @@ public class LeaderboardController : MonoBehaviour
     #endregion
 
     #region Public API
-    /// <summary>
-    /// Initialize all blocks to empty state - called once at start
-    /// </summary>
     public void Initialize()
     {
         Debug.Log("[LeaderboardController] Initialize called");
 
-        // Hide all blocks initially
         foreach (var block in richestBlocks)
-        {
-            if (block != null)
-            {
-                block.HideAll();
-            }
-        }
+            if (block != null) block.HideAll();
 
         foreach (var block in winnersBlocks)
-        {
-            if (block != null)
-            {
-                block.HideAll();
-            }
-        }
+            if (block != null) block.HideAll();
 
         currentRichest.Clear();
         currentWinners.Clear();
 
-        // Hide parent if it exists
         if (leaderboardParent != null)
-        {
             leaderboardParent.SetActive(false);
-        }
 
         isInitialized = true;
     }
 
-    /// <summary>
-    /// Update leaderboard data from server
-    /// </summary>
     public void UpdateLeaderboard(Leaderboards leaderboards)
     {
-        if (leaderboards == null)
-        {
-            return;
-        }
+        if (leaderboards == null) return;
 
-        // Check if we have any data to show
         bool hasRichestData = leaderboards.richest != null && leaderboards.richest.Count > 0;
         bool hasWinnersData = leaderboards.winners != null && leaderboards.winners.Count > 0;
         bool hasData = hasRichestData || hasWinnersData;
@@ -99,110 +79,54 @@ public class LeaderboardController : MonoBehaviour
         if (!hasData)
         {
             Debug.Log("[LeaderboardController] No leaderboard data to display");
-            // Hide parent if no data
-            if (leaderboardParent != null)
-            {
-                leaderboardParent.SetActive(false);
-            }
+            if (leaderboardParent != null) leaderboardParent.SetActive(false);
             return;
         }
 
-        // Show parent if we have data
         if (leaderboardParent != null && !leaderboardParent.activeSelf)
-        {
-        
             leaderboardParent.SetActive(true);
-        }
 
-        // Update richest (left side)
-        // If richest is empty but winners has data, duplicate winners to richest
         List<LeaderboardEntry> richestData = leaderboards.richest;
         if (!hasRichestData && hasWinnersData)
-        {
-          
             richestData = leaderboards.winners;
-        }
 
         if (richestData != null)
         {
             for (int i = 0; i < 3; i++)
             {
                 if (i < richestData.Count)
-                {
-                    UpdatePlayerBlock(
-                        richestBlocks,
-                        currentRichest,
-                        i,
-                        richestData[i],
-                        -slideDistance, // Slide LEFT (negative X to go left)
-                        true // Is left side
-                    );
-                }
+                    UpdatePlayerBlock(richestBlocks, currentRichest, i, richestData[i], -slideDistance);
                 else
-                {
                     ClearPlayerBlock(richestBlocks, currentRichest, i);
-                }
             }
         }
 
-        // Update winners (right side)
-        // If winners is empty but richest has data, duplicate richest to winners
         List<LeaderboardEntry> winnersData = leaderboards.winners;
         if (!hasWinnersData && hasRichestData)
-        {
             winnersData = leaderboards.richest;
-        }
 
         if (winnersData != null)
         {
             for (int i = 0; i < 3; i++)
             {
                 if (i < winnersData.Count)
-                {
-                    UpdatePlayerBlock(
-                        winnersBlocks,
-                        currentWinners,
-                        i,
-                        winnersData[i],
-                        slideDistance, // Slide RIGHT (positive X to go right)
-                        false // Is right side
-                    );
-                }
+                    UpdatePlayerBlock(winnersBlocks, currentWinners, i, winnersData[i], slideDistance);
                 else
-                {
                     ClearPlayerBlock(winnersBlocks, currentWinners, i);
-                }
             }
         }
     }
 
-    /// <summary>
-    /// Hide leaderboard (useful when leaving room or resetting)
-    /// </summary>
     public void Hide()
     {
-
         if (leaderboardParent != null)
-        {
             leaderboardParent.SetActive(false);
-        }
 
-        // Also hide all individual blocks
         foreach (var block in richestBlocks)
-        {
-            if (block != null)
-            {
-                block.HideAll();
-            }
-        }
+            if (block != null) block.HideAll();
 
         foreach (var block in winnersBlocks)
-        {
-            if (block != null)
-            {
-                block.HideAll();
-            }
-        }
+            if (block != null) block.HideAll();
 
         currentRichest.Clear();
         currentWinners.Clear();
@@ -216,54 +140,33 @@ public class LeaderboardController : MonoBehaviour
         Dictionary<int, LeaderboardEntry> currentData,
         int index,
         LeaderboardEntry newEntry,
-        float slideDirection,
-        bool isLeftSide)
+        float slideDirection)
     {
         if (index >= blocks.Count || blocks[index] == null) return;
 
         LeaderboardPlayerBlock block = blocks[index];
-
-        // Check if this is the first time setting data (no previous entry)
         bool isFirstTime = !currentData.ContainsKey(index);
-
-        // Check if player changed
         bool playerChanged = !isFirstTime && currentData[index].username != newEntry.username;
 
         if (isFirstTime)
         {
-            // First time - just set data directly without animation
             currentData[index] = newEntry;
-            block.SetPlayerData(
-                newEntry.username,
-                newEntry.balance,
-                GetRandomAvatar()
-            );
+            block.SetPlayerData(newEntry.username, newEntry.balance, GetRandomAvatar());
 
-            // Start alternating animation after a random delay
             float randomOffset = Random.Range(minRandomOffset, maxRandomOffset);
-            Coroutine alternatingCoroutine = StartCoroutine(DelayedAlternateStart(block, randomOffset));
-            animationCoroutines.Add(alternatingCoroutine);
+            AddBlockCoroutine(block, StartCoroutine(DelayedAlternateStart(block, randomOffset)));
         }
         else if (playerChanged)
         {
-            // Player changed - slide out, update, slide in
             currentData[index] = newEntry;
 
-            // Stop any existing animation for this block
+            // FIX: Stop only THIS block's coroutines, not everyone's.
             StopBlockAnimation(block);
 
-            // Start slide out/in animation
-            Coroutine slideCoroutine = StartCoroutine(SlideOutAndUpdate(
-                block,
-                newEntry,
-                slideDirection
-            ));
-
-            animationCoroutines.Add(slideCoroutine);
+            AddBlockCoroutine(block, StartCoroutine(SlideOutAndUpdate(block, newEntry, slideDirection)));
         }
         else
         {
-            // Same player - just update balance if changed
             if (currentData[index].balance != newEntry.balance)
             {
                 currentData[index] = newEntry;
@@ -275,8 +178,7 @@ public class LeaderboardController : MonoBehaviour
     private IEnumerator DelayedAlternateStart(LeaderboardPlayerBlock block, float delay)
     {
         yield return new WaitForSeconds(delay);
-        Coroutine alternatingCoroutine = StartCoroutine(AlternateNameBalance(block));
-        animationCoroutines.Add(alternatingCoroutine);
+        AddBlockCoroutine(block, StartCoroutine(AlternateNameBalance(block)));
     }
 
     private void ClearPlayerBlock(
@@ -302,10 +204,13 @@ public class LeaderboardController : MonoBehaviour
         LeaderboardEntry entry,
         float slideDirection)
     {
-        // Slide out
         RectTransform blockRect = block.GetComponent<RectTransform>();
+
         if (blockRect != null)
         {
+            // FIX: Capture originalPos BEFORE any tween might have already moved it.
+            // Kill existing tweens first so anchoredPosition is reliable.
+            blockRect.DOKill(complete: true);
             Vector2 originalPos = blockRect.anchoredPosition;
             Vector2 slideOutPos = originalPos + new Vector2(slideDirection, 0);
 
@@ -313,179 +218,175 @@ public class LeaderboardController : MonoBehaviour
                 .SetEase(Ease.InBack)
                 .WaitForCompletion();
 
-            // Update data while off-screen
-            block.SetPlayerData(
-                entry.username,
-                entry.balance,
-                GetRandomAvatar()
-            );
+            // FIX: Reset any stale CanvasGroup state on text elements before setting new data.
+            ResetTextState(block.NameText);
+            ResetTextState(block.BalanceText);
 
-            // Slide back in
+            block.SetPlayerData(entry.username, entry.balance, GetRandomAvatar());
+
             yield return blockRect.DOAnchorPos(originalPos, slideDuration)
                 .SetEase(Ease.OutBack)
                 .WaitForCompletion();
         }
         else
         {
-            // No rect transform - just update directly
-            block.SetPlayerData(
-                entry.username,
-                entry.balance,
-                GetRandomAvatar()
-            );
+            ResetTextState(block.NameText);
+            ResetTextState(block.BalanceText);
+            block.SetPlayerData(entry.username, entry.balance, GetRandomAvatar());
         }
 
-        // Start name/balance alternating animation with random offset
         float randomOffset = Random.Range(minRandomOffset, maxRandomOffset);
         yield return new WaitForSeconds(randomOffset);
 
-        Coroutine alternatingCoroutine = StartCoroutine(AlternateNameBalance(block));
-        animationCoroutines.Add(alternatingCoroutine);
+        AddBlockCoroutine(block, StartCoroutine(AlternateNameBalance(block)));
     }
 
     private IEnumerator AlternateNameBalance(LeaderboardPlayerBlock block)
     {
         while (true)
         {
-            // === SHOW NAME, HIDE BALANCE ===
-            block.ShowName();  // Instantly show name, hide balance
-
-            // Hold for specified duration
+            block.ShowName();
             yield return new WaitForSeconds(nameDuration);
 
-            // === TRANSITION: Name fades out UP, Balance fades in from SAME position ===
-            StartCoroutine(FadeOutUp(block.NameText));  // Start name fade out
-            yield return StartCoroutine(FadeInAtPosition(block.BalanceText));  // Balance fades in at current position
+            StartCoroutine(FadeOutUp(block.NameText));
+            yield return StartCoroutine(FadeInAtPosition(block.BalanceText));
 
-            // Hold for specified duration
             yield return new WaitForSeconds(balanceDuration);
 
-            // === TRANSITION: Balance fades out UP, Name fades in from SAME position ===
-            StartCoroutine(FadeOutUp(block.BalanceText));  // Start balance fade out
-            yield return StartCoroutine(FadeInAtPosition(block.NameText));  // Name fades in at current position
+            StartCoroutine(FadeOutUp(block.BalanceText));
+            yield return StartCoroutine(FadeInAtPosition(block.NameText));
 
-            // Optional pause between complete cycles (loop interval)
             if (loopInterval > 0)
-            {
                 yield return new WaitForSeconds(loopInterval);
-            }
         }
     }
 
-    /// <summary>
-    /// Fade text OUT by moving up and reducing opacity
-    /// </summary>
     private IEnumerator FadeOutUp(TMP_Text textComponent)
     {
         if (textComponent == null) yield break;
 
         RectTransform textRect = textComponent.GetComponent<RectTransform>();
-        CanvasGroup canvasGroup = textComponent.GetComponent<CanvasGroup>();
-
-        if (canvasGroup == null)
-        {
-            canvasGroup = textComponent.gameObject.AddComponent<CanvasGroup>();
-        }
+        CanvasGroup canvasGroup = GetOrAddCanvasGroup(textComponent.gameObject);
 
         Vector2 startPos = textRect.anchoredPosition;
-        Vector2 endPos = startPos + new Vector2(0, 30f); // Move up
+        Vector2 endPos = startPos + new Vector2(0, 30f);
 
         float elapsed = 0f;
-        float duration = fadeSpeed; // Use inspector value
+        float duration = fadeSpeed;
 
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-
+            float t = Mathf.Clamp01(elapsed / duration);
             textRect.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
             canvasGroup.alpha = 1f - t;
-
             yield return null;
         }
 
-        textRect.anchoredPosition = startPos; // Reset position for next cycle
+        // FIX: Always reset position back and leave alpha at 0 cleanly.
+        textRect.anchoredPosition = startPos;
         canvasGroup.alpha = 0f;
         textComponent.gameObject.SetActive(false);
     }
 
-    /// <summary>
-    /// Fade text IN at its current position (no movement from below)
-    /// </summary>
     private IEnumerator FadeInAtPosition(TMP_Text textComponent)
     {
         if (textComponent == null) yield break;
 
-        RectTransform textRect = textComponent.GetComponent<RectTransform>();
-        CanvasGroup canvasGroup = textComponent.GetComponent<CanvasGroup>();
+        CanvasGroup canvasGroup = GetOrAddCanvasGroup(textComponent.gameObject);
 
-        if (canvasGroup == null)
-        {
-            canvasGroup = textComponent.gameObject.AddComponent<CanvasGroup>();
-        }
-
-        // Activate and start at current position (no offset)
-        textComponent.gameObject.SetActive(true);
+        // FIX: Ensure we start from a known clean state.
         canvasGroup.alpha = 0f;
+        textComponent.gameObject.SetActive(true);
 
         float elapsed = 0f;
-        float duration = fadeSpeed; // Use inspector value
+        float duration = fadeSpeed;
 
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-
+            float t = Mathf.Clamp01(elapsed / duration);
             canvasGroup.alpha = t;
-
             yield return null;
         }
 
         canvasGroup.alpha = 1f;
     }
 
+    /// <summary>
+    /// FIX: Reset a text element's CanvasGroup and position to a clean visible state
+    /// so stale fade-out state from a previous cycle doesn't bleed into the new one.
+    /// </summary>
+    private void ResetTextState(TMP_Text textComponent)
+    {
+        if (textComponent == null) return;
+
+        CanvasGroup cg = textComponent.GetComponent<CanvasGroup>();
+        if (cg != null) cg.alpha = 1f;
+
+        // Also kill any lingering DOTween on the rect
+        RectTransform rt = textComponent.GetComponent<RectTransform>();
+        if (rt != null) rt.DOKill(complete: false);
+    }
+
+    private CanvasGroup GetOrAddCanvasGroup(GameObject go)
+    {
+        CanvasGroup cg = go.GetComponent<CanvasGroup>();
+        if (cg == null) cg = go.AddComponent<CanvasGroup>();
+        return cg;
+    }
+    #endregion
+
+    #region Private Methods - Coroutine Tracking (Per-Block)
+    // FIX: All coroutine tracking now keyed by block instance ID so stopping
+    // one block's animations never affects any other block.
+
+    private void AddBlockCoroutine(LeaderboardPlayerBlock block, Coroutine coroutine)
+    {
+        if (block == null || coroutine == null) return;
+
+        int id = block.GetInstanceID();
+        if (!blockCoroutines.ContainsKey(id))
+            blockCoroutines[id] = new List<Coroutine>();
+
+        blockCoroutines[id].Add(coroutine);
+    }
+
     private void StopBlockAnimation(LeaderboardPlayerBlock block)
     {
-        // Stop any coroutines running on this block
-        for (int i = animationCoroutines.Count - 1; i >= 0; i--)
+        if (block == null) return;
+
+        int id = block.GetInstanceID();
+
+        if (blockCoroutines.TryGetValue(id, out List<Coroutine> coroutines))
         {
-            if (animationCoroutines[i] != null)
-            {
-                StopCoroutine(animationCoroutines[i]);
-                animationCoroutines.RemoveAt(i);
-            }
+            foreach (var c in coroutines)
+                if (c != null) StopCoroutine(c);
+            coroutines.Clear();
         }
 
-        // Kill any DOTween animations on this block
-        if (block != null)
-        {
-            RectTransform blockRect = block.GetComponent<RectTransform>();
-            if (blockRect != null)
-                blockRect.DOKill();
-        }
+        // Kill DOTween on the block rect
+        RectTransform blockRect = block.GetComponent<RectTransform>();
+        if (blockRect != null) blockRect.DOKill(complete: false);
     }
 
     private void StopAllAnimations()
     {
-        foreach (var coroutine in animationCoroutines)
+        foreach (var kvp in blockCoroutines)
         {
-            if (coroutine != null)
-            {
-                StopCoroutine(coroutine);
-            }
+            foreach (var c in kvp.Value)
+                if (c != null) StopCoroutine(c);
         }
-        animationCoroutines.Clear();
+        blockCoroutines.Clear();
 
         DOTween.Kill(this);
     }
+    #endregion
 
+    #region Helpers
     private Sprite GetRandomAvatar()
     {
-        if (playerAvatars == null || playerAvatars.Length == 0)
-        {
-            return null;
-        }
-
+        if (playerAvatars == null || playerAvatars.Length == 0) return null;
         return playerAvatars[Random.Range(0, playerAvatars.Length)];
     }
     #endregion

@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
@@ -11,8 +11,8 @@ public class OpponentChipManager : MonoBehaviour
     [SerializeField] private RectTransform playerDealerArea;    // Half chips go here at cashout
 
     [Header("Chip Spawning")]
-    [SerializeField] private GameObject chipPrefab;            // Regular chip prefab with Chip.cs
-    [SerializeField] private Sprite grayChipSprite;            // Gray sprite for opponent chips
+    [SerializeField] private GameObject chipPrefab;
+    [SerializeField] private Sprite grayChipSprite;
 
     [Header("Animation Settings")]
     [SerializeField] private float dealerToBetDuration = 0.45f;
@@ -30,21 +30,18 @@ public class OpponentChipManager : MonoBehaviour
     #endregion
 
     #region Private Fields
-    // betOption -> Container for opponent chips in that bet area
     private Dictionary<string, RectTransform> opponentContainers = new Dictionary<string, RectTransform>();
-
-    // All active opponent chips (for cleanup and cashout)
     private List<RectTransform> activeOpponentChips = new List<RectTransform>();
-
-    // Track chips per bet area for cashout
     private Dictionary<string, List<RectTransform>> chipsByBetArea = new Dictionary<string, List<RectTransform>>();
+
+    // FIX: Track whether a cashout animation is currently running so we don't double-clear.
+    private bool isCashoutRunning = false;
+    private Coroutine cashoutCoroutine = null;
     #endregion
 
     #region Unity Lifecycle
     private void Awake()
     {
-        // Resolve canvas early so it is available even if InitializeContainers
-        // is called before Start() runs (e.g. from BetController.InitializePool)
         if (targetCanvas == null)
             targetCanvas = GetComponentInParent<Canvas>();
     }
@@ -58,17 +55,11 @@ public class OpponentChipManager : MonoBehaviour
     private void OnDestroy()
     {
         foreach (var chip in activeOpponentChips)
-        {
             if (chip != null) chip.DOKill();
-        }
     }
     #endregion
 
     #region Public API - Setup
-    /// <summary>
-    /// Call this at initialization to create empty containers in each bet area
-    /// Pass in the bet area transforms where opponent chips should appear
-    /// </summary>
     public void InitializeContainers(Dictionary<string, Transform> betAreaMap)
     {
         opponentContainers.Clear();
@@ -77,24 +68,19 @@ public class OpponentChipManager : MonoBehaviour
         {
             string betOption = kvp.Key;
             Transform betAreaTransform = kvp.Value;
-
             if (betAreaTransform == null) continue;
 
-            // Create empty stretched container
             GameObject containerObj = new GameObject($"OpponentChipContainer_{betOption}");
             RectTransform container = containerObj.AddComponent<RectTransform>();
 
-            // Parent to bet area
             container.SetParent(betAreaTransform, false);
-
-            // Stretch to fill (anchors at corners, offsets zero)
             container.anchorMin = Vector2.zero;
             container.anchorMax = Vector2.one;
             container.offsetMin = Vector2.zero;
             container.offsetMax = Vector2.zero;
             container.localScale = Vector3.one;
 
-            containerObj.SetActive(false); // Hidden until chips spawn
+            containerObj.SetActive(false);
 
             opponentContainers[betOption] = container;
             chipsByBetArea[betOption] = new List<RectTransform>();
@@ -105,10 +91,6 @@ public class OpponentChipManager : MonoBehaviour
     #endregion
 
     #region Public API - Betting Phase
-    /// <summary>
-    /// Called when opponent bet broadcast is received
-    /// Spawns chip at opponent dealer, animates to bet area container
-    /// </summary>
     public void AddOpponentBet(string betOption, double amount)
     {
         if (!opponentContainers.ContainsKey(betOption))
@@ -122,18 +104,29 @@ public class OpponentChipManager : MonoBehaviour
             Debug.LogError("[OpponentChipManager] Missing references!");
             return;
         }
+
         if (AudioManager.Instance != null)
-        {
             AudioManager.Instance.PlayChipAdd();
-        }
+
         StartCoroutine(CR_SpawnAndAnimateChip(betOption, amount));
     }
 
     /// <summary>
-    /// Clear all opponent bets (called at round start)
+    /// FIX: This now ONLY clears chips immediately (no animation).
+    /// Call this at round START (before new bets arrive), NOT at cashout time.
+    /// At cashout time, call PlayCashoutAnimation() and let it clean up on its own.
     /// </summary>
-    public void ClearAllOpponentBets()
+    internal void ClearAllOpponentBets()
+
     {
+        // If a cashout animation is already running, abort it first cleanly.
+        if (cashoutCoroutine != null)
+        {
+            StopCoroutine(cashoutCoroutine);
+            cashoutCoroutine = null;
+            isCashoutRunning = false;
+        }
+
         StopAllCoroutines();
 
         foreach (var chip in activeOpponentChips)
@@ -148,31 +141,43 @@ public class OpponentChipManager : MonoBehaviour
         activeOpponentChips.Clear();
 
         foreach (var container in opponentContainers.Values)
-        {
-            if (container != null)
-                container.gameObject.SetActive(false);
-        }
+            if (container != null) container.gameObject.SetActive(false);
 
         foreach (var list in chipsByBetArea.Values)
-        {
             list.Clear();
-        }
+
+        isCashoutRunning = false;
     }
     #endregion
 
     #region Public API - Cashout Phase
     /// <summary>
-    /// Called at cashout - moves all opponent chips randomly to dealer areas
-    /// Half go to opponent dealer, half to player dealer
+    /// FIX: Plays the full cashout animation — chips fly back to both dealer areas,
+    /// half each, randomly distributed. Chips are destroyed after they arrive.
+    /// Containers are hidden and lists cleared only AFTER the animation finishes.
+    /// Do NOT call ClearAllOpponentBets() immediately after this; let it self-clean.
     /// </summary>
     public void PlayCashoutAnimation()
     {
-        if (AudioManager.Instance != null)
+        if (isCashoutRunning)
         {
-            AudioManager.Instance.PlayChipAdd();
+            Debug.LogWarning("[OpponentChipManager] Cashout already running, ignoring duplicate call.");
+            return;
         }
-        StartCoroutine(CR_Cashout());
+
+        if (activeOpponentChips.Count == 0)
+        {
+            Debug.Log("[OpponentChipManager] No opponent chips to cash out.");
+            return;
+        }
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlayChipAdd();
+
+        cashoutCoroutine = StartCoroutine(CR_Cashout());
     }
+
+    public bool IsCashoutRunning() => isCashoutRunning;
     #endregion
 
     #region Private Methods - Chip Animation
@@ -180,13 +185,10 @@ public class OpponentChipManager : MonoBehaviour
     {
         RectTransform container = opponentContainers[betOption];
 
-        // Resolve canvas root � must be done each time in case it changed
         if (targetCanvas == null)
             targetCanvas = GetComponentInParent<Canvas>();
 
-        Transform canvasRoot = targetCanvas != null
-            ? targetCanvas.transform
-            : transform.root;
+        Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
 
         // 1. Spawn chip at dealer area
         GameObject chipObj = Instantiate(chipPrefab, opponentDealerArea);
@@ -200,14 +202,10 @@ public class OpponentChipManager : MonoBehaviour
             yield break;
         }
 
-        Debug.Log($"[OpponentChipManager] Spawning chip for {betOption} amount={amount}");
-
-        // Configure chip
         chip.SetSprite(grayChipSprite);
         chip.SetAmount(GameUtilities.FormatCurrency(amount));
         chip.SetActive(true);
 
-        // Random scatter at dealer
         chipRT.localPosition = new Vector3(
             Random.Range(-dealerScatterX, dealerScatterX),
             Random.Range(-dealerScatterY, dealerScatterY),
@@ -215,32 +213,26 @@ public class OpponentChipManager : MonoBehaviour
         );
         chipRT.localScale = Vector3.zero;
 
-        // FIX: Activate the container BEFORE parenting chip into it.
-        // Activating it after would immediately hide the chip we just placed.
         container.gameObject.SetActive(true);
 
-        // Pop in
         chipRT.DOScale(chipScale, 0.2f).SetEase(Ease.OutBack);
         yield return new WaitForSeconds(0.22f);
 
-        // 2. Re-parent to canvas root to move freely across the whole canvas
+        // Re-parent to canvas root to move across full canvas
         chipRT.SetParent(canvasRoot, worldPositionStays: true);
 
-        // 3. Calculate destination (inside container, with scatter)
+        // Calculate destination inside the bet area container
         Vector2 containerWorldPos = GetCanvasPosition(container);
         Vector2 destination = containerWorldPos + new Vector2(
             Random.Range(-betAreaScatterX, betAreaScatterX),
             Random.Range(-betAreaScatterY, betAreaScatterY)
         );
 
-        // 4. Animate to bet area
         chipRT.DOAnchorPos(destination, dealerToBetDuration).SetEase(Ease.OutQuad);
         yield return new WaitForSeconds(dealerToBetDuration);
 
-        // 5. Re-parent into container (keeps visual position), container is already active
         chipRT.SetParent(container, worldPositionStays: true);
 
-        // Track chip
         activeOpponentChips.Add(chipRT);
         chipsByBetArea[betOption].Add(chipRT);
 
@@ -249,42 +241,43 @@ public class OpponentChipManager : MonoBehaviour
 
     private IEnumerator CR_Cashout()
     {
-        if (activeOpponentChips.Count == 0) yield break;
+        isCashoutRunning = true;
 
         if (targetCanvas == null)
             targetCanvas = GetComponentInParent<Canvas>();
 
-        Transform canvasRoot = targetCanvas != null
-            ? targetCanvas.transform
-            : transform.root;
+        Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
 
-        // Re-parent all chips to canvas root so they can fly freely
-        foreach (var chip in activeOpponentChips)
+        // FIX: Snapshot the list BEFORE any cleanup so we have all chips to animate.
+        List<RectTransform> chipsToAnimate = new List<RectTransform>(activeOpponentChips);
+
+        // Re-parent all chips to canvas root so they fly freely.
+        foreach (var chip in chipsToAnimate)
         {
             if (chip != null)
                 chip.SetParent(canvasRoot, worldPositionStays: true);
         }
 
-        // Shuffle chips
-        List<RectTransform> shuffledChips = new List<RectTransform>(activeOpponentChips);
-        for (int i = shuffledChips.Count - 1; i > 0; i--)
+        // Shuffle chips for random dealer assignment.
+        for (int i = chipsToAnimate.Count - 1; i > 0; i--)
         {
             int j = Random.Range(0, i + 1);
-            var temp = shuffledChips[i];
-            shuffledChips[i] = shuffledChips[j];
-            shuffledChips[j] = temp;
+            var temp = chipsToAnimate[i];
+            chipsToAnimate[i] = chipsToAnimate[j];
+            chipsToAnimate[j] = temp;
         }
 
-        // Half to opponent dealer, half to player dealer
-        int halfCount = shuffledChips.Count / 2;
+        // FIX: Half go to opponentDealerArea, half go to playerDealerArea.
+        // If odd count, the extra chip goes to opponentDealerArea.
+        int halfCount = chipsToAnimate.Count / 2;
 
-        for (int i = 0; i < shuffledChips.Count; i++)
+        for (int i = 0; i < chipsToAnimate.Count; i++)
         {
-            RectTransform chip = shuffledChips[i];
+            RectTransform chip = chipsToAnimate[i];
             if (chip == null) continue;
 
-            // Determine target dealer
-            RectTransform targetDealer = (i < halfCount) ? opponentDealerArea : playerDealerArea;
+            // First half → opponentDealerArea, second half → playerDealerArea
+            RectTransform targetDealer = (i < halfCount) ? playerDealerArea : opponentDealerArea;
             if (targetDealer == null) targetDealer = opponentDealerArea;
 
             Vector2 targetPos = GetCanvasPosition(targetDealer) + new Vector2(
@@ -292,7 +285,7 @@ public class OpponentChipManager : MonoBehaviour
                 Random.Range(-dealerScatterY, dealerScatterY)
             );
 
-            // Animate to dealer with scale down
+            // Fly chip to dealer, then scale it out.
             chip.DOAnchorPos(targetPos, cashoutDuration).SetEase(Ease.InQuad);
             chip.DOScale(0f, cashoutDuration * 0.6f)
                 .SetDelay(cashoutDuration * 0.4f)
@@ -305,21 +298,26 @@ public class OpponentChipManager : MonoBehaviour
             yield return new WaitForSeconds(cashoutStagger);
         }
 
+        // Wait for the last chip's full animation to finish.
         yield return new WaitForSeconds(cashoutDuration);
 
-        // Cleanup
+        // FIX: Clean up containers and tracking lists AFTER animation is done.
         activeOpponentChips.Clear();
+
         foreach (var list in chipsByBetArea.Values)
-        {
             list.Clear();
-        }
+
+        foreach (var container in opponentContainers.Values)
+            if (container != null) container.gameObject.SetActive(false);
+
+        isCashoutRunning = false;
+        cashoutCoroutine = null;
+
+        Debug.Log("[OpponentChipManager] Cashout animation complete.");
     }
     #endregion
 
     #region Helpers
-    /// <summary>
-    /// Convert RectTransform world position to canvas-space anchoredPosition
-    /// </summary>
     private Vector2 GetCanvasPosition(RectTransform rt)
     {
         if (rt == null || targetCanvas == null) return Vector2.zero;

@@ -372,7 +372,7 @@ public class GameManager : MonoBehaviour
         // Trigger opponent chip cashout animation (bet area → dealers)
         opponentChipManager?.PlayCashoutAnimation();
 
-        betController.ClearAllBets();
+       betController.ClearAllBets(false);
     }
 
     internal void OnRoundEnd(RoundEndPayload data)
@@ -502,7 +502,7 @@ public class GameManager : MonoBehaviour
         uiController.ShowLoadingScreen("Returning to Lobby...");
 
         betController.DisableBetting();
-        betController.ClearAllBets();
+        betController.ClearAllBets(true);
         betController.ClearAllWinHighlights();
         roundController.ClearRoundDisplay();
         resultPlaneController?.ClearAllResults();
@@ -571,7 +571,7 @@ public class GameManager : MonoBehaviour
         betController?.DisableBetting();
 
         // 3. Clear all game state
-        betController?.ClearAllBets();
+        betController?.ClearAllBets(true);
         betController?.ClearAllWinHighlights();
         roundController?.ClearRoundDisplay();
 
