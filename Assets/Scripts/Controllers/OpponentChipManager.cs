@@ -41,6 +41,14 @@ public class OpponentChipManager : MonoBehaviour
     #endregion
 
     #region Unity Lifecycle
+    private void Awake()
+    {
+        // Resolve canvas early so it is available even if InitializeContainers
+        // is called before Start() runs (e.g. from BetController.InitializePool)
+        if (targetCanvas == null)
+            targetCanvas = GetComponentInParent<Canvas>();
+    }
+
     private void Start()
     {
         if (targetCanvas == null)
@@ -171,7 +179,14 @@ public class OpponentChipManager : MonoBehaviour
     private IEnumerator CR_SpawnAndAnimateChip(string betOption, double amount)
     {
         RectTransform container = opponentContainers[betOption];
-        Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : opponentDealerArea.parent;
+
+        // Resolve canvas root — must be done each time in case it changed
+        if (targetCanvas == null)
+            targetCanvas = GetComponentInParent<Canvas>();
+
+        Transform canvasRoot = targetCanvas != null
+            ? targetCanvas.transform
+            : transform.root;
 
         // 1. Spawn chip at dealer area
         GameObject chipObj = Instantiate(chipPrefab, opponentDealerArea);
@@ -180,9 +195,12 @@ public class OpponentChipManager : MonoBehaviour
 
         if (chip == null || chipRT == null)
         {
+            Debug.LogError("[OpponentChipManager] chipPrefab missing RectTransform or Chip component!");
             Destroy(chipObj);
             yield break;
         }
+
+        Debug.Log($"[OpponentChipManager] Spawning chip for {betOption} amount={amount}");
 
         // Configure chip
         chip.SetSprite(grayChipSprite);
@@ -197,11 +215,15 @@ public class OpponentChipManager : MonoBehaviour
         );
         chipRT.localScale = Vector3.zero;
 
+        // FIX: Activate the container BEFORE parenting chip into it.
+        // Activating it after would immediately hide the chip we just placed.
+        container.gameObject.SetActive(true);
+
         // Pop in
         chipRT.DOScale(chipScale, 0.2f).SetEase(Ease.OutBack);
         yield return new WaitForSeconds(0.22f);
 
-        // 2. Re-parent to canvas root to move freely
+        // 2. Re-parent to canvas root to move freely across the whole canvas
         chipRT.SetParent(canvasRoot, worldPositionStays: true);
 
         // 3. Calculate destination (inside container, with scatter)
@@ -215,22 +237,26 @@ public class OpponentChipManager : MonoBehaviour
         chipRT.DOAnchorPos(destination, dealerToBetDuration).SetEase(Ease.OutQuad);
         yield return new WaitForSeconds(dealerToBetDuration);
 
-        // 5. Re-parent to container (keeps visual position)
+        // 5. Re-parent into container (keeps visual position), container is already active
         chipRT.SetParent(container, worldPositionStays: true);
-
-        // Activate container
-        container.gameObject.SetActive(true);
 
         // Track chip
         activeOpponentChips.Add(chipRT);
         chipsByBetArea[betOption].Add(chipRT);
+
+        Debug.Log($"[OpponentChipManager] Chip placed for {betOption}. Active chips: {activeOpponentChips.Count}");
     }
 
     private IEnumerator CR_Cashout()
     {
         if (activeOpponentChips.Count == 0) yield break;
 
-        Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : opponentDealerArea.parent;
+        if (targetCanvas == null)
+            targetCanvas = GetComponentInParent<Canvas>();
+
+        Transform canvasRoot = targetCanvas != null
+            ? targetCanvas.transform
+            : transform.root;
 
         // Re-parent all chips to canvas root so they can fly freely
         foreach (var chip in activeOpponentChips)

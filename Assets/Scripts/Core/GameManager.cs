@@ -82,7 +82,7 @@ public class GameManager : MonoBehaviour
 
         uiController.UpdateTotalPlayerCount(payload.playerCount);
 
-        // Always try to update leaderboards - LeaderboardController will handle null/empty cases
+        // Always try to update leaderboards
         Debug.Log($"[GameManager] OnRoomJoinedWithData - leaderboards is {(payload.leaderboards == null ? "null" : "not null")}");
         if (payload.leaderboards == null)
         {
@@ -91,23 +91,83 @@ public class GameManager : MonoBehaviour
 
         uiController.UpdateLeaderboards(payload.leaderboards);
 
-        // NEW: Update Round ID or show waiting state
+        // FIX Issue 1 & 2: Handle mid-round join by reading roundState.phase
         if (payload.roundState != null && !string.IsNullOrEmpty(payload.roundState.roundId))
         {
             CurrentRoundId = payload.roundState.roundId;
             uiController.UpdateRoundId(payload.roundState.roundId);
             Debug.Log($"[GameManager] Round ID set on room join: {payload.roundState.roundId}");
 
-            // Set phase if available
-            string phase = payload.roundState.phase?.ToUpper() ?? "WAITING";
-            uiController.UpdateRoundPhase(phase);
+            string phase = (payload.roundState.phase ?? "").ToLower();
+            Debug.Log($"[GameManager] Mid-round join detected. Phase='{phase}'");
+
+            switch (phase)
+            {
+                case "betting":
+                    {
+                        // Round is in betting phase — enable betting and show correct timer
+                        int timeRemaining = GameUtilities.CalculateTimeRemaining(
+                            payload.roundState.bettingEndTime,
+                            payload.roundState.serverTime);
+
+                        uiController.ShowBettingPhase(timeRemaining);
+                        uiController.UpdateRoundPhase("BETTING");
+                        betController.EnableBetting();
+
+                        // Build a synthetic RoundStartData so RoundController starts its
+                        // animation cycle correctly from mid-round position
+                        var syntheticRoundStart = new RoundStartData
+                        {
+                            roundId = payload.roundState.roundId,
+                            startedAt = payload.roundState.startedAt,
+                            bettingEndTime = payload.roundState.bettingEndTime,
+                            serverTime = payload.roundState.serverTime,
+                            playerCount = payload.playerCount
+                        };
+                        roundController.StartRound(syntheticRoundStart);
+                        break;
+                    }
+
+                case "rolling":
+                case "result":
+                    {
+                        // Dice are being rolled or result is shown — lock betting, show idle
+                        uiController.ShowBetLocked();
+                        uiController.UpdateRoundPhase("ROLLING");
+                        betController.DisableBetting();
+                        Debug.Log("[GameManager] Mid-round join in rolling/result phase — bet locked");
+                        break;
+                    }
+
+                case "nextround":
+                    {
+                        int secondsUntilNext = GameUtilities.CalculateTimeRemaining(
+                            payload.roundState.bettingEndTime,   // reuse as proxy if nextRoundStartTime not present
+                            payload.roundState.serverTime);
+                        uiController.ShowNextRound(secondsUntilNext);
+                        uiController.UpdateRoundPhase("NEXTROUND");
+                        betController.DisableBetting();
+                        break;
+                    }
+
+                default:
+                    {
+                        // Unknown phase — safe default: show bet locked
+                        uiController.ShowBetLocked();
+                        uiController.UpdateRoundPhase("WAITING");
+                        betController.DisableBetting();
+                        Debug.Log($"[GameManager] Mid-round join: unknown phase '{phase}' — defaulting to locked");
+                        break;
+                    }
+            }
         }
         else
         {
             CurrentRoundId = null;
             uiController.UpdateRoundId(null);
             uiController.UpdateRoundPhase("WAITING");
-            Debug.Log("[GameManager] No active round - showing waiting state");
+            uiController.HideAllTimers();
+            Debug.Log("[GameManager] No active round — showing waiting state");
         }
     }
     #endregion
@@ -272,12 +332,11 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        bool isOwnPlayer = (data.username == socketManager.PlayerData.username);
-
-        if (isOwnPlayer)
-        {
-            betController.OnBetPlacedBroadcast(data);
-        }
+        // FIX Issue 3: Forward ALL bet broadcasts to BetController.
+        // BetController.OnBetPlacedBroadcast() already separates own vs opponent bets
+        // internally via HandleOpponentBet(). The old guard here was silently dropping
+        // every opponent chip — that is why gray chips never appeared.
+        betController.OnBetPlacedBroadcast(data);
     }
 
     internal void OnCashout(CashoutData data)

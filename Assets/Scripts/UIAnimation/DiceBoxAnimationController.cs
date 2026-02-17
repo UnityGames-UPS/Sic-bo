@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,11 +6,16 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Dice box animation controller with SERVER TIME SYNCHRONIZATION - AUDIO INTEGRATED
-/// Now handles mid-round joins by calculating elapsed time and jumping to correct animation phase
+/// CHANGES vs original:
+///   + DiceMaskFollowPath reference — mask driven per-frame to match sprite animation
+///   + boxOpeningStartFrame / boxFullyOpenFrame — mask slides open between these frames
+///   + boxStartClosingFrame / boxClosedFrame    — mask slides closed between these frames
+///   - Removed diceVisibleAtOpeningFrame / diceHiddenAtClosingFrame (replaced by mask frames)
+///   * Shake sound restored to original: always plays unconditionally in PlayShakeAnimation
 /// </summary>
 public class DiceBoxAnimationController : MonoBehaviour
 {
-    #region Serialized Fields - Animation Sequences
+    #region Serialized Fields
     [Header("Animation Sequences")]
     [SerializeField] private List<Sprite> shakeSequence;
     [SerializeField] private List<Sprite> idleSequence;
@@ -21,6 +26,7 @@ public class DiceBoxAnimationController : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private Image animationImage;
     [SerializeField] private GameObject diceBoxContainer;
+    [SerializeField] private GameObject diceContainer;
 
     [Header("Timing Configuration")]
     [SerializeField] private float shakeDuration = 2.5f;
@@ -31,13 +37,31 @@ public class DiceBoxAnimationController : MonoBehaviour
     [SerializeField] private float closingDuration = 1.5f;
     [SerializeField] private float zoomOutDuration = 0.9f;
 
-    [Header("Dice Visibility Control")]
-    [SerializeField] private int diceVisibleAtOpeningFrame = 51;
-    [SerializeField] private int diceHiddenAtClosingFrame = 28;
-    [SerializeField] private GameObject diceContainer;
+    [Header("Mask — Opening Frames")]
+    [Tooltip("Frame in openingSequence where the box lid starts moving (mask starts sliding).")]
+    [SerializeField] private int boxOpeningStartFrame = 10;
+    [Tooltip("Frame in openingSequence where the box is fully open (mask reaches end position).")]
+    [SerializeField] private int boxFullyOpenFrame = 51;
+
+    [Header("Mask — Closing Frames")]
+    [Tooltip("Frame in closingSequence where the box lid starts closing (mask starts sliding back).")]
+    [SerializeField] private int boxStartClosingFrame = 5;
+    [Tooltip("Frame in closingSequence where the box is fully closed (mask back at start position).")]
+    [SerializeField] private int boxClosedFrame = 28;
+
+    [Header("Mask — Scale-Up Frames")]
+    [Tooltip("Frame in openingSequence where the mask starts scaling up (1,1,1 → targetScale).\n" +
+             "Before this frame scale stays at 1,1,1.")]
+    [SerializeField] private int boxScaleUpStartFrame = 10;
+    [Tooltip("Frame in openingSequence where the mask reaches full scale.\n" +
+             "After this frame scale is held at targetScale.")]
+    [SerializeField] private int boxScaleUpEndFrame = 51;
+
+    [Header("Mask Controller")]
+    [SerializeField] private DiceMaskFollowPath diceMaskFollowPath;
 
     [Header("Speed Control")]
-    [Tooltip("Speed multiplier applied to post-result animations (closing + zoom out) when a new round starts before the cycle finishes. 3 = 3x faster.")]
+    [Tooltip("Speed multiplier applied to post-result animations when a new round starts early.")]
     [SerializeField] private float fastForwardSpeed = 3f;
     #endregion
 
@@ -46,52 +70,42 @@ public class DiceBoxAnimationController : MonoBehaviour
     private Coroutine animationCoroutine;
     private bool isAnimating = false;
 
-    // Server sync fields
     private long roundStartTime = 0;
     private long bettingEndTime = 0;
-    private long serverTimeOffset = 0; // Difference between server time and local time
+    private long serverTimeOffset = 0;
 
-    // Callbacks
     private Action onDiceShouldShow;
     private Action onDiceShouldHide;
     private Action onAnimationCycleComplete;
 
-    // Audio tracking
     private bool hasPlayedShakeSound = false;
     private bool hasPlayedBoxOpenSound = false;
     private bool hasPlayedBoxCloseSound = false;
 
-    // Live playback speed - coroutines read this every frame so it can be changed at runtime
     private float playbackSpeed = 1f;
 
-    // Pending round - queued while post-result animations are playing
     private bool hasPendingRound = false;
     private long pendingRoundStartTimestamp;
     private long pendingBettingEndTimestamp;
     private long pendingServerTime;
+
+    // FIX Issue 2: store a pending reveal request so RevealDiceResult() can be
+    // honoured even when it arrives before ZoomIn completes (lag scenario)
+    private bool hasPendingReveal = false;
     #endregion
 
     #region Unity Lifecycle
     private void Awake()
     {
         ValidateSetup();
-
-        // Initially hide everything
         if (diceBoxContainer) diceBoxContainer.SetActive(false);
         if (diceContainer) diceContainer.SetActive(false);
     }
 
-    private void OnDestroy()
-    {
-        StopAllAnimations();
-    }
+    private void OnDestroy() => StopAllAnimations();
     #endregion
 
-    #region Public API - Animation Control with Server Sync
-    /// <summary>
-    /// Start animation cycle synced with server time
-    /// Calculates elapsed time and jumps to correct phase if joining mid-round
-    /// </summary>
+    #region Public API
     public void StartAnimationCycleWithServerSync(long roundStartTimestamp, long bettingEndTimestamp, long currentServerTime)
     {
         Debug.Log($"[DiceBoxAnim] Starting animation cycle with server sync");
@@ -99,9 +113,6 @@ public class DiceBoxAnimationController : MonoBehaviour
         Debug.Log($"[DiceBoxAnim] Betting ends at: {bettingEndTimestamp}");
         Debug.Log($"[DiceBoxAnim] Current server time: {currentServerTime}");
 
-        // If we're in a post-result animation (Opening, Open, Closing, ZoomingOut),
-        // don't kill the coroutine - instead fast-forward it and queue the new round.
-        // The new round will start automatically when OnZoomOutComplete fires.
         if (currentState == DiceBoxState.Opening ||
             currentState == DiceBoxState.Open ||
             currentState == DiceBoxState.Closing ||
@@ -116,84 +127,108 @@ public class DiceBoxAnimationController : MonoBehaviour
             return;
         }
 
-        // Normal start - reset speed and clear any stale pending round
         playbackSpeed = 1f;
         hasPendingRound = false;
+        hasPendingReveal = false;   // FIX: clear any stale reveal from previous round
 
         StopAllAnimations();
 
-        // Reset audio flags
         hasPlayedShakeSound = false;
         hasPlayedBoxOpenSound = false;
         hasPlayedBoxCloseSound = false;
 
-        // Store server timing
         roundStartTime = roundStartTimestamp;
         bettingEndTime = bettingEndTimestamp;
         serverTimeOffset = currentServerTime - (long)(Time.realtimeSinceStartup * 1000);
 
-        // Calculate elapsed time since round start
         long elapsedMs = currentServerTime - roundStartTimestamp;
         float elapsedSeconds = elapsedMs / 1000f;
 
-        Debug.Log($"[DiceBoxAnim] Elapsed time since round start: {elapsedSeconds:F2} seconds");
+        Debug.Log($"[DiceBoxAnim] Elapsed time since round start: {elapsedSeconds:F2}s");
 
-        // Show container
         if (diceBoxContainer) diceBoxContainer.SetActive(true);
         if (diceContainer) diceContainer.SetActive(false);
 
-        // Determine which phase to start in based on elapsed time
+        diceMaskFollowPath?.ResetToStart();   // resets position AND scale to 1,1,1
+
         JumpToCorrectPhase(elapsedSeconds);
     }
 
-    /// <summary>
-    /// Legacy method - starts from beginning (for backward compatibility)
-    /// </summary>
     public void StartAnimationCycle()
     {
-        Debug.Log("[DiceBoxAnim] Starting new animation cycle (legacy - from beginning)");
+        Debug.Log("[DiceBoxAnim] Starting new animation cycle (legacy)");
         StopAllAnimations();
 
-        // Reset audio flags - CRITICAL for new round
         hasPlayedShakeSound = false;
         hasPlayedBoxOpenSound = false;
         hasPlayedBoxCloseSound = false;
 
-        // Show container and ensure dice are hidden
         if (diceBoxContainer) diceBoxContainer.SetActive(true);
         if (diceContainer) diceContainer.SetActive(false);
 
-        // Start with shake animation
+        diceMaskFollowPath?.ResetToStart();
+
         PlayShakeAnimation();
     }
 
-    /// <summary>
-    /// Call this when betting is locked to transition from idle to zoom in
-    /// </summary>
     public void OnBettingLocked()
     {
-        Debug.Log("[DiceBoxAnim] Betting locked - will transition to zoom in after current animation");
+        Debug.Log($"[DiceBoxAnim] Betting locked - current state: {currentState}");
 
-        // If we're in idle state, transition to zoom in
         if (currentState == DiceBoxState.Idle)
         {
+            // Normal path: idle loop was running, kill it and zoom in
             StopAllAnimations();
             PlayZoomInAnimation();
         }
+        else if (currentState == DiceBoxState.Shaking)
+        {
+            // FIX Issue 1: Edge case — mid-round join with very little time left,
+            // betting ends while shake animation is still playing.
+            // Skip straight to ZoomIn so the reveal path is unblocked.
+            Debug.LogWarning("[DiceBoxAnim] Betting locked during Shake — skipping to ZoomIn");
+            StopAllAnimations();
+            PlayZoomInAnimation();
+        }
+        else if (currentState == DiceBoxState.ZoomingIn ||
+                 currentState == DiceBoxState.ZoomedIn)
+        {
+            // Already past betting phase — do nothing
+            Debug.Log("[DiceBoxAnim] Betting locked: already ZoomingIn/ZoomedIn, no action needed");
+        }
+        else
+        {
+            Debug.Log($"[DiceBoxAnim] Betting locked: unexpected state {currentState}, ignoring");
+        }
     }
 
-    /// <summary>
-    /// Call this when dice result is ready to be revealed
-    /// </summary>
     public void RevealDiceResult()
     {
-        Debug.Log("[DiceBoxAnim] Revealing dice result");
+        Debug.Log($"[DiceBoxAnim] Revealing dice result (state={currentState})");
 
-        // Should be called after zoom in completes, but handle gracefully
         if (currentState == DiceBoxState.ZoomingIn || currentState == DiceBoxState.ZoomedIn)
         {
+            // Normal path: ZoomIn is complete or in progress, open immediately
+            hasPendingReveal = false;
             StopAllAnimations();
             PlayOpeningAnimation();
+        }
+        else if (currentState == DiceBoxState.Idle ||
+                 currentState == DiceBoxState.Shaking)
+        {
+            // FIX Issue 2: Result arrived early (lag) — store it and it will fire
+            // as soon as OnZoomInComplete() or OnBettingLocked() is processed.
+            Debug.LogWarning($"[DiceBoxAnim] RevealDiceResult called in {currentState} — storing as pending, forcing ZoomIn now");
+            hasPendingReveal = true;
+            StopAllAnimations();
+            PlayZoomInAnimation();
+        }
+        else if (currentState == DiceBoxState.Opening ||
+                 currentState == DiceBoxState.Open ||
+                 currentState == DiceBoxState.Closing)
+        {
+            // Already revealing or finishing — ignore duplicate
+            Debug.Log($"[DiceBoxAnim] RevealDiceResult: already in {currentState}, ignoring");
         }
         else
         {
@@ -201,13 +236,9 @@ public class DiceBoxAnimationController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Call this to start the closing sequence
-    /// </summary>
     public void CloseAndFinish()
     {
         Debug.Log("[DiceBoxAnim] Starting close sequence");
-
         if (currentState == DiceBoxState.Open)
         {
             StopAllAnimations();
@@ -215,54 +246,26 @@ public class DiceBoxAnimationController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Force hide everything immediately
-    /// </summary>
     public void ForceHide()
     {
         Debug.Log("[DiceBoxAnim] Force hiding");
         StopAllAnimations();
-
         if (diceBoxContainer) diceBoxContainer.SetActive(false);
         if (diceContainer) diceContainer.SetActive(false);
-
+        diceMaskFollowPath?.ResetToStart();
         currentState = DiceBoxState.Hidden;
     }
 
-    /// <summary>
-    /// Set callback for when dice should become visible during opening animation
-    /// </summary>
-    public void SetDiceShowCallback(Action callback)
-    {
-        onDiceShouldShow = callback;
-    }
-
-    /// <summary>
-    /// Set callback for when dice should be hidden during closing animation
-    /// </summary>
-    public void SetDiceHideCallback(Action callback)
-    {
-        onDiceShouldHide = callback;
-    }
-
-    /// <summary>
-    /// Set callback for when full animation cycle completes
-    /// </summary>
-    public void SetAnimationCycleCompleteCallback(Action callback)
-    {
-        onAnimationCycleComplete = callback;
-    }
+    public void SetDiceShowCallback(Action callback) => onDiceShouldShow = callback;
+    public void SetDiceHideCallback(Action callback) => onDiceShouldHide = callback;
+    public void SetAnimationCycleCompleteCallback(Action callback) => onAnimationCycleComplete = callback;
     #endregion
 
-    #region Private Methods - Phase Jump Logic
-    /// <summary>
-    /// Jump to the correct animation phase based on elapsed time
-    /// </summary>
+    #region Phase Jump Logic
     private void JumpToCorrectPhase(float elapsedSeconds)
     {
-        // Calculate phase boundaries
         float shakeEnd = shakeDuration;
-        float idleEnd = shakeEnd + idleDuration; // This is when betting should end
+        float idleEnd = shakeEnd + idleDuration;
         float zoomInEnd = idleEnd + zoomInDuration;
         float openingEnd = zoomInEnd + openingDuration;
         float holdOpenEnd = openingEnd + holdOpenDuration;
@@ -280,90 +283,70 @@ public class DiceBoxAnimationController : MonoBehaviour
 
         if (elapsedSeconds < shakeEnd)
         {
-            // Start shake but skip ahead
-            float timeIntoShake = elapsedSeconds;
-            Debug.Log($"[DiceBoxAnim] Joining during SHAKE phase ({timeIntoShake:F2}s into shake)");
-
-            // Mark shake sound as played since we're joining mid-shake
+            Debug.Log($"[DiceBoxAnim] Joining during SHAKE phase ({elapsedSeconds:F2}s into shake)");
             hasPlayedShakeSound = true;
-            PlayShakeAnimation(timeIntoShake);
+            PlayShakeAnimation(elapsedSeconds);
         }
         else if (elapsedSeconds < idleEnd)
         {
-            // Start idle but skip ahead
-            float timeIntoIdle = elapsedSeconds - shakeEnd;
-            Debug.Log($"[DiceBoxAnim] Joining during IDLE phase ({timeIntoIdle:F2}s into idle)");
-
-            // Mark shake sound as played
+            Debug.Log($"[DiceBoxAnim] Joining during IDLE phase ({(elapsedSeconds - shakeEnd):F2}s into idle)");
             hasPlayedShakeSound = true;
-            PlayIdleAnimation(timeIntoIdle);
+            PlayIdleAnimation(elapsedSeconds - shakeEnd);
         }
         else if (elapsedSeconds < zoomInEnd)
         {
-            // Start zoom in but skip ahead
-            float timeIntoZoomIn = elapsedSeconds - idleEnd;
-            Debug.Log($"[DiceBoxAnim] Joining during ZOOM IN phase ({timeIntoZoomIn:F2}s into zoom in)");
-
+            Debug.Log($"[DiceBoxAnim] Joining during ZOOM IN phase ({(elapsedSeconds - idleEnd):F2}s into zoom)");
             hasPlayedShakeSound = true;
-            PlayZoomInAnimation(timeIntoZoomIn);
+            PlayZoomInAnimation(elapsedSeconds - idleEnd);
         }
         else if (elapsedSeconds < openingEnd)
         {
-            // Start opening but skip ahead
-            float timeIntoOpening = elapsedSeconds - zoomInEnd;
-            Debug.Log($"[DiceBoxAnim] Joining during OPENING phase ({timeIntoOpening:F2}s into opening)");
-
+            Debug.Log($"[DiceBoxAnim] Joining during OPENING phase ({(elapsedSeconds - zoomInEnd):F2}s into opening)");
             hasPlayedShakeSound = true;
-            // Mark box open as played since we're joining mid-open
             hasPlayedBoxOpenSound = true;
-            PlayOpeningAnimation(timeIntoOpening);
+            hasPendingReveal = false; // already opening — no need for pending
+            PlayOpeningAnimation(elapsedSeconds - zoomInEnd);
         }
         else if (elapsedSeconds < holdOpenEnd)
         {
-            // Jump to hold open state
             Debug.Log($"[DiceBoxAnim] Joining during HOLD OPEN phase");
-
             hasPlayedShakeSound = true;
             hasPlayedBoxOpenSound = true;
+            hasPendingReveal = false;
 
-            // Set to final frame of opening sequence
             if (openingSequence != null && openingSequence.Count > 0)
-            {
                 SetDisplayToFrame(openingSequence, openingSequence.Count - 1);
-            }
-            currentState = DiceBoxState.Open;
 
-            // Start hold timer
-            float remainingHoldTime = holdOpenEnd - elapsedSeconds;
-            animationCoroutine = StartCoroutine(HoldOpenThenClose(remainingHoldTime));
+            // Joining during hold — mask is fully open, dice visible
+            diceMaskFollowPath?.SetOpenProgress(1f);
+            if (diceContainer) diceContainer.SetActive(true);
+            onDiceShouldShow?.Invoke();
+
+            currentState = DiceBoxState.Open;
+            animationCoroutine = StartCoroutine(HoldOpenThenClose(holdOpenEnd - elapsedSeconds));
         }
         else if (elapsedSeconds < closingEnd)
         {
-            // Start closing but skip ahead
-            float timeIntoClosing = elapsedSeconds - holdOpenEnd;
-            Debug.Log($"[DiceBoxAnim] Joining during CLOSING phase ({timeIntoClosing:F2}s into closing)");
-
+            Debug.Log($"[DiceBoxAnim] Joining during CLOSING phase ({(elapsedSeconds - holdOpenEnd):F2}s into closing)");
             hasPlayedShakeSound = true;
             hasPlayedBoxOpenSound = true;
-            // Mark box close as played since we're joining mid-close
             hasPlayedBoxCloseSound = true;
-            PlayClosingAnimation(timeIntoClosing);
+            hasPendingReveal = false;
+            PlayClosingAnimation(elapsedSeconds - holdOpenEnd);
         }
         else if (elapsedSeconds < zoomOutEnd)
         {
-            // Start zoom out but skip ahead
-            float timeIntoZoomOut = elapsedSeconds - closingEnd;
-            Debug.Log($"[DiceBoxAnim] Joining during ZOOM OUT phase ({timeIntoZoomOut:F2}s into zoom out)");
-
+            Debug.Log($"[DiceBoxAnim] Joining during ZOOM OUT phase ({(elapsedSeconds - closingEnd):F2}s into zoom out)");
             hasPlayedShakeSound = true;
             hasPlayedBoxOpenSound = true;
             hasPlayedBoxCloseSound = true;
-            PlayZoomOutAnimation(timeIntoZoomOut);
+            hasPendingReveal = false;
+            PlayZoomOutAnimation(elapsedSeconds - closingEnd);
         }
         else
         {
-            // Round should be over, go to waiting state
-            Debug.Log($"[DiceBoxAnim] Joining after cycle complete - waiting state");
+            Debug.Log("[DiceBoxAnim] Joining after cycle complete — waiting state");
+            hasPendingReveal = false;
             currentState = DiceBoxState.Waiting;
             if (diceBoxContainer) diceBoxContainer.SetActive(false);
             onAnimationCycleComplete?.Invoke();
@@ -371,29 +354,24 @@ public class DiceBoxAnimationController : MonoBehaviour
     }
     #endregion
 
-    #region Private Methods - Individual Animation Phases
+    #region Individual Animation Phases
     private void PlayShakeAnimation(float startTime = 0f)
     {
         currentState = DiceBoxState.Shaking;
-        playbackSpeed = 1f; // Ensure normal speed for new cycle
+        playbackSpeed = 1f;
         Debug.Log("[DiceBoxAnim] Playing shake animation");
 
-
+        // ── ORIGINAL: always plays unconditionally ────────────────────────
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.PlayShake();
             Debug.Log("[DiceBoxAnim] Shake sound played");
         }
         hasPlayedShakeSound = true;
+        // ─────────────────────────────────────────────────────────────────
 
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            shakeSequence,
-            shakeDuration,
-            reverse: false,
-            loop: false,
-            startTime,
-            OnShakeComplete
-        ));
+            shakeSequence, shakeDuration, false, false, startTime, OnShakeComplete));
     }
 
     private void OnShakeComplete()
@@ -405,16 +383,10 @@ public class DiceBoxAnimationController : MonoBehaviour
     private void PlayIdleAnimation(float startTime = 0f)
     {
         currentState = DiceBoxState.Idle;
-        Debug.Log("[DiceBoxAnim] Playing idle animation (will loop until betting ends)");
+        Debug.Log("[DiceBoxAnim] Playing idle animation (loops until betting ends)");
 
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            idleSequence,
-            idleDuration,
-            reverse: false,
-            loop: true,
-            startTime,
-            null
-        ));
+            idleSequence, idleDuration, false, true, startTime, null));
     }
 
     private void PlayZoomInAnimation(float startTime = 0f)
@@ -423,19 +395,22 @@ public class DiceBoxAnimationController : MonoBehaviour
         Debug.Log("[DiceBoxAnim] Playing zoom in animation");
 
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            zoomInSequence,
-            zoomInDuration,
-            reverse: false,
-            loop: false,
-            startTime,
-            OnZoomInComplete
-        ));
+            zoomInSequence, zoomInDuration, false, false, startTime, OnZoomInComplete));
     }
 
     private void OnZoomInComplete()
     {
-        Debug.Log("[DiceBoxAnim] Zoom in complete - waiting for dice result");
+        Debug.Log("[DiceBoxAnim] Zoom in complete — waiting for dice result");
         currentState = DiceBoxState.ZoomedIn;
+
+        // FIX Issue 2: if RevealDiceResult() already arrived while we were zooming
+        // (lag scenario), play opening immediately instead of waiting forever
+        if (hasPendingReveal)
+        {
+            Debug.Log("[DiceBoxAnim] Pending reveal found — opening immediately");
+            hasPendingReveal = false;
+            PlayOpeningAnimation();
+        }
     }
 
     private void PlayOpeningAnimation(float startTime = 0f)
@@ -443,7 +418,11 @@ public class DiceBoxAnimationController : MonoBehaviour
         currentState = DiceBoxState.Opening;
         Debug.Log("[DiceBoxAnim] Playing opening animation");
 
-        // AUDIO: Play box open sound only once at the start
+        // Activate dice BEFORE the animation starts so they sit behind the closed mask.
+        // The mask then reveals them naturally as it slides/scales — no pop.
+        if (diceContainer) diceContainer.SetActive(true);
+        onDiceShouldShow?.Invoke();
+
         if (!hasPlayedBoxOpenSound && AudioManager.Instance != null)
         {
             AudioManager.Instance.PlayBoxOpen();
@@ -451,28 +430,20 @@ public class DiceBoxAnimationController : MonoBehaviour
         }
 
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            openingSequence,
-            openingDuration,
-            reverse: false,
-            loop: false,
-            startTime,
-            OnOpeningComplete
-        ));
+            openingSequence, openingDuration, false, false, startTime, OnOpeningComplete));
     }
 
     private void OnOpeningComplete()
     {
-        Debug.Log("[DiceBoxAnim] Opening complete - holding open");
+        Debug.Log("[DiceBoxAnim] Opening complete — holding open");
         currentState = DiceBoxState.Open;
-
         animationCoroutine = StartCoroutine(HoldOpenThenClose(holdOpenDuration));
     }
 
     private IEnumerator HoldOpenThenClose(float holdDuration)
     {
-        Debug.Log($"[DiceBoxAnim] Holding open for {holdDuration}s");
-        yield return new WaitForSeconds(holdDuration);
-
+        Debug.Log($"[DiceBoxAnim] Holding open for {holdDuration:F2}s");
+        yield return new WaitForSeconds(holdDuration / Mathf.Max(playbackSpeed, 0.01f));
         PlayClosingAnimation();
     }
 
@@ -481,7 +452,6 @@ public class DiceBoxAnimationController : MonoBehaviour
         currentState = DiceBoxState.Closing;
         Debug.Log("[DiceBoxAnim] Playing closing animation");
 
-        // AUDIO: Play box close sound only once at the start
         if (!hasPlayedBoxCloseSound && AudioManager.Instance != null)
         {
             AudioManager.Instance.PlayBoxClose();
@@ -489,18 +459,13 @@ public class DiceBoxAnimationController : MonoBehaviour
         }
 
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            closingSequence,
-            closingDuration,
-            reverse: false,
-            loop: false,
-            startTime,
-            OnClosingComplete
-        ));
+            closingSequence, closingDuration, false, false, startTime, OnClosingComplete));
     }
 
     private void OnClosingComplete()
     {
         Debug.Log("[DiceBoxAnim] Closing complete");
+        diceMaskFollowPath?.ResetToStart();
         PlayZoomOutAnimation();
     }
 
@@ -510,41 +475,28 @@ public class DiceBoxAnimationController : MonoBehaviour
         Debug.Log("[DiceBoxAnim] Playing zoom out animation");
 
         animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            zoomInSequence,
-            zoomOutDuration,
-            reverse: true,
-            loop: false,
-            startTime,
-            OnZoomOutComplete
-        ));
+            zoomInSequence, zoomOutDuration, true, false, startTime, OnZoomOutComplete));
     }
 
     private void OnZoomOutComplete()
     {
-        Debug.Log("[DiceBoxAnim] Zoom out complete - cycle finished");
+        Debug.Log("[DiceBoxAnim] Zoom out complete — cycle finished");
         currentState = DiceBoxState.Waiting;
-        playbackSpeed = 1f; // Always reset speed after cycle
+        playbackSpeed = 1f;
 
-        // Notify that full cycle is complete
         onAnimationCycleComplete?.Invoke();
 
-        // If a new round was queued while we were animating, start it now
         if (hasPendingRound)
         {
-            Debug.Log("[DiceBoxAnim] Starting queued pending round after cycle complete");
+            Debug.Log("[DiceBoxAnim] Starting queued pending round");
             hasPendingRound = false;
-            // Use corrected current server time so elapsed calculation is accurate
-            long correctedServerTime = (long)(Time.realtimeSinceStartup * 1000) + serverTimeOffset;
-            // Re-call the public method now that state is safe
-            StartAnimationCycleWithServerSync(pendingRoundStartTimestamp, pendingBettingEndTimestamp, correctedServerTime);
+            long corrected = (long)(Time.realtimeSinceStartup * 1000) + serverTimeOffset;
+            StartAnimationCycleWithServerSync(pendingRoundStartTimestamp, pendingBettingEndTimestamp, corrected);
         }
     }
     #endregion
 
-    #region Private Methods - Core Animation Playback
-    /// <summary>
-    /// Play animation sequence with optional time skip
-    /// </summary>
+    #region Core Animation Playback
     private IEnumerator PlaySequenceCoroutine(
         List<Sprite> sequence,
         float duration,
@@ -563,28 +515,25 @@ public class DiceBoxAnimationController : MonoBehaviour
         isAnimating = true;
         float baseFrameDelay = duration / sequence.Count;
 
-        // Calculate starting frame based on startTime
         int startFrame = Mathf.FloorToInt(startTime / baseFrameDelay);
         float timeIntoStartFrame = startTime - (startFrame * baseFrameDelay);
 
-        // Wait for remaining time in start frame (adjusted for current speed)
         if (timeIntoStartFrame > 0 && startFrame < sequence.Count)
         {
-            float remainingFrameTime = (baseFrameDelay - timeIntoStartFrame) / Mathf.Max(playbackSpeed, 0.01f);
+            float remaining = (baseFrameDelay - timeIntoStartFrame) / Mathf.Max(playbackSpeed, 0.01f);
 
             if (reverse)
             {
-                int reverseIndex = sequence.Count - 1 - startFrame;
-                if (reverseIndex >= 0 && reverseIndex < sequence.Count)
-                    SetDisplayToFrame(sequence, reverseIndex);
+                int ri = sequence.Count - 1 - startFrame;
+                if (ri >= 0) SetDisplayToFrame(sequence, ri);
             }
             else
             {
                 SetDisplayToFrame(sequence, startFrame);
-                CheckDiceVisibilityTriggers(startFrame);
+                HandleFrameTriggers(startFrame, sequence.Count);
             }
 
-            yield return new WaitForSeconds(remainingFrameTime);
+            yield return new WaitForSeconds(remaining);
             startFrame++;
         }
 
@@ -597,7 +546,6 @@ public class DiceBoxAnimationController : MonoBehaviour
                     if (animationImage && sequence[i])
                         animationImage.sprite = sequence[i];
 
-                    // Read speed live each frame
                     yield return new WaitForSeconds(baseFrameDelay / Mathf.Max(playbackSpeed, 0.01f));
                 }
             }
@@ -608,64 +556,98 @@ public class DiceBoxAnimationController : MonoBehaviour
                     if (animationImage && sequence[i])
                         animationImage.sprite = sequence[i];
 
-                    CheckDiceVisibilityTriggers(i);
+                    HandleFrameTriggers(i, sequence.Count);
 
-                    // Read speed live each frame
                     yield return new WaitForSeconds(baseFrameDelay / Mathf.Max(playbackSpeed, 0.01f));
                 }
             }
 
             startFrame = 0;
-        } while (loop && isAnimating);
+        }
+        while (loop && isAnimating);
 
         isAnimating = false;
         animationCoroutine = null;
 
-        if (!loop)
-            onComplete?.Invoke();
+        if (!loop) onComplete?.Invoke();
     }
 
-    private void CheckDiceVisibilityTriggers(int currentFrame)
+    /// <summary>
+    /// Called every frame during playback.
+    /// During Opening: drives mask open  between boxOpeningStartFrame → boxFullyOpenFrame
+    /// During Closing: drives mask close between boxStartClosingFrame → boxClosedFrame
+    /// Also shows/hides diceContainer at the right moment.
+    /// </summary>
+    private void HandleFrameTriggers(int frame, int totalFrames)
     {
-        // Show dice at specific frame during opening
-        if (currentState == DiceBoxState.Opening && currentFrame == diceVisibleAtOpeningFrame)
+        // ── OPENING sequence ──────────────────────────────────────────────────
+        if (currentState == DiceBoxState.Opening)
         {
-            Debug.Log($"[DiceBoxAnim] Frame {currentFrame}/{openingSequence.Count}: SHOWING dice");
-            ShowDice();
+            // Drive mask progress between start and fully-open frames
+            if (frame >= boxOpeningStartFrame && frame <= boxFullyOpenFrame)
+            {
+                int range = boxFullyOpenFrame - boxOpeningStartFrame;
+                float progress = range > 0
+                                 ? (float)(frame - boxOpeningStartFrame) / range
+                                 : 1f;
+                diceMaskFollowPath?.SetOpenProgress(progress);
+            }
+
+            // Hold mask at end after fully open
+            if (frame > boxFullyOpenFrame)
+            {
+                diceMaskFollowPath?.SetOpenProgress(1f);
+            }
+
+            // Scale mask up, frame-synced between boxScaleUpStartFrame → boxScaleUpEndFrame.
+            // rawT is computed here (same pattern as SetOpenProgress above) and passed to the mask.
+            if (frame >= boxScaleUpStartFrame && frame <= boxScaleUpEndFrame)
+            {
+                int scaleRange = boxScaleUpEndFrame - boxScaleUpStartFrame;
+                float scaleProgress = scaleRange > 0
+                                      ? (float)(frame - boxScaleUpStartFrame) / scaleRange
+                                      : 1f;
+                diceMaskFollowPath?.SetScaleProgress(scaleProgress);
+            }
+            else if (frame > boxScaleUpEndFrame)
+            {
+                diceMaskFollowPath?.SetScaleProgress(1f);
+            }
         }
 
-        // Hide dice at specific frame during closing
-        if (currentState == DiceBoxState.Closing && currentFrame == diceHiddenAtClosingFrame)
+        // ── CLOSING sequence ──────────────────────────────────────────────────
+        if (currentState == DiceBoxState.Closing)
         {
-            Debug.Log($"[DiceBoxAnim] Frame {currentFrame}/{closingSequence.Count}: HIDING dice");
-            HideDice();
+            // Drive mask progress between start-closing and fully-closed frames
+            if (frame >= boxStartClosingFrame && frame <= boxClosedFrame)
+            {
+                int range = boxClosedFrame - boxStartClosingFrame;
+                float progress = range > 0
+                                 ? (float)(frame - boxStartClosingFrame) / range
+                                 : 1f;
+                diceMaskFollowPath?.SetCloseProgress(progress);
+            }
+
+            // Hide dice when box is fully closed
+            if (frame == boxClosedFrame)
+            {
+                Debug.Log($"[DiceBoxAnim] Frame {frame}: hiding dice");
+                if (diceContainer) diceContainer.SetActive(false);
+                onDiceShouldHide?.Invoke();
+            }
+
+            // Hold mask at start after fully closed
+            if (frame > boxClosedFrame)
+            {
+                diceMaskFollowPath?.SetCloseProgress(1f);
+            }
         }
     }
 
-    private void ShowDice()
+    private void SetDisplayToFrame(List<Sprite> sequence, int index)
     {
-        if (diceContainer)
-        {
-            diceContainer.SetActive(true);
-        }
-        onDiceShouldShow?.Invoke();
-    }
-
-    private void HideDice()
-    {
-        if (diceContainer)
-        {
-            diceContainer.SetActive(false);
-        }
-        onDiceShouldHide?.Invoke();
-    }
-
-    private void SetDisplayToFrame(List<Sprite> sequence, int frameIndex)
-    {
-        if (animationImage && sequence != null && frameIndex >= 0 && frameIndex < sequence.Count)
-        {
-            animationImage.sprite = sequence[frameIndex];
-        }
+        if (animationImage && sequence != null && index >= 0 && index < sequence.Count)
+            animationImage.sprite = sequence[index];
     }
 
     private void StopAllAnimations()
@@ -682,79 +664,57 @@ public class DiceBoxAnimationController : MonoBehaviour
     #region Validation
     private void ValidateSetup()
     {
-        bool hasErrors = false;
+        if (animationImage == null) Debug.LogError("[DiceBoxAnim] animationImage not assigned!");
+        if (diceBoxContainer == null) Debug.LogWarning("[DiceBoxAnim] diceBoxContainer not assigned!");
+        if (diceContainer == null) Debug.LogWarning("[DiceBoxAnim] diceContainer not assigned!");
+        if (diceMaskFollowPath == null) Debug.LogWarning("[DiceBoxAnim] diceMaskFollowPath not assigned — mask disabled.");
 
-        if (animationImage == null)
-        {
-            Debug.LogError("[DiceBoxAnim] Animation Image is not assigned!");
-            hasErrors = true;
-        }
+        if (shakeSequence == null || shakeSequence.Count == 0) Debug.LogWarning("[DiceBoxAnim] shakeSequence empty!");
+        if (idleSequence == null || idleSequence.Count == 0) Debug.LogWarning("[DiceBoxAnim] idleSequence empty!");
+        if (zoomInSequence == null || zoomInSequence.Count == 0) Debug.LogWarning("[DiceBoxAnim] zoomInSequence empty!");
+        if (openingSequence == null || openingSequence.Count == 0) Debug.LogWarning("[DiceBoxAnim] openingSequence empty!");
+        if (closingSequence == null || closingSequence.Count == 0) Debug.LogWarning("[DiceBoxAnim] closingSequence empty!");
 
-        if (diceContainer == null)
+        if (openingSequence != null)
         {
-            Debug.LogWarning("[DiceBoxAnim] Dice Container is not assigned! Dice visibility control will not work.");
-        }
+            if (boxOpeningStartFrame >= openingSequence.Count)
+                Debug.LogWarning($"[DiceBoxAnim] boxOpeningStartFrame ({boxOpeningStartFrame}) >= openingSequence length ({openingSequence.Count})!");
+            if (boxFullyOpenFrame >= openingSequence.Count)
+                Debug.LogWarning($"[DiceBoxAnim] boxFullyOpenFrame ({boxFullyOpenFrame}) >= openingSequence length ({openingSequence.Count})!");
+            if (boxOpeningStartFrame >= boxFullyOpenFrame)
+                Debug.LogWarning("[DiceBoxAnim] boxOpeningStartFrame should be less than boxFullyOpenFrame!");
 
-        if (shakeSequence == null || shakeSequence.Count == 0)
-        {
-            Debug.LogWarning("[DiceBoxAnim] Shake sequence is empty!");
-        }
-
-        if (idleSequence == null || idleSequence.Count == 0)
-        {
-            Debug.LogWarning("[DiceBoxAnim] Idle sequence is empty!");
-        }
-
-        if (zoomInSequence == null || zoomInSequence.Count == 0)
-        {
-            Debug.LogWarning("[DiceBoxAnim] Zoom in sequence is empty!");
-        }
-
-        if (openingSequence == null || openingSequence.Count == 0)
-        {
-            Debug.LogWarning("[DiceBoxAnim] Opening sequence is empty!");
-        }
-        else if (diceVisibleAtOpeningFrame >= openingSequence.Count)
-        {
-            Debug.LogWarning($"[DiceBoxAnim] Dice visible frame ({diceVisibleAtOpeningFrame}) is beyond opening sequence length ({openingSequence.Count})!");
+            if (boxScaleUpStartFrame >= openingSequence.Count)
+                Debug.LogWarning($"[DiceBoxAnim] boxScaleUpStartFrame ({boxScaleUpStartFrame}) >= openingSequence length ({openingSequence.Count})!");
+            if (boxScaleUpEndFrame >= openingSequence.Count)
+                Debug.LogWarning($"[DiceBoxAnim] boxScaleUpEndFrame ({boxScaleUpEndFrame}) >= openingSequence length ({openingSequence.Count})!");
+            if (boxScaleUpStartFrame >= boxScaleUpEndFrame)
+                Debug.LogWarning("[DiceBoxAnim] boxScaleUpStartFrame should be less than boxScaleUpEndFrame!");
         }
 
-        if (closingSequence == null || closingSequence.Count == 0)
+        if (closingSequence != null)
         {
-            Debug.LogWarning("[DiceBoxAnim] Closing sequence is empty!");
-        }
-        else if (diceHiddenAtClosingFrame >= closingSequence.Count)
-        {
-            Debug.LogWarning($"[DiceBoxAnim] Dice hidden frame ({diceHiddenAtClosingFrame}) is beyond closing sequence length ({closingSequence.Count})!");
+            if (boxStartClosingFrame >= closingSequence.Count)
+                Debug.LogWarning($"[DiceBoxAnim] boxStartClosingFrame ({boxStartClosingFrame}) >= closingSequence length ({closingSequence.Count})!");
+            if (boxClosedFrame >= closingSequence.Count)
+                Debug.LogWarning($"[DiceBoxAnim] boxClosedFrame ({boxClosedFrame}) >= closingSequence length ({closingSequence.Count})!");
+            if (boxStartClosingFrame >= boxClosedFrame)
+                Debug.LogWarning("[DiceBoxAnim] boxStartClosingFrame should be less than boxClosedFrame!");
         }
 
-        if (!hasErrors)
-        {
-            Debug.Log("[DiceBoxAnim] Setup validated successfully");
-        }
+        Debug.Log("[DiceBoxAnim] Validation complete");
     }
     #endregion
 
     #region Public Getters
     public DiceBoxState GetCurrentState() => currentState;
     public bool IsAnimating() => isAnimating;
-    public float GetTotalCycleTime() => shakeDuration + zoomInDuration + openingDuration + holdOpenDuration + closingDuration + zoomOutDuration;
+    public float GetTotalCycleTime() =>
+        shakeDuration + zoomInDuration + openingDuration + holdOpenDuration + closingDuration + zoomOutDuration;
     #endregion
 }
 
-/// <summary>
-/// Animation states for the dice box
-/// </summary>
 public enum DiceBoxState
 {
-    Hidden,      // Not visible
-    Shaking,     // Girl shaking the dice box
-    Idle,        // Idle loop while betting is active
-    ZoomingIn,   // Zooming into the box
-    ZoomedIn,    // Zoomed in, waiting for result
-    Opening,     // Box opening to reveal dice
-    Open,        // Box is open, dice visible, holding
-    Closing,     // Box closing after result
-    ZoomingOut,  // Zooming out from the box
-    Waiting      // Waiting for next round (cycle complete)
+    Hidden, Shaking, Idle, ZoomingIn, ZoomedIn, Opening, Open, Closing, ZoomingOut, Waiting
 }
