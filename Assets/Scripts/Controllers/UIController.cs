@@ -284,6 +284,16 @@ public class UIController : MonoBehaviour
 
         UpdateBalance(balance);
 
+        // Tell the leaderboard controller which avatar belongs to the local player.
+        // selectedAvatarIndex is set in Start(), so it is always valid here.
+        if (leaderboardController != null &&
+            playerAvatarSprites != null &&
+            selectedAvatarIndex >= 0 &&
+            selectedAvatarIndex < playerAvatarSprites.Length)
+        {
+            leaderboardController.SetLocalPlayer(name, playerAvatarSprites[selectedAvatarIndex]);
+        }
+
         // Only update leaderboards if there's actual data
         if (leaderboards != null &&
             ((leaderboards.richest != null && leaderboards.richest.Count > 0) ||

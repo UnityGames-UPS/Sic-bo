@@ -22,7 +22,7 @@ public class LeaderboardController : MonoBehaviour
     [SerializeField] private float fadeSpeed = 0.3f;
     [SerializeField] private float loopInterval = 0f;
 
-    [Tooltip("Cards slide exactly this many units. Richest: -300 <-> 0   Winners: 0 <-> +300")]
+    [Tooltip("Cards slide exactly this many units. Richest: -300→0   Winners: +300→0")]
     [SerializeField] private float slideDistance = 300f;
     [SerializeField] private float slideDuration = 0.5f;
 
@@ -42,6 +42,23 @@ public class LeaderboardController : MonoBehaviour
     private Dictionary<int, LeaderboardEntry> currentRichest = new Dictionary<int, LeaderboardEntry>();
     private Dictionary<int, LeaderboardEntry> currentWinners = new Dictionary<int, LeaderboardEntry>();
     private Dictionary<int, List<Coroutine>> blockCoroutines = new Dictionary<int, List<Coroutine>>();
+
+    // Local player identity — set by UIController once login data arrives
+    private string localPlayerUsername = null;
+    private Sprite localPlayerAvatar = null;
+    #endregion
+
+    #region Public API — Local Player
+    /// <summary>
+    /// Call this once from UIController after the player's name and chosen avatar are known.
+    /// Any leaderboard block whose username matches will display this avatar instead of a random one.
+    /// </summary>
+    public void SetLocalPlayer(string username, Sprite avatar)
+    {
+        localPlayerUsername = username;
+        localPlayerAvatar = avatar;
+        Debug.Log($"[LeaderboardController] Local player set: {username}");
+    }
     #endregion
 
     #region Dummy Data Helpers
@@ -93,12 +110,12 @@ public class LeaderboardController : MonoBehaviour
         if (leaderboardParent != null && !leaderboardParent.activeSelf)
             leaderboardParent.SetActive(true);
 
-        // Richest (left panel)  — slideDir = -1  →  off-screen position is at x - 300
+        // Richest (left panel)  — slideDir = -1  → off-screen at x - 300
         for (int i = 0; i < 3; i++)
             UpdatePlayerBlock(richestBlocks, currentRichest, i, richestData[i],
                               slideDir: -1f, isWinners: false);
 
-        // Winners (right panel) — slideDir = +1  →  off-screen position is at x + 300
+        // Winners (right panel) — slideDir = +1  → off-screen at x + 300
         for (int i = 0; i < 3; i++)
             UpdatePlayerBlock(winnersBlocks, currentWinners, i, winnersData[i],
                               slideDir: 1f, isWinners: true);
@@ -118,10 +135,6 @@ public class LeaderboardController : MonoBehaviour
     #endregion
 
     #region Block Management
-    /// <param name="slideDir">
-    ///   -1 = Richest (left)   entry: x-300 → x    exit: x → x-300
-    ///   +1 = Winners (right)  entry: x+300 → x    exit: x → x+300
-    /// </param>
     private void UpdatePlayerBlock(
         List<LeaderboardPlayerBlock> blocks,
         Dictionary<int, LeaderboardEntry> currentData,
@@ -140,9 +153,8 @@ public class LeaderboardController : MonoBehaviour
 
         if (isFirstTime)
         {
-            // No animation on first appearance — just show immediately
             currentData[index] = newEntry;
-            block.SetPlayerData(newEntry.username, displayValue, GetRandomAvatar());
+            block.SetPlayerData(newEntry.username, displayValue, PickAvatar(newEntry.username));
 
             float offset = Random.Range(minRandomOffset, maxRandomOffset);
             AddBlockCoroutine(block, StartCoroutine(DelayedAlternateStart(block, offset)));
@@ -175,15 +187,8 @@ public class LeaderboardController : MonoBehaviour
     #region Animations
 
     /// <summary>
-    /// Slide behaviour (no easing overshoot — pure linear in, quad out):
-    ///
-    ///   Richest (slideDir = -1):
-    ///     EXIT  → tween from x  to  x - 300        (slides LEFT off screen)
-    ///     ENTRY → jump to x - 300, tween to x       (slides in from LEFT)
-    ///
-    ///   Winners (slideDir = +1):
-    ///     EXIT  → tween from x  to  x + 300        (slides RIGHT off screen)
-    ///     ENTRY → jump to x + 300, tween to x       (slides in from RIGHT)
+    /// Richest (slideDir = -1):  exit x→x-300,  re-enter x-300→x
+    /// Winners (slideDir = +1):  exit x→x+300,  re-enter x+300→x
     /// </summary>
     private IEnumerator SlideOutAndUpdate(
         LeaderboardPlayerBlock block,
@@ -197,37 +202,30 @@ public class LeaderboardController : MonoBehaviour
         {
             blockRect.DOKill(complete: true);
             Vector2 restPos = blockRect.anchoredPosition;
-
-            // ── EXIT: slide out in the SAME direction as entry origin ──────────
-            // richest: restPos → restPos - 300
-            // winners: restPos → restPos + 300
             Vector2 offScreenPos = restPos + new Vector2(slideDir * slideDistance, 0f);
 
+            // Slide OUT
             yield return blockRect
                 .DOAnchorPos(offScreenPos, slideDuration)
-                .SetEase(Ease.InQuad)          // accelerate out, no bounce
+                .SetEase(Ease.InQuad)
                 .WaitForCompletion();
 
-            // ── SWAP content while card is fully off-screen ────────────────────
+            // Swap content while off-screen
             ResetTextState(block.NameText);
             ResetTextState(block.BalanceText);
-            block.SetPlayerData(entry.username, displayValue, GetRandomAvatar());
+            block.SetPlayerData(entry.username, displayValue, PickAvatar(entry.username));
 
-            // ── ENTRY: already at offScreenPos, tween back to restPos ──────────
-            // richest: restPos - 300 → restPos
-            // winners: restPos + 300 → restPos
-            // (no need to teleport — we never moved restPos itself)
-
+            // Slide IN (already at offScreenPos, tween back to rest)
             yield return blockRect
                 .DOAnchorPos(restPos, slideDuration)
-                .SetEase(Ease.OutQuad)         // decelerate in, no bounce
+                .SetEase(Ease.OutQuad)
                 .WaitForCompletion();
         }
         else
         {
             ResetTextState(block.NameText);
             ResetTextState(block.BalanceText);
-            block.SetPlayerData(entry.username, displayValue, GetRandomAvatar());
+            block.SetPlayerData(entry.username, displayValue, PickAvatar(entry.username));
         }
 
         float randomOffset = Random.Range(minRandomOffset, maxRandomOffset);
@@ -351,6 +349,23 @@ public class LeaderboardController : MonoBehaviour
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// Returns the local player's fixed avatar if the username matches,
+    /// otherwise picks a random one from the pool.
+    /// </summary>
+    private Sprite PickAvatar(string username)
+    {
+        if (!string.IsNullOrEmpty(localPlayerUsername) &&
+            localPlayerAvatar != null &&
+            username == localPlayerUsername)
+        {
+            return localPlayerAvatar;
+        }
+
+        return GetRandomAvatar();
+    }
+
     private Sprite GetRandomAvatar()
     {
         if (playerAvatars == null || playerAvatars.Length == 0) return null;
