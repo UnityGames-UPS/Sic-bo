@@ -71,6 +71,8 @@ Material:
     - _CircleSize: 0.107
     - _CircleSpeed: 0.8
     - _ColorMask: 15
+    - _CornerOffset: 0.1
+    - _CornerPhase: 1.5708
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
@@ -105,7 +107,9 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _LightColor: {r: 1, g: 0.27406728, b: 0.118867874, a: 0}
-    - _LightColor1: {r: 0.9019608, g: 0.7254902, b: 0.37254903, a: 0.27450982}
-    - _LightColor2: {r: 0.9019608, g: 0.72427106, b: 0.3686275, a: 0.3529412}
+    - _LightColor1: {r: 0.52156866, g: 0.3731249, b: 0.31359914, a: 0.27450982}
+    - _LightColor2: {r: 0.52156866, g: 0.37254903, b: 0.3137255, a: 0.3529412}
+    - _LightColor3: {r: 0.52156866, g: 0.37254903, b: 0.3137255, a: 1}
+    - _LightColor4: {r: 0.52156866, g: 0.37254903, b: 0.3137255, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
