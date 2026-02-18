@@ -1684,32 +1684,12 @@ public class BetController : MonoBehaviour
     }
 
     /// <summary>
-    /// Returns true only when BOTH the richest list AND the winners list
-    /// each contain at least 3 entries. If the room has fewer than 3 players
-    /// the leaderboard is considered incomplete and no badges should be shown.
-    /// </summary>
-    private bool IsLeaderboardFull()
-    {
-        return currentLeaderboards != null
-            && currentLeaderboards.richest != null && currentLeaderboards.richest.Count >= 3
-            && currentLeaderboards.winners != null && currentLeaderboards.winners.Count >= 3;
-    }
-
-    /// <summary>
     /// Recomputes isPlayerRichest / isPlayerWinner from currentLeaderboards + currentPlayerUsername.
-    /// Both flags are forced to false when the leaderboard is not yet full.
     /// </summary>
     private void RefreshPlayerLeaderboardStatus()
     {
-        if (!IsLeaderboardFull())
-        {
-            isPlayerRichest = false;
-            isPlayerWinner = false;
-            return;
-        }
-
-        isPlayerRichest = IsUsernameInLeaderboardList(currentPlayerUsername, currentLeaderboards.richest);
-        isPlayerWinner = IsUsernameInLeaderboardList(currentPlayerUsername, currentLeaderboards.winners);
+        isPlayerRichest = IsUsernameInLeaderboardList(currentPlayerUsername, currentLeaderboards?.richest);
+        isPlayerWinner = IsUsernameInLeaderboardList(currentPlayerUsername, currentLeaderboards?.winners);
     }
 
     /// <summary>

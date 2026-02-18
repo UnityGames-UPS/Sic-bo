@@ -273,7 +273,8 @@ public class AudioManager : MonoBehaviour
     {
         if (isUpdatingToggles) return;
 
-        isSfxEnabled = isOn;
+        // isOn=true means the mute/off image is active (UI image is inverted), so audio is DISABLED
+        isSfxEnabled = !isOn;
         SaveAudioSettings();
         ApplyAudioSettings();
 
@@ -281,25 +282,28 @@ public class AudioManager : MonoBehaviour
         UpdateAllToggles();
 
         // Stop clock tick if disabled
-        if (!isOn && isClockTickPlaying)
+        if (!isSfxEnabled && isClockTickPlaying)
         {
             StopClockTick();
         }
 
         // Play test sound when enabling
-        if (isOn)
+        if (isSfxEnabled)
         {
             PlayButtonClick();
         }
 
-        Debug.Log($"[AudioManager] SFX toggled from Home: {isOn}");
+        Debug.Log($"[AudioManager] SFX toggled from Home: isSfxEnabled={isSfxEnabled}");
     }
+
+  
 
     private void OnMusicHomeToggleChanged(bool isOn)
     {
         if (isUpdatingToggles) return;
 
-        isBgMusicEnabled = isOn;
+        // isOn=true means the mute/off image is active (UI image is inverted), so audio is DISABLED
+        isBgMusicEnabled = !isOn;
         SaveAudioSettings();
         ApplyAudioSettings();
 
@@ -307,19 +311,20 @@ public class AudioManager : MonoBehaviour
         UpdateAllToggles();
 
         // Play test sound when enabling
-        if (isOn)
+        if (isBgMusicEnabled)
         {
             PlayButtonClick();
         }
 
-        Debug.Log($"[AudioManager] Music toggled from Home: {isOn}");
+        Debug.Log($"[AudioManager] Music toggled from Home: isBgMusicEnabled={isBgMusicEnabled}");
     }
 
     private void OnSfxGameToggleChanged(bool isOn)
     {
         if (isUpdatingToggles) return;
 
-        isSfxEnabled = isOn;
+        // isOn=true means the mute/off image is active (UI image is inverted), so audio is DISABLED
+        isSfxEnabled = !isOn;
         SaveAudioSettings();
         ApplyAudioSettings();
 
@@ -327,25 +332,26 @@ public class AudioManager : MonoBehaviour
         UpdateAllToggles();
 
         // Stop clock tick if disabled
-        if (!isOn && isClockTickPlaying)
+        if (!isSfxEnabled && isClockTickPlaying)
         {
             StopClockTick();
         }
 
         // Play test sound when enabling
-        if (isOn)
+        if (isSfxEnabled)
         {
             PlayButtonClick();
         }
 
-        Debug.Log($"[AudioManager] SFX toggled from Game: {isOn}");
+        Debug.Log($"[AudioManager] SFX toggled from Game: isSfxEnabled={isSfxEnabled}");
     }
 
     private void OnMusicGameToggleChanged(bool isOn)
     {
         if (isUpdatingToggles) return;
 
-        isBgMusicEnabled = isOn;
+        // isOn=true means the mute/off image is active (UI image is inverted), so audio is DISABLED
+        isBgMusicEnabled = !isOn;
         SaveAudioSettings();
         ApplyAudioSettings();
 
@@ -353,36 +359,37 @@ public class AudioManager : MonoBehaviour
         UpdateAllToggles();
 
         // Play test sound when enabling
-        if (isOn)
+        if (isBgMusicEnabled)
         {
             PlayButtonClick();
         }
 
-        Debug.Log($"[AudioManager] Music toggled from Game: {isOn}");
+        Debug.Log($"[AudioManager] Music toggled from Game: isBgMusicEnabled={isBgMusicEnabled}");
     }
 
     private void UpdateAllToggles()
     {
         isUpdatingToggles = true;
 
+        // isOn=true displays the mute/off image (UI is inverted), so we set isOn = !enabled
         if (sfxHomeToggle != null)
         {
-            sfxHomeToggle.isOn = isSfxEnabled;
+            sfxHomeToggle.isOn = !isSfxEnabled;
         }
 
         if (musicHomeToggle != null)
         {
-            musicHomeToggle.isOn = isBgMusicEnabled;
+            musicHomeToggle.isOn = !isBgMusicEnabled;
         }
 
         if (sfxGameToggle != null)
         {
-            sfxGameToggle.isOn = isSfxEnabled;
+            sfxGameToggle.isOn = !isSfxEnabled;
         }
 
         if (musicGameToggle != null)
         {
-            musicGameToggle.isOn = isBgMusicEnabled;
+            musicGameToggle.isOn = !isBgMusicEnabled;
         }
 
         isUpdatingToggles = false;
@@ -576,7 +583,7 @@ public class AudioManager : MonoBehaviour
 
     internal void PlayShake()
     {
-        print ("[AudioManager] Playing shake sound");
+        print("[AudioManager] Playing shake sound");
         PlayAnimationSfx(shakeSound);
     }
 

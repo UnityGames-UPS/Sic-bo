@@ -219,16 +219,19 @@ public class UIController : MonoBehaviour
         if (ExitGame_Button) ExitGame_Button.onClick.AddListener(() =>
         {
             if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            CloseSideMenu();
             gameManager.LeaveRoom();
         });
         if (HistoryGame_Button) HistoryGame_Button.onClick.AddListener(() =>
         {
             if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            CloseSideMenu();
             OpenHistoryFromGame();
         });
         if (SettingsGame_Button) SettingsGame_Button.onClick.AddListener(() =>
         {
             if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+            CloseSideMenu();
             OpenInfoFromGame();
         });
 
@@ -350,24 +353,27 @@ public class UIController : MonoBehaviour
         if (menuPanelContainerRect != null)
         {
             Vector2 startPos = panelOriginalPosition;
-            startPos.x += panelSlideDistance; // Start from right side outside canvas
+            startPos.x += panelSlideDistance;
             menuPanelContainerRect.anchoredPosition = startPos;
 
             menuPanelContainerRect.DOAnchorPos(panelOriginalPosition, panelSlideDuration)
                 .SetEase(Ease.OutCubic);
         }
 
-        // Animate buttons dropping from close button position
+        // Re-enable all menu buttons and animate them smoothly from close button position
         for (int i = 0; i < menuButtonRects.Length; i++)
         {
-            // Set initial position to close button
+            // Make sure button is visible before animating
+            menuButtonRects[i].gameObject.SetActive(true);
+
+            // Start from close button position
             menuButtonRects[i].anchoredPosition = closeButtonPos;
 
             float delay = i * buttonDropDelay;
 
-            // Drop to original position with elastic/bounce effect
+            // Smooth slide to original position (no bounce/hang)
             menuButtonRects[i].DOAnchorPos(menuButtonOriginalPositions[i], buttonDropDuration)
-                .SetEase(Ease.OutBounce)
+                .SetEase(Ease.OutCubic)
                 .SetDelay(delay);
         }
     }
@@ -385,22 +391,28 @@ public class UIController : MonoBehaviour
             }
         }
 
-        // Animate buttons back to close button position in reverse order
+        // Animate buttons back to close button position in reverse order, then disable them
         for (int i = 0; i < menuButtonRects.Length; i++)
         {
             int reverseIndex = menuButtonRects.Length - 1 - i;
             float delay = i * buttonDropDelay;
+            RectTransform rect = menuButtonRects[reverseIndex];
 
-            menuButtonRects[reverseIndex].DOAnchorPos(closeButtonPos, buttonDropDuration * 0.7f)
-                .SetEase(Ease.InBack)
-                .SetDelay(delay);
+            rect.DOAnchorPos(closeButtonPos, buttonDropDuration * 0.7f)
+                .SetEase(Ease.InCubic)
+                .SetDelay(delay)
+                .OnComplete(() =>
+                {
+                    // Disable the button so it doesn't visually block the close button
+                    rect.gameObject.SetActive(false);
+                });
         }
 
-        // Slide panel container out
+        // Slide panel container out after buttons have collapsed
         if (menuPanelContainerRect != null)
         {
             Vector2 endPos = panelOriginalPosition;
-            endPos.x += panelSlideDistance; // Slide to right outside canvas
+            endPos.x += panelSlideDistance;
 
             float totalButtonAnimTime = menuButtonRects.Length * buttonDropDelay + buttonDropDuration * 0.7f;
 
@@ -409,7 +421,6 @@ public class UIController : MonoBehaviour
                 .SetDelay(totalButtonAnimTime)
                 .OnComplete(() =>
                 {
-                    // Disable menu panel after animation completes
                     if (MenuPanel_Object) MenuPanel_Object.SetActive(false);
                 });
         }

@@ -95,7 +95,7 @@ public class LeaderboardController : MonoBehaviour
             for (int i = 0; i < 3; i++)
             {
                 if (i < richestData.Count)
-                    UpdatePlayerBlock(richestBlocks, currentRichest, i, richestData[i], -slideDistance);
+                    UpdatePlayerBlock(richestBlocks, currentRichest, i, richestData[i], -slideDistance, isWinners: false);
                 else
                     ClearPlayerBlock(richestBlocks, currentRichest, i);
             }
@@ -110,7 +110,7 @@ public class LeaderboardController : MonoBehaviour
             for (int i = 0; i < 3; i++)
             {
                 if (i < winnersData.Count)
-                    UpdatePlayerBlock(winnersBlocks, currentWinners, i, winnersData[i], slideDistance);
+                    UpdatePlayerBlock(winnersBlocks, currentWinners, i, winnersData[i], slideDistance, isWinners: true);
                 else
                     ClearPlayerBlock(winnersBlocks, currentWinners, i);
             }
@@ -140,7 +140,8 @@ public class LeaderboardController : MonoBehaviour
         Dictionary<int, LeaderboardEntry> currentData,
         int index,
         LeaderboardEntry newEntry,
-        float slideDirection)
+        float slideDirection,
+        bool isWinners = false)
     {
         if (index >= blocks.Count || blocks[index] == null) return;
 
@@ -148,10 +149,13 @@ public class LeaderboardController : MonoBehaviour
         bool isFirstTime = !currentData.ContainsKey(index);
         bool playerChanged = !isFirstTime && currentData[index].username != newEntry.username;
 
+        // Choose the correct display value: totalWins for winners, balance for richest
+        double displayValue = isWinners ? newEntry.totalWins : newEntry.balance;
+
         if (isFirstTime)
         {
             currentData[index] = newEntry;
-            block.SetPlayerData(newEntry.username, newEntry.balance, GetRandomAvatar());
+            block.SetPlayerData(newEntry.username, displayValue, GetRandomAvatar());
 
             float randomOffset = Random.Range(minRandomOffset, maxRandomOffset);
             AddBlockCoroutine(block, StartCoroutine(DelayedAlternateStart(block, randomOffset)));
@@ -163,14 +167,15 @@ public class LeaderboardController : MonoBehaviour
             // FIX: Stop only THIS block's coroutines, not everyone's.
             StopBlockAnimation(block);
 
-            AddBlockCoroutine(block, StartCoroutine(SlideOutAndUpdate(block, newEntry, slideDirection)));
+            AddBlockCoroutine(block, StartCoroutine(SlideOutAndUpdate(block, newEntry, slideDirection, displayValue)));
         }
         else
         {
-            if (currentData[index].balance != newEntry.balance)
+            double previousValue = isWinners ? currentData[index].totalWins : currentData[index].balance;
+            if (previousValue != displayValue)
             {
                 currentData[index] = newEntry;
-                block.UpdateBalance(newEntry.balance);
+                block.UpdateBalance(displayValue);
             }
         }
     }
@@ -202,7 +207,8 @@ public class LeaderboardController : MonoBehaviour
     private IEnumerator SlideOutAndUpdate(
         LeaderboardPlayerBlock block,
         LeaderboardEntry entry,
-        float slideDirection)
+        float slideDirection,
+        double displayValue)
     {
         RectTransform blockRect = block.GetComponent<RectTransform>();
 
@@ -222,7 +228,7 @@ public class LeaderboardController : MonoBehaviour
             ResetTextState(block.NameText);
             ResetTextState(block.BalanceText);
 
-            block.SetPlayerData(entry.username, entry.balance, GetRandomAvatar());
+            block.SetPlayerData(entry.username, displayValue, GetRandomAvatar());
 
             yield return blockRect.DOAnchorPos(originalPos, slideDuration)
                 .SetEase(Ease.OutBack)
@@ -232,7 +238,7 @@ public class LeaderboardController : MonoBehaviour
         {
             ResetTextState(block.NameText);
             ResetTextState(block.BalanceText);
-            block.SetPlayerData(entry.username, entry.balance, GetRandomAvatar());
+            block.SetPlayerData(entry.username, displayValue, GetRandomAvatar());
         }
 
         float randomOffset = Random.Range(minRandomOffset, maxRandomOffset);

@@ -75,6 +75,7 @@ public class LeaderboardEntry
 {
     public string username;
     public double balance;
+    public double totalWins;   // Used by winners leaderboard (richest uses balance)
     public int rank;
 }
 
@@ -513,7 +514,7 @@ public class ResultData
     public int sum;
     public string matchSide;
 }
-    #endregion
+#endregion
 
 #region Request/Response Models
 [Serializable]

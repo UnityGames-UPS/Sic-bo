@@ -355,13 +355,10 @@ public class OpponentChipManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Returns true if <paramref name="username"/> appears in the top-3 entries of the given list,
-    /// but ONLY when the leaderboard is considered full (both lists have at least 3 entries).
-    /// If the room has fewer than 3 players no badges are shown.
+    /// Returns true if <paramref name="username"/> appears in the top-3 entries of the given list.
     /// </summary>
-    private bool IsUsernameInList(string username, List<LeaderboardEntry> entries)
+    private static bool IsUsernameInList(string username, List<LeaderboardEntry> entries)
     {
-        if (!IsLeaderboardFull()) return false;
         if (string.IsNullOrEmpty(username) || entries == null) return false;
 
         int checkCount = Mathf.Min(3, entries.Count);
@@ -371,16 +368,6 @@ public class OpponentChipManager : MonoBehaviour
                 return true;
         }
         return false;
-    }
-
-    /// <summary>
-    /// Returns true only when BOTH richest and winners have at least 3 entries.
-    /// </summary>
-    private bool IsLeaderboardFull()
-    {
-        return currentLeaderboards != null
-            && currentLeaderboards.richest != null && currentLeaderboards.richest.Count >= 3
-            && currentLeaderboards.winners != null && currentLeaderboards.winners.Count >= 3;
     }
     #endregion
 }
