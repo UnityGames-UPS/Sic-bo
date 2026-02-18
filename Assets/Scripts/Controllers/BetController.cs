@@ -122,6 +122,11 @@ public class BetController : MonoBehaviour
     private Dictionary<string, Dictionary<string, double>> opponentBets =
         new Dictionary<string, Dictionary<string, double>>(); // username -> betOption -> amount
     private string currentPlayerUsername = ""; // Set from GameManager
+
+    // Leaderboard state for badge decoration on player bet chips
+    private Leaderboards currentLeaderboards = null;
+    private bool isPlayerRichest = false;
+    private bool isPlayerWinner = false;
     #endregion
     #region Unity Lifecycle
     private void Start()
@@ -296,7 +301,7 @@ public class BetController : MonoBehaviour
             ChipAreaPanel.DOAnchorPosY(-200f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
         }
     }
- 
+
     #endregion
 
     #region Setup
@@ -677,6 +682,10 @@ public class BetController : MonoBehaviour
         // will decompose e.g. 13 into 10+3 chips automatically.
         AddBetToAreaFromServer(data.betOption, data.amount);
 
+        // Stamp newly placed chips with the current player's leaderboard badge (if any)
+        BaseBetArea confirmedArea = GetBetAreaByOption(data.betOption);
+        ApplyBadgesToContainer(confirmedArea?.PlayerBetContainer);
+
         // Record actual server-confirmed amount for undo/cancel/double tracking
         if (!areaBets.ContainsKey(data.betOption)) areaBets[data.betOption] = 0;
         areaBets[data.betOption] += data.amount;
@@ -707,6 +716,9 @@ public class BetController : MonoBehaviour
         // UPGRADED: use server-driven chip spawning path
         AddBetToAreaFromServer(data.betOption, data.amount);
 
+        // Stamp newly placed chips with leaderboard badge
+        ApplyBadgesToContainer(GetBetAreaByOption(data.betOption)?.PlayerBetContainer);
+
         if (!areaBets.ContainsKey(data.betOption)) areaBets[data.betOption] = 0;
         areaBets[data.betOption] += data.amount;
         currentTotalBet += data.amount;
@@ -728,6 +740,9 @@ public class BetController : MonoBehaviour
         int chipIndex = GetChipIndexForAmount(data.amount);
 
         AddBetToAreaFromServer(data.betOption, data.amount);
+
+        // Stamp newly placed chips with leaderboard badge
+        ApplyBadgesToContainer(GetBetAreaByOption(data.betOption)?.PlayerBetContainer);
 
         if (!areaBets.ContainsKey(data.betOption)) areaBets[data.betOption] = 0;
         areaBets[data.betOption] += data.amount;
@@ -825,7 +840,7 @@ public class BetController : MonoBehaviour
             // Opponent placed a bet - spawn and animate chip
             Debug.Log($"[OPPONENT] {data.username} bet {data.amount} on {data.betOption}");
 
-            opponentChipManager.AddOpponentBet(data.betOption, data.amount);
+            opponentChipManager.AddOpponentBet(data.betOption, data.amount, data.username);
 
             // Track opponent bet
             if (!opponentBets[data.username].ContainsKey(data.betOption))
@@ -1385,7 +1400,7 @@ public class BetController : MonoBehaviour
 
     private void OnChipSelected(int index)
     {
-       
+
         SelectChipAt(index);
         CloseChipSelector();
     }
@@ -1647,6 +1662,106 @@ public class BetController : MonoBehaviour
     internal void SetCurrentPlayerUsername(string username)
     {
         currentPlayerUsername = username;
+        // Refresh badge status whenever the player identity changes
+        RefreshPlayerLeaderboardStatus();
+    }
+
+    /// <summary>
+    /// Call this whenever leaderboard data arrives (init, round start, cashout).
+    /// Updates the cached badge status and refreshes all existing player bet chips immediately.
+    /// </summary>
+    internal void SetLeaderboardData(Leaderboards leaderboards)
+    {
+        currentLeaderboards = leaderboards;
+
+        // Also forward to the opponent chip manager
+        if (opponentChipManager != null)
+            opponentChipManager.SetLeaderboardData(leaderboards);
+
+        RefreshPlayerLeaderboardStatus();
+        // Re-stamp all chips already in bet containers (handles mid-round leaderboard updates)
+        RefreshAllPlayerChipBadges();
+    }
+
+    /// <summary>
+    /// Returns true only when BOTH the richest list AND the winners list
+    /// each contain at least 3 entries. If the room has fewer than 3 players
+    /// the leaderboard is considered incomplete and no badges should be shown.
+    /// </summary>
+    private bool IsLeaderboardFull()
+    {
+        return currentLeaderboards != null
+            && currentLeaderboards.richest != null && currentLeaderboards.richest.Count >= 3
+            && currentLeaderboards.winners != null && currentLeaderboards.winners.Count >= 3;
+    }
+
+    /// <summary>
+    /// Recomputes isPlayerRichest / isPlayerWinner from currentLeaderboards + currentPlayerUsername.
+    /// Both flags are forced to false when the leaderboard is not yet full.
+    /// </summary>
+    private void RefreshPlayerLeaderboardStatus()
+    {
+        if (!IsLeaderboardFull())
+        {
+            isPlayerRichest = false;
+            isPlayerWinner = false;
+            return;
+        }
+
+        isPlayerRichest = IsUsernameInLeaderboardList(currentPlayerUsername, currentLeaderboards.richest);
+        isPlayerWinner = IsUsernameInLeaderboardList(currentPlayerUsername, currentLeaderboards.winners);
+    }
+
+    /// <summary>
+    /// Stamps every Chip found inside every PlayerBetContainer with the current player badge status.
+    /// Safe to call at any time — chips with chipUsedForBetting=false ignore the call.
+    /// </summary>
+    private void RefreshAllPlayerChipBadges()
+    {
+        ApplyBadgesToContainer(SmallArea?.PlayerBetContainer);
+        ApplyBadgesToContainer(BigArea?.PlayerBetContainer);
+        ApplyBadgesToContainer(OddArea?.PlayerBetContainer);
+        ApplyBadgesToContainer(EvenArea?.PlayerBetContainer);
+
+        foreach (var area in TripleDiceAreas) ApplyBadgesToContainer(area?.PlayerBetContainer);
+        foreach (var area in SingleDiceAreas) ApplyBadgesToContainer(area?.PlayerBetContainer);
+        foreach (var area in SumAreas) ApplyBadgesToContainer(area?.PlayerBetContainer);
+    }
+
+    /// <summary>
+    /// Applies the current player badge state to every Chip inside the given container.
+    /// Clears badges if the player has no leaderboard status.
+    /// </summary>
+    private void ApplyBadgesToContainer(Transform container)
+    {
+        if (container == null) return;
+
+        Chip[] chips = container.GetComponentsInChildren<Chip>(true);
+        foreach (var chip in chips)
+        {
+            if (chip == null) continue;
+
+            if (isPlayerRichest || isPlayerWinner)
+                chip.SetLeaderboardBadge(isPlayerRichest, isPlayerWinner);
+            else
+                chip.ClearLeaderboardBadge();
+        }
+    }
+
+    /// <summary>
+    /// Returns true if username appears in the top-3 of the given list.
+    /// </summary>
+    private static bool IsUsernameInLeaderboardList(string username, List<LeaderboardEntry> entries)
+    {
+        if (string.IsNullOrEmpty(username) || entries == null) return false;
+
+        int checkCount = Mathf.Min(3, entries.Count);
+        for (int i = 0; i < checkCount; i++)
+        {
+            if (entries[i] != null && entries[i].username == username)
+                return true;
+        }
+        return false;
     }
     private void ClearArea(SimpleBetArea area) { if (area != null) area.ClearBets(); }
     private void ClearArea(TripleSameDiceArea area) { if (area != null) area.ClearBets(); }

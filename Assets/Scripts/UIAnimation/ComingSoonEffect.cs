@@ -6,12 +6,6 @@ using TMPro;
 using DG.Tweening;
 using UnityEngine.TextCore.Text;
 
-/// <summary>
-/// Attach to any Button GameObject.
-/// When clicked, spawns a "Coming Soon" label that floats up and fades like smoke.
-/// Spawns multiple staggered copies for a richer smoke effect.
-/// No extra dependencies required — just assign the Canvas in the Inspector.
-/// </summary>
 public class ComingSoonEffect : MonoBehaviour
 {
     #region Serialized Fields

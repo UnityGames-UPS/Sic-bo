@@ -1343,6 +1343,7 @@ GameObject:
   - component: {fileID: 12195441}
   - component: {fileID: 12195440}
   - component: {fileID: 12195439}
+  - component: {fileID: 12195442}
   m_Layer: 0
   m_Name: ShopBtn
   m_TagString: Untagged
@@ -1452,6 +1453,35 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 12195437}
   m_CullTransparentMesh: 1
+--- !u!114 &12195442
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 12195437}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c1ed82116e91a4478d54972b7a7eba8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetCanvas: {fileID: 674617748}
+  displayText: Coming Soon
+  fontSize: 28
+  textColor: {r: 1, g: 1, b: 1, a: 1}
+  customFont: {fileID: 11400000, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
+  puffCount: 1
+  puffStagger: 0.07
+  riseHeight: 80
+  riseSpread: 10
+  riseDuration: 1
+  fadeDelay: 0.35
+  fadeDuration: 0.55
+  scaleStart: 0.7
+  scaleEnd: 0.85
+  riseEase: 9
+  spawnOffset: {x: 0, y: 30}
+  blockDuringAnimation: 0
 --- !u!1 &31951337
 GameObject:
   m_ObjectHideFlags: 0
@@ -5015,6 +5045,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 95477668}
   chipText: {fileID: 716459345}
+  chipUsedForBetting: 0
+  richestBadgeObject: {fileID: 0}
+  winnersBadgeObject: {fileID: 0}
 --- !u!1 &96190417
 GameObject:
   m_ObjectHideFlags: 0
@@ -23403,7 +23436,7 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: 1baaa782181a430880010beae6ca9c68
+  testToken: a3b71f563df340e991b20f1b2e294fce
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
 --- !u!4 &410521237
@@ -27192,6 +27225,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 491663329}
   chipText: {fileID: 2123216024}
+  chipUsedForBetting: 0
+  richestBadgeObject: {fileID: 0}
+  winnersBadgeObject: {fileID: 0}
 --- !u!114 &491663328
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -32766,6 +32802,7 @@ GameObject:
   - component: {fileID: 614783880}
   - component: {fileID: 614783879}
   - component: {fileID: 614783878}
+  - component: {fileID: 614783881}
   m_Layer: 0
   m_Name: RankingBtn
   m_TagString: Untagged
@@ -32875,6 +32912,35 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 614783876}
   m_CullTransparentMesh: 1
+--- !u!114 &614783881
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 614783876}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c1ed82116e91a4478d54972b7a7eba8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetCanvas: {fileID: 674617748}
+  displayText: Coming Soon
+  fontSize: 28
+  textColor: {r: 1, g: 1, b: 1, a: 1}
+  customFont: {fileID: 11400000, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
+  puffCount: 1
+  puffStagger: 0.07
+  riseHeight: 80
+  riseSpread: 10
+  riseDuration: 1
+  fadeDelay: 0.35
+  fadeDuration: 0.55
+  scaleStart: 0.7
+  scaleEnd: 0.85
+  riseEase: 9
+  spawnOffset: {x: 0, y: 30}
+  blockDuringAnimation: 0
 --- !u!1 &615447351
 GameObject:
   m_ObjectHideFlags: 0
@@ -62465,6 +62531,7 @@ GameObject:
   - component: {fileID: 1142387337}
   - component: {fileID: 1142387336}
   - component: {fileID: 1142387335}
+  - component: {fileID: 1142387338}
   m_Layer: 0
   m_Name: NewsBtn
   m_TagString: Untagged
@@ -62574,6 +62641,35 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1142387333}
   m_CullTransparentMesh: 1
+--- !u!114 &1142387338
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1142387333}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c1ed82116e91a4478d54972b7a7eba8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetCanvas: {fileID: 674617748}
+  displayText: Coming Soon
+  fontSize: 28
+  textColor: {r: 1, g: 1, b: 1, a: 1}
+  customFont: {fileID: 11400000, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
+  puffCount: 1
+  puffStagger: 0.07
+  riseHeight: 80
+  riseSpread: 10
+  riseDuration: 1
+  fadeDelay: 0.35
+  fadeDuration: 0.55
+  scaleStart: 0.7
+  scaleEnd: 0.85
+  riseEase: 9
+  spawnOffset: {x: 0, y: 30}
+  blockDuringAnimation: 0
 --- !u!1 &1143246718
 GameObject:
   m_ObjectHideFlags: 0
@@ -66650,6 +66746,7 @@ GameObject:
   - component: {fileID: 1192756089}
   - component: {fileID: 1192756088}
   - component: {fileID: 1192756087}
+  - component: {fileID: 1192756090}
   m_Layer: 0
   m_Name: ProfileBtn
   m_TagString: Untagged
@@ -66759,6 +66856,35 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1192756085}
   m_CullTransparentMesh: 1
+--- !u!114 &1192756090
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1192756085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c1ed82116e91a4478d54972b7a7eba8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetCanvas: {fileID: 674617748}
+  displayText: Coming Soon
+  fontSize: 28
+  textColor: {r: 1, g: 1, b: 1, a: 1}
+  customFont: {fileID: 11400000, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
+  puffCount: 1
+  puffStagger: 0.07
+  riseHeight: 80
+  riseSpread: 10
+  riseDuration: 1
+  fadeDelay: 0.35
+  fadeDuration: 0.55
+  scaleStart: 0.7
+  scaleEnd: 0.85
+  riseEase: 9
+  spawnOffset: {x: 0, y: 30}
+  blockDuringAnimation: 0
 --- !u!1 &1193398568
 GameObject:
   m_ObjectHideFlags: 0
@@ -85484,6 +85610,7 @@ GameObject:
   - component: {fileID: 1551261516}
   - component: {fileID: 1551261515}
   - component: {fileID: 1551261514}
+  - component: {fileID: 1551261517}
   m_Layer: 0
   m_Name: FriendsBtn
   m_TagString: Untagged
@@ -85593,6 +85720,35 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1551261512}
   m_CullTransparentMesh: 1
+--- !u!114 &1551261517
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1551261512}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c1ed82116e91a4478d54972b7a7eba8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetCanvas: {fileID: 674617748}
+  displayText: Coming Soon
+  fontSize: 28
+  textColor: {r: 1, g: 1, b: 1, a: 1}
+  customFont: {fileID: 11400000, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
+  puffCount: 1
+  puffStagger: 0.07
+  riseHeight: 80
+  riseSpread: 10
+  riseDuration: 1
+  fadeDelay: 0.35
+  fadeDuration: 0.55
+  scaleStart: 0.7
+  scaleEnd: 0.85
+  riseEase: 9
+  spawnOffset: {x: 0, y: 30}
+  blockDuringAnimation: 0
 --- !u!1 &1555375805
 GameObject:
   m_ObjectHideFlags: 0
@@ -94095,6 +94251,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 1727007356}
   chipText: {fileID: 1690209068}
+  chipUsedForBetting: 0
+  richestBadgeObject: {fileID: 0}
+  winnersBadgeObject: {fileID: 0}
 --- !u!1 &1732600266
 GameObject:
   m_ObjectHideFlags: 0
@@ -107820,6 +107979,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 1980096436}
   chipText: {fileID: 1976261504}
+  chipUsedForBetting: 0
+  richestBadgeObject: {fileID: 0}
+  winnersBadgeObject: {fileID: 0}
 --- !u!1 &1980352778
 GameObject:
   m_ObjectHideFlags: 0
@@ -113413,6 +113575,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 2099097514}
   chipText: {fileID: 797732118}
+  chipUsedForBetting: 0
+  richestBadgeObject: {fileID: 0}
+  winnersBadgeObject: {fileID: 0}
 --- !u!1 &2100954596
 GameObject:
   m_ObjectHideFlags: 0
@@ -116848,6 +117013,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   chipImage: {fileID: 2145760457}
   chipText: {fileID: 921935017}
+  chipUsedForBetting: 0
+  richestBadgeObject: {fileID: 0}
+  winnersBadgeObject: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

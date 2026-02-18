@@ -46,6 +46,7 @@ public class GameManager : MonoBehaviour
         CurrentWagers = socketManager.InitialData.wagers;
 
         betController.SetCurrentPlayerUsername(socketManager.PlayerData.username);
+        betController.SetLeaderboardData(socketManager.InitialData.leaderboards);
         uiController.SetupInitialData(
             socketManager.PlayerData.username,
             CurrentBalance,
@@ -90,6 +91,7 @@ public class GameManager : MonoBehaviour
         }
 
         uiController.UpdateLeaderboards(payload.leaderboards);
+        betController.SetLeaderboardData(payload.leaderboards);
 
         // FIX Issue 1 & 2: Handle mid-round join by reading roundState.phase
         if (payload.roundState != null && !string.IsNullOrEmpty(payload.roundState.roundId))
@@ -346,6 +348,7 @@ public class GameManager : MonoBehaviour
         if (data.leaderboards != null)
         {
             uiController.UpdateLeaderboards(data.leaderboards);
+            betController.SetLeaderboardData(data.leaderboards);
         }
 
         if (data.payouts != null)
@@ -372,7 +375,7 @@ public class GameManager : MonoBehaviour
         // Trigger opponent chip cashout animation (bet area → dealers)
         opponentChipManager?.PlayCashoutAnimation();
 
-       betController.ClearAllBets(false);
+        betController.ClearAllBets(false);
     }
 
     internal void OnRoundEnd(RoundEndPayload data)
@@ -796,4 +799,4 @@ public class GameManager : MonoBehaviour
     }
 
     #endregion
-}
+}   

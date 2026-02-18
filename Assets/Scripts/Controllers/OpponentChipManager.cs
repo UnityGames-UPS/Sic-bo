@@ -37,6 +37,9 @@ public class OpponentChipManager : MonoBehaviour
     // FIX: Track whether a cashout animation is currently running so we don't double-clear.
     private bool isCashoutRunning = false;
     private Coroutine cashoutCoroutine = null;
+
+    // Leaderboard data for badge decoration on opponent chips
+    private Leaderboards currentLeaderboards = null;
     #endregion
 
     #region Unity Lifecycle
@@ -88,10 +91,22 @@ public class OpponentChipManager : MonoBehaviour
 
         Debug.Log($"[OpponentChipManager] Initialized {opponentContainers.Count} containers");
     }
+
+    /// <summary>
+    /// Call this whenever leaderboard data is updated so opponent chips show the correct badge.
+    /// </summary>
+    public void SetLeaderboardData(Leaderboards leaderboards)
+    {
+        currentLeaderboards = leaderboards;
+    }
     #endregion
 
     #region Public API - Betting Phase
-    public void AddOpponentBet(string betOption, double amount)
+    /// <summary>
+    /// Spawns and animates a chip for an opponent's bet.
+    /// Pass the opponent's username so the correct leaderboard badge can be shown.
+    /// </summary>
+    public void AddOpponentBet(string betOption, double amount, string username = "")
     {
         if (!opponentContainers.ContainsKey(betOption))
         {
@@ -108,7 +123,7 @@ public class OpponentChipManager : MonoBehaviour
         if (AudioManager.Instance != null)
             AudioManager.Instance.PlayChipAdd();
 
-        StartCoroutine(CR_SpawnAndAnimateChip(betOption, amount));
+        StartCoroutine(CR_SpawnAndAnimateChip(betOption, amount, username));
     }
 
     /// <summary>
@@ -181,7 +196,7 @@ public class OpponentChipManager : MonoBehaviour
     #endregion
 
     #region Private Methods - Chip Animation
-    private IEnumerator CR_SpawnAndAnimateChip(string betOption, double amount)
+    private IEnumerator CR_SpawnAndAnimateChip(string betOption, double amount, string username = "")
     {
         RectTransform container = opponentContainers[betOption];
 
@@ -205,6 +220,11 @@ public class OpponentChipManager : MonoBehaviour
         chip.SetSprite(grayChipSprite);
         chip.SetAmount(GameUtilities.FormatCurrency(amount));
         chip.SetActive(true);
+
+        // Apply leaderboard badge if the opponent is in the top-3
+        bool isRichest = IsUsernameInList(username, currentLeaderboards?.richest);
+        bool isWinner = IsUsernameInList(username, currentLeaderboards?.winners);
+        chip.SetLeaderboardBadge(isRichest, isWinner);
 
         chipRT.localPosition = new Vector3(
             Random.Range(-dealerScatterX, dealerScatterX),
@@ -236,7 +256,7 @@ public class OpponentChipManager : MonoBehaviour
         activeOpponentChips.Add(chipRT);
         chipsByBetArea[betOption].Add(chipRT);
 
-        Debug.Log($"[OpponentChipManager] Chip placed for {betOption}. Active chips: {activeOpponentChips.Count}");
+        Debug.Log($"[OpponentChipManager] Chip placed for {betOption} (username={username}). Active chips: {activeOpponentChips.Count}");
     }
 
     private IEnumerator CR_Cashout()
@@ -332,6 +352,35 @@ public class OpponentChipManager : MonoBehaviour
             out Vector2 localPoint);
 
         return localPoint;
+    }
+
+    /// <summary>
+    /// Returns true if <paramref name="username"/> appears in the top-3 entries of the given list,
+    /// but ONLY when the leaderboard is considered full (both lists have at least 3 entries).
+    /// If the room has fewer than 3 players no badges are shown.
+    /// </summary>
+    private bool IsUsernameInList(string username, List<LeaderboardEntry> entries)
+    {
+        if (!IsLeaderboardFull()) return false;
+        if (string.IsNullOrEmpty(username) || entries == null) return false;
+
+        int checkCount = Mathf.Min(3, entries.Count);
+        for (int i = 0; i < checkCount; i++)
+        {
+            if (entries[i] != null && entries[i].username == username)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Returns true only when BOTH richest and winners have at least 3 entries.
+    /// </summary>
+    private bool IsLeaderboardFull()
+    {
+        return currentLeaderboards != null
+            && currentLeaderboards.richest != null && currentLeaderboards.richest.Count >= 3
+            && currentLeaderboards.winners != null && currentLeaderboards.winners.Count >= 3;
     }
     #endregion
 }
