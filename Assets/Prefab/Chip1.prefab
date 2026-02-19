@@ -362,7 +362,6 @@ GameObject:
   - component: {fileID: 175488758738908956}
   - component: {fileID: 7129576637422272748}
   - component: {fileID: 134235307314904445}
-  - component: {fileID: 7532830555475832167}
   m_Layer: 5
   m_Name: Chip1
   m_TagString: Untagged
@@ -427,23 +426,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &7532830555475832167
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6814881221705434442}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d31caa18e3f2ee24ca5da483c7604da6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  chipImage: {fileID: 134235307314904445}
-  chipText: {fileID: 0}
-  chipUsedForBetting: 0
-  richestBadgeObject: {fileID: 0}
-  winnersBadgeObject: {fileID: 0}
 --- !u!1 &9177566444956272802
 GameObject:
   m_ObjectHideFlags: 0

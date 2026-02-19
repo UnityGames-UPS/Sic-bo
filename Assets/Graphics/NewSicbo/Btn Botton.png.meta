@@ -1,7 +1,52 @@
 fileFormatVersion: 2
-guid: e4df09157579147178702185be2e3fb2
+guid: 5a1f5bcb8bb59df419a36b5523a7e7c6
 TextureImporter:
-  internalIDToNameTable: []
+  internalIDToNameTable:
+  - first:
+      213: -96020674479476480
+    second: Btn Botton_0
+  - first:
+      213: 8234972170967895645
+    second: Btn Botton_1
+  - first:
+      213: -5748044219589735099
+    second: Btn Botton_2
+  - first:
+      213: -8689667427121970966
+    second: Btn Botton_3
+  - first:
+      213: -7598400621710027230
+    second: Btn Botton_4
+  - first:
+      213: 860910953965974937
+    second: Btn Botton_5
+  - first:
+      213: 4501847096651062856
+    second: Btn Botton_6
+  - first:
+      213: 8358046995180054838
+    second: Btn Botton_7
+  - first:
+      213: 879535436372958546
+    second: Btn Botton_8
+  - first:
+      213: 5410797810445631019
+    second: Btn Botton_9
+  - first:
+      213: -5576413133923071470
+    second: Btn Botton_10
+  - first:
+      213: 2243762214252771480
+    second: Btn Botton_11
+  - first:
+      213: 6240930912230990207
+    second: Btn Botton_12
+  - first:
+      213: -488982214589487904
+    second: Btn Botton_13
+  - first:
+      213: -4851535882768079183
+    second: Btn Botton_14
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -94,7 +139,7 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
-    buildTarget: WebGL
+    buildTarget: Android
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
@@ -107,7 +152,7 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
-    buildTarget: Android
+    buildTarget: WebGL
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
@@ -136,177 +181,265 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: SB_Homepage_Level_Cards_0
+      name: Btn Botton_0
       rect:
         serializedVersion: 2
-        x: 65
-        y: 741
-        width: 447
-        height: 564
+        x: 49
+        y: 304
+        width: 159
+        height: 160
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 94a866541ef724323a617c732aca191b
-      internalID: 1110721817
+      spriteID: 001be8e84bddaaef0800000000000000
+      internalID: -96020674479476480
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: SB_Homepage_Level_Cards_1
+      name: Btn Botton_1
       rect:
         serializedVersion: 2
-        x: 644
-        y: 741
-        width: 447
-        height: 564
+        x: 300
+        y: 301
+        width: 168
+        height: 166
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 105800a4dde2745c59c69f5465c5202b
-      internalID: -419099113
+      spriteID: d5ec4c90f8f784270800000000000000
+      internalID: 8234972170967895645
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: SB_Homepage_Level_Cards_3
+      name: Btn Botton_3
       rect:
         serializedVersion: 2
-        x: 1800
-        y: 741
-        width: 447
-        height: 564
+        x: 815
+        y: 305
+        width: 162
+        height: 157
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 001b293ec0cd44ff097ea8458a98ed3d
-      internalID: -898038988
+      spriteID: ae0cc1ec389186780800000000000000
+      internalID: -8689667427121970966
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: SB_Homepage_Level_Cards_4
+      name: Btn Botton_4
       rect:
         serializedVersion: 2
-        x: 65
-        y: 61
-        width: 447
-        height: 564
+        x: 1052
+        y: 297
+        width: 200
+        height: 170
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 54d411fabe241424386f5f3240862818
-      internalID: 2109871209
+      spriteID: 226ddd184ee0d8690800000000000000
+      internalID: -7598400621710027230
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: SB_Homepage_Level_Cards_5
+      name: Btn Botton_6
       rect:
         serializedVersion: 2
-        x: 644
-        y: 61
-        width: 447
-        height: 564
+        x: 1327
+        y: 289
+        width: 163
+        height: 189
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: b1775d83a97ed41f8baeca008ebdaf70
-      internalID: 96902413
+      spriteID: 84e92052516c97e30800000000000000
+      internalID: 4501847096651062856
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: SB_Homepage_Level_Cards_6
+      name: Btn Botton_7
       rect:
         serializedVersion: 2
-        x: 1222
-        y: 61
-        width: 447
-        height: 564
+        x: 541
+        y: 307
+        width: 199
+        height: 144
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 51ccb7f774c1044efb5169df5c0166c4
-      internalID: -1839092568
+      spriteID: 6396ab3957fbdf370800000000000000
+      internalID: 8358046995180054838
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: SB_Homepage_Level_Cards_7
+      name: Btn Botton_8
       rect:
         serializedVersion: 2
-        x: 1800
-        y: 61
-        width: 447
-        height: 564
+        x: 49
+        y: 48
+        width: 159
+        height: 160
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 7c969164d95f74165b91be619c7e28d9
-      internalID: 889849590
+      spriteID: 25dd064c1dcb43c00800000000000000
+      internalID: 879535436372958546
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: SB_Homepage_Level_Cards_2
+      name: Btn Botton_9
       rect:
         serializedVersion: 2
-        x: 1222
-        y: 741
-        width: 447
-        height: 564
+        x: 300
+        y: 45
+        width: 168
+        height: 166
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 04e87797c75a88b4884486ca864e8c97
-      internalID: -874234984
+      spriteID: b2eb213e0f3071b40800000000000000
+      internalID: 5410797810445631019
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Btn Botton_10
+      rect:
+        serializedVersion: 2
+        x: 815
+        y: 49
+        width: 162
+        height: 157
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 21a41bfbcc99c92b0800000000000000
+      internalID: -5576413133923071470
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Btn Botton_11
+      rect:
+        serializedVersion: 2
+        x: 1052
+        y: 41
+        width: 200
+        height: 170
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 898fafc88d1732f10800000000000000
+      internalID: 2243762214252771480
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Btn Botton_13
+      rect:
+        serializedVersion: 2
+        x: 1327
+        y: 33
+        width: 163
+        height: 190
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e4e8ed3449c639f0800000000000000
+      internalID: -488982214589487904
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Btn Botton_14
+      rect:
+        serializedVersion: 2
+        x: 545
+        y: 60
+        width: 191
+        height: 136
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1b62c84b1d1ebacb0800000000000000
+      internalID: -4851535882768079183
       vertices: []
       indices: 
       edges: []
@@ -315,7 +448,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 297fcf692a1e7cd45a7d363be411b793
     internalID: 0
     vertices: []
     indices: 
@@ -325,20 +458,21 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      SB_Homepage_Level_Cards_0: 1110721817
-      SB_Homepage_Level_Cards_1: -419099113
-      SB_Homepage_Level_Cards_10: -2128942774
-      SB_Homepage_Level_Cards_11: -1463219405
-      SB_Homepage_Level_Cards_12: 69205731
-      SB_Homepage_Level_Cards_13: -275954911
-      SB_Homepage_Level_Cards_2: -874234984
-      SB_Homepage_Level_Cards_3: -898038988
-      SB_Homepage_Level_Cards_4: 2109871209
-      SB_Homepage_Level_Cards_5: 96902413
-      SB_Homepage_Level_Cards_6: -1839092568
-      SB_Homepage_Level_Cards_7: 889849590
-      SB_Homepage_Level_Cards_8: 1892966367
-      SB_Homepage_Level_Cards_9: 1555619300
+      Btn Botton_0: -96020674479476480
+      Btn Botton_1: 8234972170967895645
+      Btn Botton_10: -5576413133923071470
+      Btn Botton_11: 2243762214252771480
+      Btn Botton_12: 6240930912230990207
+      Btn Botton_13: -488982214589487904
+      Btn Botton_14: -4851535882768079183
+      Btn Botton_2: -5748044219589735099
+      Btn Botton_3: -8689667427121970966
+      Btn Botton_4: -7598400621710027230
+      Btn Botton_5: 860910953965974937
+      Btn Botton_6: 4501847096651062856
+      Btn Botton_7: 8358046995180054838
+      Btn Botton_8: 879535436372958546
+      Btn Botton_9: 5410797810445631019
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
