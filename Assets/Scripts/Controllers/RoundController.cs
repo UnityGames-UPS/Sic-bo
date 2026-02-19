@@ -3,10 +3,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
 
-/// <summary>
-/// Manages round flow and dice display with SERVER-SYNCED dice box animation - AUDIO INTEGRATED
-/// Updated to handle mid-round joins properly
-/// </summary>
 public class RoundController : MonoBehaviour
 {
     #region Serialized Fields
@@ -23,7 +19,7 @@ public class RoundController : MonoBehaviour
     [SerializeField] private TMPro.TMP_Text Sum_Text;
     [SerializeField] private GameObject ResultPanel;
 
-    [Header("Result Indicators - Images")]
+    [Header("Result Indicators")]
     [SerializeField] private GameObject SmallImage;
     [SerializeField] private GameObject BigImage;
     [SerializeField] private GameObject OddImage;
@@ -36,12 +32,11 @@ public class RoundController : MonoBehaviour
     [Header("References")]
     [SerializeField] private UIController uiController;
     [SerializeField] private BetController betController;
-    [SerializeField] private GameManager gameManager;
 
     [Header("Dice Box Animation")]
     [SerializeField] private DiceBoxAnimationController diceBoxAnimController;
 
-    [Header("Audio Settings")]
+    [Header("Audio")]
     [SerializeField] private float diceResultSoundDelay = 1.0f;
     #endregion
 
@@ -51,351 +46,192 @@ public class RoundController : MonoBehaviour
     private Coroutine finalCountdownCoroutine;
     private DiceResultData currentDiceResult;
     private bool diceResultReceived = false;
-
-    // Server time tracking
-    private long currentRoundStartTime = 0;
     private long currentBettingEndTime = 0;
     #endregion
 
     #region Unity Lifecycle
     private void Awake()
     {
-        // Register callbacks with animation controller
         if (diceBoxAnimController != null)
         {
             diceBoxAnimController.SetDiceShowCallback(OnAnimationShowDice);
             diceBoxAnimController.SetDiceHideCallback(OnAnimationHideDice);
             diceBoxAnimController.SetAnimationCycleCompleteCallback(OnAnimationCycleComplete);
         }
-        else
-        {
-            Debug.LogError("[RoundController] DiceBoxAnimationController is not assigned!");
-        }
 
-        // Initially hide everything
         if (DiceContainer) DiceContainer.SetActive(false);
         if (ResultPanel) ResultPanel.SetActive(false);
     }
     #endregion
 
-    #region Public API - Round Management
-    /// <summary>
-    /// Called when a new round starts - NOW WITH SERVER SYNC
-    /// </summary>
+    #region Internal API
     internal void StartRound(RoundStartData data)
     {
         if (data == null) return;
-
-        Debug.Log($"[RoundController] Starting round {data.roundId}");
-        Debug.Log($"[RoundController] Round start time: {data.startedAt}");
-        Debug.Log($"[RoundController] Betting end time: {data.bettingEndTime}");
-        Debug.Log($"[RoundController] Server time: {data.serverTime}");
 
         currentRoundId = data.roundId;
         isRoundActive = true;
         diceResultReceived = false;
         currentDiceResult = null;
-
-        // Store timing info
-        currentRoundStartTime = data.startedAt;
         currentBettingEndTime = data.bettingEndTime;
 
-        // Stop any existing countdown
         if (finalCountdownCoroutine != null)
         {
             StopCoroutine(finalCountdownCoroutine);
             finalCountdownCoroutine = null;
         }
 
-        // Clear previous round display
         ClearRoundDisplay();
-
-        // Clear win highlights from previous round
         betController?.ClearAllWinHighlights();
+        AudioManager.Instance?.PlayRoundStart();
 
-        // AUDIO: Play round start sound
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlayRoundStart();
-        }
+        diceBoxAnimController?.StartAnimationCycleWithServerSync(
+            data.startedAt,
+            data.bettingEndTime,
+            data.serverTime
+        );
 
-        // Start the dice box animation cycle WITH SERVER SYNC
-        if (diceBoxAnimController != null)
-        {
-            diceBoxAnimController.StartAnimationCycleWithServerSync(
-                data.startedAt,
-                data.bettingEndTime,
-                data.serverTime
-            );
-        }
-
-        // Update UI
         uiController.UpdateRoundPhase("BETTING");
 
         int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
         uiController.UpdateTimer(timeRemaining);
     }
 
-    /// <summary>
-    /// Called every second with updated timer
-    /// </summary>
     internal void UpdateTimer(int secondsRemaining)
     {
         if (!isRoundActive) return;
 
         uiController.UpdateTimer(secondsRemaining);
 
-        // When we hit 1 second, start the final countdown
         if (secondsRemaining == 1 && finalCountdownCoroutine == null)
-        {
             finalCountdownCoroutine = StartCoroutine(FinalCountdownToZero());
-        }
     }
 
-    /// <summary>
-    /// Called when dice result is received from server
-    /// </summary>
     internal void ShowDiceResult(DiceResultData data)
     {
         if (data == null) return;
 
-        Debug.Log($"[RoundController] Dice result received: {data.dice1}, {data.dice2}, {data.dice3} = {data.sum} ({data.matchSide})");
-
-        // Store the result
         currentDiceResult = data;
         diceResultReceived = true;
 
-        // Disable betting
         betController.DisableBetting();
         uiController.UpdateRoundPhase("RESULT");
 
-        // The animation controller should be in ZoomedIn state by now
-        // Trigger the reveal
         if (diceBoxAnimController != null)
-        {
             diceBoxAnimController.RevealDiceResult();
-        }
         else
         {
-            // Fallback if no animation controller
-            Debug.LogWarning("[RoundController] No animation controller - showing dice immediately");
             SetDiceValues(data);
             ShowResult(data.sum, data.matchSide);
             PlayDiceResultSounds(data);
         }
     }
 
-    /// <summary>
-    /// Clear all round displays
-    /// </summary>
     internal void ClearRoundDisplay()
     {
         if (DiceContainer) DiceContainer.SetActive(false);
         if (ResultPanel) ResultPanel.SetActive(false);
-
-        // Hide all indicator images
         if (SmallImage) SmallImage.SetActive(false);
         if (BigImage) BigImage.SetActive(false);
         if (OddImage) OddImage.SetActive(false);
         if (EvenImage) EvenImage.SetActive(false);
 
+        if (finalCountdownCoroutine != null)
+        {
+            StopCoroutine(finalCountdownCoroutine);
+            finalCountdownCoroutine = null;
+        }
+
         currentDiceResult = null;
         diceResultReceived = false;
     }
+
+    internal string GetCurrentRoundId() => currentRoundId;
+    internal bool IsRoundActive() => isRoundActive;
     #endregion
 
-    #region Private Methods - Countdown
+    #region Countdown
     private IEnumerator FinalCountdownToZero()
     {
-        // Wait for the remaining second
         yield return new WaitForSeconds(1f);
-
-        // Update UI to show 0
         uiController.UpdateTimer(0);
-
-        // Disable betting
         betController.DisableBetting();
         uiController.ShowBetLocked();
-
-        // Notify animation controller that betting is locked
-        if (diceBoxAnimController != null)
-        {
-            diceBoxAnimController.OnBettingLocked();
-        }
-
+        diceBoxAnimController?.OnBettingLocked();
         finalCountdownCoroutine = null;
     }
     #endregion
 
-    #region Private Methods - Animation Callbacks
-    /// <summary>
-    /// Called by animation controller when dice should be shown (during opening animation)
-    /// </summary>
+    #region Animation Callbacks
     private void OnAnimationShowDice()
     {
-        Debug.Log("[RoundController] Animation triggered: Show dice");
+        if (currentDiceResult == null) return;
 
-        if (currentDiceResult != null)
+        SetDiceValues(currentDiceResult);
+        if (DiceContainer) DiceContainer.SetActive(true);
+        ShowResult(currentDiceResult.sum, currentDiceResult.matchSide);
+        AudioManager.Instance?.PlayDiceShow();
+        PlayDiceResultSounds(currentDiceResult);
+
+        if (DiceContainer)
         {
-            // Set the dice values
-            SetDiceValues(currentDiceResult);
-
-            // Make sure container is active
-            if (DiceContainer) DiceContainer.SetActive(true);
-
-            // Show result text
-            ShowResult(currentDiceResult.sum, currentDiceResult.matchSide);
-
-            // AUDIO: Play dice show sound
-            if (AudioManager.Instance != null)
-            {
-                AudioManager.Instance.PlayDiceShow();
-            }
-
-            // AUDIO: Play dice result sounds in sequence
-            PlayDiceResultSounds(currentDiceResult);
-
-            // Optional: Add pop animation when dice appear
-            if (DiceContainer)
-            {
-                DiceContainer.transform.localScale = Vector3.zero;
-                DiceContainer.transform.DOScale(1.2f, 0.3f)
-                    .SetEase(Ease.OutBack)
-                    .OnComplete(() => DiceContainer.transform.DOScale(1f, 0.2f));
-            }
-        }
-        else
-        {
-            Debug.LogWarning("[RoundController] Dice show triggered but no result data available!");
+            DiceContainer.transform.localScale = Vector3.zero;
+            DiceContainer.transform.DOScale(1.2f, 0.3f)
+                .SetEase(Ease.OutBack)
+                .OnComplete(() => DiceContainer.transform.DOScale(1f, 0.2f));
         }
     }
 
-    /// <summary>
-    /// Called by animation controller when dice should be hidden (during closing animation)
-    /// </summary>
     private void OnAnimationHideDice()
     {
-        Debug.Log("[RoundController] Animation triggered: Hide dice");
-
         if (DiceContainer) DiceContainer.SetActive(false);
         if (ResultPanel) ResultPanel.SetActive(false);
     }
 
-    /// <summary>
-    /// Called when full animation cycle completes
-    /// </summary>
-    private void OnAnimationCycleComplete()
-    {
-        Debug.Log("[RoundController] Animation cycle complete - ready for next round");
-        isRoundActive = false;
-    }
+    private void OnAnimationCycleComplete() => isRoundActive = false;
     #endregion
 
-    #region Private Methods - Dice Display
-    /// <summary>
-    /// Set the dice face sprites to show the result
-    /// </summary>
+    #region Dice Display
     private void SetDiceValues(DiceResultData data)
     {
-        if (DiceSprites == null || DiceSprites.Length < 6)
-        {
-            Debug.LogError("[RoundController] Dice sprites not properly configured!");
-            return;
-        }
-
+        if (DiceSprites == null || DiceSprites.Length < 6) return;
         SetDiceFace(Dice1_Image, data.dice1 - 1);
         SetDiceFace(Dice2_Image, data.dice2 - 1);
         SetDiceFace(Dice3_Image, data.dice3 - 1);
-
-        Debug.Log($"[RoundController] Dice values set: {data.dice1}, {data.dice2}, {data.dice3}");
     }
 
     private void SetDiceFace(Image diceImage, int faceIndex)
     {
         if (diceImage == null || DiceSprites == null) return;
-        if (faceIndex < 0 || faceIndex >= DiceSprites.Length)
-        {
-            Debug.LogError($"[RoundController] Invalid dice face index: {faceIndex}");
-            return;
-        }
-
+        if (faceIndex < 0 || faceIndex >= DiceSprites.Length) return;
         diceImage.sprite = DiceSprites[faceIndex];
     }
 
     private void ShowResult(int sum, string matchSide)
     {
-        // Set sum text
         if (Sum_Text)
         {
             Sum_Text.text = sum.ToString();
-
-            // Color-code sum text based on odd/even
-            bool isOdd = (sum % 2 != 0);
-            Sum_Text.color = isOdd ? oddSumColor : evenSumColor;
-
-            Debug.Log($"[RoundController] Sum {sum} is {(isOdd ? "ODD" : "EVEN")} - color set to {(isOdd ? "red" : "black")}");
+            Sum_Text.color = (sum % 2 != 0) ? oddSumColor : evenSumColor;
         }
-
-        // Hide all indicator images first
         if (SmallImage) SmallImage.SetActive(false);
         if (BigImage) BigImage.SetActive(false);
         if (OddImage) OddImage.SetActive(false);
         if (EvenImage) EvenImage.SetActive(false);
 
-        // Determine and show correct indicators based on sum
-        bool isOddSum = (sum % 2 != 0);
-        bool isSmall = (sum >= 4 && sum <= 10);
-        bool isBig = (sum >= 11 && sum <= 17);
+        if (sum >= 4 && sum <= 10 && SmallImage) SmallImage.SetActive(true);
+        if (sum >= 11 && sum <= 17 && BigImage) BigImage.SetActive(true);
+        if (sum % 2 != 0 && OddImage) OddImage.SetActive(true);
+        else if (sum % 2 == 0 && EvenImage) EvenImage.SetActive(true);
 
-        // Show Small or Big indicator
-        if (isSmall && SmallImage)
-        {
-            SmallImage.SetActive(true);
-            Debug.Log("[RoundController] Showing SMALL indicator");
-        }
-        else if (isBig && BigImage)
-        {
-            BigImage.SetActive(true);
-            Debug.Log("[RoundController] Showing BIG indicator");
-        }
-
-        // Show Odd or Even indicator
-        if (isOddSum && OddImage)
-        {
-            OddImage.SetActive(true);
-            Debug.Log("[RoundController] Showing ODD indicator");
-        }
-        else if (!isOddSum && EvenImage)
-        {
-            EvenImage.SetActive(true);
-            Debug.Log("[RoundController] Showing EVEN indicator");
-        }
-
-        // Show result panel
         if (ResultPanel) ResultPanel.SetActive(true);
-
-        Debug.Log($"[RoundController] Result displayed: Sum={sum}, Small={isSmall}, Big={isBig}, Odd={isOddSum}");
     }
     #endregion
 
-    #region Private Methods - Audio
+    #region Audio
     private void PlayDiceResultSounds(DiceResultData data)
     {
-        if (AudioManager.Instance != null)
-        {
-            // Play dice sounds in sequence with delay
-            AudioManager.Instance.PlayDiceResultSequence(
-                data.dice1,
-                data.dice2,
-                data.dice3,
-                diceResultSoundDelay
-            );
-        }
+        AudioManager.Instance?.PlayDiceResultSequence(data.dice1, data.dice2, data.dice3, diceResultSoundDelay);
     }
-    #endregion
-
-    #region Public Getters
-    public string GetCurrentRoundId() => currentRoundId;
-    public bool IsRoundActive() => isRoundActive;
     #endregion
 }

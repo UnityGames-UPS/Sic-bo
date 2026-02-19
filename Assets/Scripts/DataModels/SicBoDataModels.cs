@@ -2,11 +2,6 @@
 using System;
 using System.Collections.Generic;
 
-/// <summary>
-/// All data models for Sic Bo game
-/// Organized by: Root, Init Data, Room, Round Events, History, Betting, Requests/Responses
-/// </summary>
-
 #region Root Response
 [Serializable]
 public class SicBoRoot
@@ -49,9 +44,9 @@ public class SicBoGameData
 public class Bets
 {
     public List<double> casual;
-    public List<int> novice;
-    public List<int> expert;
-    public List<int> high_roller;
+    public List<double> novice;
+    public List<double> expert;
+    public List<double> high_roller;
 }
 
 [Serializable]
@@ -282,17 +277,11 @@ public class BonusData
     // - Other bets: {"sum_12": [1], "odd": [1]} → single multiplier in array
     public Dictionary<string, List<int>> bonus;
 
-    /// <summary>
-    /// Check if this bonus data uses the new dictionary format
-    /// </summary>
     public bool HasBonusDictionary()
     {
         return bonus != null && bonus.Count > 0;
     }
 
-    /// <summary>
-    /// Get multipliers for a specific bet option
-    /// </summary>
     public List<int> GetMultipliers(string betOption)
     {
         if (bonus != null && bonus.TryGetValue(betOption, out List<int> multipliers))
@@ -302,9 +291,6 @@ public class BonusData
         return new List<int>();
     }
 
-    /// <summary>
-    /// Get a formatted string describing all bonuses
-    /// </summary>
     public string GetBonusDescription()
     {
         if (bonus == null || bonus.Count == 0) return "No bonuses";

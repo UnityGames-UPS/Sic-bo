@@ -1,5 +1,4 @@
 ﻿using DG.Tweening;
-using DG.Tweening.Core.Easing;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -13,7 +12,7 @@ public class UIController : MonoBehaviour
     [SerializeField] private GameObject HomeScreen;
     [SerializeField] private GameObject GameScreen;
 
-    [Header("Home Screen Elements")]
+    [Header("Home Screen")]
     [SerializeField] private TMP_Text TotalPlayers_Text;
     [SerializeField] private TMP_Text PlayerName_Text;
     [SerializeField] private TMP_Text PlayerBalance_Text;
@@ -37,7 +36,7 @@ public class UIController : MonoBehaviour
     [SerializeField] private Button SettingsHome_Button;
     [SerializeField] private Button ExitHome_Button;
 
-    [Header("Game Screen Elements")]
+    [Header("Game Screen")]
     [SerializeField] private TMP_Text GamePlayerName_Text;
     [SerializeField] private TMP_Text RoundId_Text;
     [SerializeField] private TMP_Text GameBalance_Text;
@@ -45,7 +44,7 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text RoundPhase_Text;
     [SerializeField] private Button SideMenuOpen_Button;
 
-    [Header("Side Menu Elements")]
+    [Header("Side Menu")]
     [SerializeField] private Button SideMenuClose_Button;
     [SerializeField] private Button ExitGame_Button;
     [SerializeField] private Button HistoryGame_Button;
@@ -55,33 +54,30 @@ public class UIController : MonoBehaviour
     [SerializeField] private GameObject MenuPanel_Object;
     [SerializeField] private GameObject MenuPanelContainer_Object;
 
-    [Header("Side Menu Animation Settings")]
+    [Header("Side Menu Animation")]
     [SerializeField] private float panelSlideDuration = 0.3f;
     [SerializeField] private float buttonDropDuration = 0.5f;
     [SerializeField] private float buttonDropDelay = 0.1f;
-    [SerializeField] private float panelSlideDistance = 500f; // Distance panel slides from
+    [SerializeField] private float panelSlideDistance = 500f;
 
-
-    [Header("Error Popup - Separate Parent")]
+    [Header("Error Popup")]
     [SerializeField] private GameObject ErrorPopupParent;
     [SerializeField] private GameObject ErrorPopup;
     [SerializeField] private TMP_Text ErrorTitle_Text;
     [SerializeField] private TMP_Text ErrorMessage_Text;
     [SerializeField] private Button ErrorOK_Button;
 
-    [Header("In-Game Popup - Separate Parent")]
+    [Header("In-Game Popup")]
     [SerializeField] private GameObject InGamePopupParent;
     [SerializeField] private GameObject InGamePopup;
     [SerializeField] private TMP_Text InGameMessage_Text;
 
-    [Header("Other Popups - Separate Parents")]
+    [Header("Other Popups")]
     [SerializeField] private GameObject ReconnectPopupParent;
     [SerializeField] private GameObject ReconnectPopup;
-
     [SerializeField] private GameObject DisconnectPopupParent;
     [SerializeField] private GameObject DisconnectPopup;
     [SerializeField] private Button DisconnectOK_Button;
-
     [SerializeField] private GameObject QuitPopupParent;
     [SerializeField] private GameObject QuitPopup;
     [SerializeField] private Button QuitYes_Button;
@@ -114,20 +110,16 @@ public class UIController : MonoBehaviour
 
     #region Private Fields
     private Tween winTween;
-    private Tween bonusTween;
     private Tween currentPopupTween;
     private Coroutine inGamePopupCoroutine;
     private string playerName;
     private Wagers gameWagers;
     private Bets gameBets;
     private bool isAnotherDeviceError = false;
-
-    // Side Menu Animation Fields
     private RectTransform[] menuButtonRects;
     private Vector2[] menuButtonOriginalPositions;
     private RectTransform menuPanelContainerRect;
     private Vector2 panelOriginalPosition;
-
     private int selectedAvatarIndex = -1;
     #endregion
 
@@ -139,10 +131,7 @@ public class UIController : MonoBehaviour
         InitializePopups();
         InitializeSideMenuAnimation();
 
-        if (LoadingScreen_Object != null)
-        {
-            LoadingScreen_Object.SetActive(false);
-        }
+        if (LoadingScreen_Object != null) LoadingScreen_Object.SetActive(false);
 
         if (playerAvatarSprites != null && playerAvatarSprites.Length > 0)
         {
@@ -150,18 +139,12 @@ public class UIController : MonoBehaviour
             UpdatePlayerAvatars();
         }
 
-        // Initialize leaderboard controller
-        if (leaderboardController != null)
-        {
-            leaderboardController.Initialize();
-        }
+        leaderboardController?.Initialize();
     }
 
     private void OnDestroy()
     {
-        // Clean up all tweens
         winTween?.Kill();
-        bonusTween?.Kill();
         currentPopupTween?.Kill();
         if (inGamePopupCoroutine != null) StopCoroutine(inGamePopupCoroutine);
     }
@@ -170,105 +153,36 @@ public class UIController : MonoBehaviour
     #region Setup
     private void SetupButtonListeners()
     {
-        if (CasualRoom_Button) CasualRoom_Button.onClick.AddListener(() =>
+        void Bind(Button btn, System.Action action)
         {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayLobbyButton();
-            gameManager.JoinRoom("casual");
-        });
-        if (NoviceRoom_Button) NoviceRoom_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayLobbyButton();
-            gameManager.JoinRoom("novice");
-        });
-        if (ExpertRoom_Button) ExpertRoom_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayLobbyButton();
-            gameManager.JoinRoom("expert");
-        });
-        if (HighRollerRoom_Button) HighRollerRoom_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayLobbyButton();
-            gameManager.JoinRoom("high_roller");
-        });
-        if (HistoryHome_Button) HistoryHome_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            OpenHistoryFromHome();
-        });
-        if (SettingsHome_Button) SettingsHome_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            OpenInfoFromHome();
-        });
-        if (ExitHome_Button) ExitHome_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            ShowQuitPopup();
-        });
+            if (btn) btn.onClick.AddListener(() => action());
+        }
 
-        if (SideMenuOpen_Button) SideMenuOpen_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            OpenSideMenu();
-        });
-        if (SideMenuClose_Button) SideMenuClose_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            CloseSideMenu();
-        });
-        if (ExitGame_Button) ExitGame_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            CloseSideMenu();
-            gameManager.LeaveRoom();
-        });
-        if (HistoryGame_Button) HistoryGame_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            CloseSideMenu();
-            OpenHistoryFromGame();
-        });
-        if (SettingsGame_Button) SettingsGame_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            CloseSideMenu();
-            OpenInfoFromGame();
-        });
-
-        if (ErrorOK_Button) ErrorOK_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            OnErrorOK();
-        });
-        if (DisconnectOK_Button) DisconnectOK_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            CloseDisconnectPopup();
-            gameManager.ExitGame();
-        });
-        if (QuitYes_Button) QuitYes_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            CloseQuitPopup();
-            gameManager.ExitGame();
-        });
-        if (QuitNo_Button) QuitNo_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            CloseQuitPopup();
-        });
+        Bind(CasualRoom_Button, () => { AudioManager.Instance?.PlayLobbyButton(); gameManager.JoinRoom("casual"); });
+        Bind(NoviceRoom_Button, () => { AudioManager.Instance?.PlayLobbyButton(); gameManager.JoinRoom("novice"); });
+        Bind(ExpertRoom_Button, () => { AudioManager.Instance?.PlayLobbyButton(); gameManager.JoinRoom("expert"); });
+        Bind(HighRollerRoom_Button, () => { AudioManager.Instance?.PlayLobbyButton(); gameManager.JoinRoom("high_roller"); });
+        Bind(HistoryHome_Button, () => { AudioManager.Instance?.PlayButtonClick(); OpenHistoryFromHome(); });
+        Bind(SettingsHome_Button, () => { AudioManager.Instance?.PlayButtonClick(); OpenInfoFromHome(); });
+        Bind(ExitHome_Button, () => { AudioManager.Instance?.PlayButtonClick(); ShowQuitPopup(); });
+        Bind(SideMenuOpen_Button, () => { AudioManager.Instance?.PlayButtonClick(); OpenSideMenu(); });
+        Bind(SideMenuClose_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseSideMenu(); });
+        Bind(ExitGame_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseSideMenu(); gameManager.LeaveRoom(); });
+        Bind(HistoryGame_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseSideMenu(); OpenHistoryFromGame(); });
+        Bind(SettingsGame_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseSideMenu(); OpenInfoFromGame(); });
+        Bind(ErrorOK_Button, () => { AudioManager.Instance?.PlayButtonClick(); OnErrorOK(); });
+        Bind(DisconnectOK_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseDisconnectPopup(); gameManager.ExitGame(); });
+        Bind(QuitYes_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseQuitPopup(); gameManager.ExitGame(); });
+        Bind(QuitNo_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseQuitPopup(); });
     }
 
     private void InitializePopups()
     {
-        // Hide all popups and their parents on start
         HidePopupImmediate(ErrorPopupParent, ErrorPopup);
         HidePopupImmediate(InGamePopupParent, InGamePopup);
         HidePopupImmediate(ReconnectPopupParent, ReconnectPopup);
         HidePopupImmediate(DisconnectPopupParent, DisconnectPopup);
         HidePopupImmediate(QuitPopupParent, QuitPopup);
-
-        // Hide win panel at start � it is shown only when a win occurs
         if (WinPanel) WinPanel.SetActive(false);
         if (WinAmount_Text) WinAmount_Text.gameObject.SetActive(false);
     }
@@ -284,8 +198,6 @@ public class UIController : MonoBehaviour
 
         UpdateBalance(balance);
 
-        // Tell the leaderboard controller which avatar belongs to the local player.
-        // selectedAvatarIndex is set in Start(), so it is always valid here.
         if (leaderboardController != null &&
             playerAvatarSprites != null &&
             selectedAvatarIndex >= 0 &&
@@ -294,7 +206,6 @@ public class UIController : MonoBehaviour
             leaderboardController.SetLocalPlayer(name, playerAvatarSprites[selectedAvatarIndex]);
         }
 
-        // Only update leaderboards if there's actual data
         if (leaderboards != null &&
             ((leaderboards.richest != null && leaderboards.richest.Count > 0) ||
              (leaderboards.winners != null && leaderboards.winners.Count > 0)))
@@ -309,19 +220,14 @@ public class UIController : MonoBehaviour
     #region Side Menu Animation
     private void InitializeSideMenuAnimation()
     {
-        // Get panel container rect and store original position
         if (MenuPanelContainer_Object)
         {
             menuPanelContainerRect = MenuPanelContainer_Object.GetComponent<RectTransform>();
             if (menuPanelContainerRect != null)
-            {
                 panelOriginalPosition = menuPanelContainerRect.anchoredPosition;
-            }
         }
 
-        // Collect all menu buttons
         List<RectTransform> tempRects = new List<RectTransform>();
-
         if (HistoryGame_Button) tempRects.Add(HistoryGame_Button.GetComponent<RectTransform>());
         if (SettingsGame_Button) tempRects.Add(SettingsGame_Button.GetComponent<RectTransform>());
         if (Sound_button) tempRects.Add(Sound_button.GetComponent<RectTransform>());
@@ -330,109 +236,69 @@ public class UIController : MonoBehaviour
 
         menuButtonRects = tempRects.ToArray();
         menuButtonOriginalPositions = new Vector2[menuButtonRects.Length];
-
-        // Store original positions
         for (int i = 0; i < menuButtonRects.Length; i++)
-        {
             menuButtonOriginalPositions[i] = menuButtonRects[i].anchoredPosition;
-        }
 
-        // Hide menu initially
         if (MenuPanel_Object) MenuPanel_Object.SetActive(false);
     }
 
     private void OpenSideMenu()
     {
-        print("Opening side menu..........");
-
-        // Enable menu panel
         if (MenuPanel_Object) MenuPanel_Object.SetActive(true);
 
-        // Get close button position
         Vector2 closeButtonPos = Vector2.zero;
         if (SideMenuClose_Button)
         {
-            RectTransform closeButtonRect = SideMenuClose_Button.GetComponent<RectTransform>();
-            if (closeButtonRect != null)
-            {
-                closeButtonPos = closeButtonRect.anchoredPosition;
-            }
+            RectTransform r = SideMenuClose_Button.GetComponent<RectTransform>();
+            if (r != null) closeButtonPos = r.anchoredPosition;
         }
 
-        // Slide panel container in from outside canvas
         if (menuPanelContainerRect != null)
         {
             Vector2 startPos = panelOriginalPosition;
             startPos.x += panelSlideDistance;
             menuPanelContainerRect.anchoredPosition = startPos;
-
-            menuPanelContainerRect.DOAnchorPos(panelOriginalPosition, panelSlideDuration)
-                .SetEase(Ease.OutCubic);
+            menuPanelContainerRect.DOAnchorPos(panelOriginalPosition, panelSlideDuration).SetEase(Ease.OutCubic);
         }
 
-        // Re-enable all menu buttons and animate them smoothly from close button position
         for (int i = 0; i < menuButtonRects.Length; i++)
         {
-            // Make sure button is visible before animating
             menuButtonRects[i].gameObject.SetActive(true);
-
-            // Start from close button position
             menuButtonRects[i].anchoredPosition = closeButtonPos;
-
-            float delay = i * buttonDropDelay;
-
-            // Smooth slide to original position (no bounce/hang)
             menuButtonRects[i].DOAnchorPos(menuButtonOriginalPositions[i], buttonDropDuration)
                 .SetEase(Ease.OutCubic)
-                .SetDelay(delay);
+                .SetDelay(i * buttonDropDelay);
         }
     }
 
     private void CloseSideMenu()
     {
-        // Get close button position
         Vector2 closeButtonPos = Vector2.zero;
         if (SideMenuClose_Button)
         {
-            RectTransform closeButtonRect = SideMenuClose_Button.GetComponent<RectTransform>();
-            if (closeButtonRect != null)
-            {
-                closeButtonPos = closeButtonRect.anchoredPosition;
-            }
+            RectTransform r = SideMenuClose_Button.GetComponent<RectTransform>();
+            if (r != null) closeButtonPos = r.anchoredPosition;
         }
 
-        // Animate buttons back to close button position in reverse order, then disable them
         for (int i = 0; i < menuButtonRects.Length; i++)
         {
             int reverseIndex = menuButtonRects.Length - 1 - i;
-            float delay = i * buttonDropDelay;
             RectTransform rect = menuButtonRects[reverseIndex];
-
             rect.DOAnchorPos(closeButtonPos, buttonDropDuration * 0.7f)
                 .SetEase(Ease.InCubic)
-                .SetDelay(delay)
-                .OnComplete(() =>
-                {
-                    // Disable the button so it doesn't visually block the close button
-                    rect.gameObject.SetActive(false);
-                });
+                .SetDelay(i * buttonDropDelay)
+                .OnComplete(() => rect.gameObject.SetActive(false));
         }
 
-        // Slide panel container out after buttons have collapsed
         if (menuPanelContainerRect != null)
         {
             Vector2 endPos = panelOriginalPosition;
             endPos.x += panelSlideDistance;
-
-            float totalButtonAnimTime = menuButtonRects.Length * buttonDropDelay + buttonDropDuration * 0.7f;
-
+            float totalTime = menuButtonRects.Length * buttonDropDelay + buttonDropDuration * 0.7f;
             menuPanelContainerRect.DOAnchorPos(endPos, panelSlideDuration)
                 .SetEase(Ease.InCubic)
-                .SetDelay(totalButtonAnimTime)
-                .OnComplete(() =>
-                {
-                    if (MenuPanel_Object) MenuPanel_Object.SetActive(false);
-                });
+                .SetDelay(totalTime)
+                .OnComplete(() => { if (MenuPanel_Object) MenuPanel_Object.SetActive(false); });
         }
     }
     #endregion
@@ -459,7 +325,7 @@ public class UIController : MonoBehaviour
     }
     #endregion
 
-    #region Popup Helper Methods
+    #region Popup Helpers
     private void HidePopupImmediate(GameObject parent, GameObject popup)
     {
         if (parent) parent.SetActive(false);
@@ -469,106 +335,56 @@ public class UIController : MonoBehaviour
     private void SlideInPopup(GameObject parent, GameObject popup)
     {
         if (!parent || !popup) return;
-
         currentPopupTween?.Kill();
-
-        // Activate parent and popup
         parent.SetActive(true);
         popup.SetActive(true);
-
-        // Start position: off-screen to the left
-        RectTransform rectTransform = popup.GetComponent<RectTransform>();
-        if (rectTransform == null) return;
-
-        Vector3 startPos = rectTransform.anchoredPosition;
+        RectTransform rt = popup.GetComponent<RectTransform>();
+        if (rt == null) return;
+        Vector2 startPos = rt.anchoredPosition;
         startPos.x = -slideDistance;
-        rectTransform.anchoredPosition = startPos;
-
-        // Animate to center (x = 0)
-        Vector3 endPos = startPos;
-        endPos.x = 0;
-
-        currentPopupTween = rectTransform.DOAnchorPos(endPos, slideDuration)
-            .SetEase(Ease.OutCubic);
+        rt.anchoredPosition = startPos;
+        currentPopupTween = rt.DOAnchorPos(new Vector2(0, startPos.y), slideDuration).SetEase(Ease.OutCubic);
     }
 
     private void SlideOutPopup(GameObject parent, GameObject popup, System.Action onComplete = null)
     {
         if (!parent || !popup) return;
-
         currentPopupTween?.Kill();
-
-        RectTransform rectTransform = popup.GetComponent<RectTransform>();
-        if (rectTransform == null)
-        {
-            HidePopupImmediate(parent, popup);
-            onComplete?.Invoke();
-            return;
-        }
-
-        // Animate to right off-screen
-        Vector3 endPos = rectTransform.anchoredPosition;
+        RectTransform rt = popup.GetComponent<RectTransform>();
+        if (rt == null) { HidePopupImmediate(parent, popup); onComplete?.Invoke(); return; }
+        Vector2 endPos = rt.anchoredPosition;
         endPos.x = slideDistance;
-
-        currentPopupTween = rectTransform.DOAnchorPos(endPos, slideDuration)
+        currentPopupTween = rt.DOAnchorPos(endPos, slideDuration)
             .SetEase(Ease.InCubic)
-            .OnComplete(() =>
-            {
-                HidePopupImmediate(parent, popup);
-                onComplete?.Invoke();
-            });
+            .OnComplete(() => { HidePopupImmediate(parent, popup); onComplete?.Invoke(); });
     }
     #endregion
 
-    #region Error Popup (For Connection/System Errors Only)
-
+    #region Error Popup
     internal void ShowErrorPopup(string message, string title = "Error")
     {
         if (ErrorTitle_Text) ErrorTitle_Text.text = title;
         if (ErrorMessage_Text) ErrorMessage_Text.text = message;
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlayPopupOpen();
-        }
+        AudioManager.Instance?.PlayPopupOpen();
         SlideInPopup(ErrorPopupParent, ErrorPopup);
     }
 
-    private void CloseErrorPopup()
-    {
-        SlideOutPopup(ErrorPopupParent, ErrorPopup);
-    }
+    private void CloseErrorPopup() => SlideOutPopup(ErrorPopupParent, ErrorPopup);
 
     private void OnErrorOK()
     {
         CloseErrorPopup();
-
-        // If this was an "another device" error, exit the game
-        if (isAnotherDeviceError)
-        {
-            isAnotherDeviceError = false;
-            gameManager.ExitGame();
-        }
+        if (isAnotherDeviceError) { isAnotherDeviceError = false; gameManager.ExitGame(); }
     }
     #endregion
 
-    #region In-Game Popup (For Game Notifications Only)
-
+    #region In-Game Popup
     internal void ShowInGamePopup(string message)
     {
-        // Stop any existing coroutine
-        if (inGamePopupCoroutine != null)
-        {
-            StopCoroutine(inGamePopupCoroutine);
-        }
-
+        if (inGamePopupCoroutine != null) StopCoroutine(inGamePopupCoroutine);
         if (InGameMessage_Text) InGameMessage_Text.text = message;
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlayPopupOpen();
-        }
+        AudioManager.Instance?.PlayPopupOpen();
         SlideInPopup(InGamePopupParent, InGamePopup);
-
-        // Auto-close after delay
         inGamePopupCoroutine = StartCoroutine(CloseInGamePopupAfterDelay());
     }
 
@@ -581,151 +397,81 @@ public class UIController : MonoBehaviour
     #endregion
 
     #region Reconnect Popup
-
     internal void ShowReconnectPopup()
     {
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlayPopupOpen();
-        }
+        AudioManager.Instance?.PlayPopupOpen();
         SlideInPopup(ReconnectPopupParent, ReconnectPopup);
     }
 
-    internal void CloseReconnectPopup()
-    {
-        SlideOutPopup(ReconnectPopupParent, ReconnectPopup);
-    }
+    internal void CloseReconnectPopup() => SlideOutPopup(ReconnectPopupParent, ReconnectPopup);
     #endregion
 
     #region Disconnect Popup
     internal void ShowDisconnectPopup()
     {
-        // Close reconnect popup first if it's showing
         if (ReconnectPopupParent && ReconnectPopupParent.activeSelf)
-        {
             SlideOutPopup(ReconnectPopupParent, ReconnectPopup);
-        }
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlayPopupOpen();
-        }
+        AudioManager.Instance?.PlayPopupOpen();
         SlideInPopup(DisconnectPopupParent, DisconnectPopup);
     }
 
-    private void CloseDisconnectPopup()
-    {
-        SlideOutPopup(DisconnectPopupParent, DisconnectPopup);
-    }
+    private void CloseDisconnectPopup() => SlideOutPopup(DisconnectPopupParent, DisconnectPopup);
     #endregion
 
     #region Quit Popup
     private void ShowQuitPopup()
     {
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlayPopupOpen();
-        }
+        AudioManager.Instance?.PlayPopupOpen();
         SlideInPopup(QuitPopupParent, QuitPopup);
     }
 
-    private void CloseQuitPopup()
-    {
-        SlideOutPopup(QuitPopupParent, QuitPopup);
-    }
+    private void CloseQuitPopup() => SlideOutPopup(QuitPopupParent, QuitPopup);
     #endregion
 
     #region Another Device Popup
-
     internal void ShowAnotherDevicePopup()
     {
         isAnotherDeviceError = true;
-
-        // Show as error popup with custom title
         ShowErrorPopup("Another device has logged in with your account.", "Another Login Detected");
     }
     #endregion
 
     #region Menu Panels
-    private void OpenHistoryFromHome()
-    {
-        if (menuController) menuController.OpenMenuWithHistory();
-    }
-
-    private void OpenHistoryFromGame()
-    {
-        if (menuController) menuController.OpenMenuWithHistory();
-    }
-
-    private void OpenInfoFromHome()
-    {
-        if (menuController) menuController.OpenMenuWithInfo();
-    }
-
-    private void OpenInfoFromGame()
-    {
-        if (menuController) menuController.OpenMenuWithInfo();
-    }
+    private void OpenHistoryFromHome() => menuController?.OpenMenuWithHistory();
+    private void OpenHistoryFromGame() => menuController?.OpenMenuWithHistory();
+    private void OpenInfoFromHome() => menuController?.OpenMenuWithInfo();
+    private void OpenInfoFromGame() => menuController?.OpenMenuWithInfo();
     #endregion
 
     #region Data Updates
     internal void UpdateBalance(double balance)
     {
-        string balanceText = balance.ToString("F2");
-        if (PlayerBalance_Text) PlayerBalance_Text.text = balanceText;
-        if (GameBalance_Text) GameBalance_Text.text = balanceText;
+        string text = balance.ToString("F2");
+        if (PlayerBalance_Text) PlayerBalance_Text.text = text;
+        if (GameBalance_Text) GameBalance_Text.text = text;
     }
 
-    internal void UpdateTimer(int secondsRemaining)
-    {
-        if (betTimerController)
-        {
-            betTimerController.UpdateBettingTimer(secondsRemaining);
-        }
-    }
+    internal void UpdateTimer(int secondsRemaining) => betTimerController?.UpdateBettingTimer(secondsRemaining);
+
     internal void UpdateRoundId(string roundId)
     {
         if (RoundId_Text)
-        {
-            if (string.IsNullOrEmpty(roundId))
-            {
-                RoundId_Text.text = "Waiting...";
-            }
-            else
-            {
-                RoundId_Text.text = $"RoundID : {roundId}";
-            }
-        }
+            RoundId_Text.text = string.IsNullOrEmpty(roundId) ? "Waiting..." : $"RoundID : {roundId}";
     }
-    internal void ClearRoundId()
-    {
-        if (RoundId_Text) RoundId_Text.text = "---";
-    }
-    internal void UpdateTotalPlayerCount(int total)
-    {
-        if (TotalPlayers_Text) TotalPlayers_Text.text = $"{total}";
-    }
-    internal void UpdatePlayerCountInLevel(int count)
-    {
-        if (PlayerCount_Text) PlayerCount_Text.text = count.ToString();
-    }
+
+    internal void ClearRoundId() { if (RoundId_Text) RoundId_Text.text = "---"; }
+
+    internal void UpdateTotalPlayerCount(int total) { if (TotalPlayers_Text) TotalPlayers_Text.text = total.ToString(); }
+    internal void UpdatePlayerCountInLevel(int count) { if (PlayerCount_Text) PlayerCount_Text.text = count.ToString(); }
 
     internal void UpdateRoundPhase(string phase)
     {
         if (RoundPhase_Text) RoundPhase_Text.text = phase.ToUpper();
-
-        if (betTimerController)
+        if (betTimerController != null)
         {
-            switch (phase.ToLower())
-            {
-                case "betting":
-                    break;
-                case "rolling":
-                case "result":
-                    betTimerController.ShowBetLocked();
-                    break;
-                case "nextround":
-                    break;
-            }
+            string lower = phase.ToLower();
+            if (lower == "rolling" || lower == "result")
+                betTimerController.ShowBetLocked();
         }
     }
 
@@ -737,85 +483,43 @@ public class UIController : MonoBehaviour
         if (HighRollerCount_Text) HighRollerCount_Text.text = $"{highRoller} ";
     }
 
-    internal void UpdateLeaderboards(Leaderboards leaderboards)
-    {
-        // Use new LeaderboardController if available
-        if (leaderboardController != null)
-        {
-            leaderboardController.UpdateLeaderboard(leaderboards);
-        }
-    }
+    internal void UpdateLeaderboards(Leaderboards leaderboards) => leaderboardController?.UpdateLeaderboard(leaderboards);
 
     private void UpdateLobbyMinMaxDisplay()
     {
         if (gameWagers == null || gameBets == null) return;
 
-        if (CasualMin_Text && CasualMax_Text && gameBets.casual != null && gameBets.casual.Count > 0)
-        {
-            double min = gameBets.casual[0];
-            double max = gameWagers.main_bets?.small?.GetMaxBet("casual") ?? 0;
-            CasualMin_Text.text = $"{min:F2}";
-            CasualMax_Text.text = $"{max:F2}";
-        }
+        UpdateRoomMinMax("casual", gameBets.casual, CasualMin_Text, CasualMax_Text);
+        UpdateRoomMinMax("novice", gameBets.novice, NoviceMin_Text, NoviceMax_Text);
+        UpdateRoomMinMax("expert", gameBets.expert, ExpertMin_Text, ExpertMax_Text);
+        UpdateRoomMinMax("high_roller", gameBets.high_roller, HighRollerMin_Text, HighRollerMax_Text);
+    }
 
-        if (NoviceMin_Text && NoviceMax_Text && gameBets.novice != null && gameBets.novice.Count > 0)
-        {
-            double min = gameBets.novice[0];
-            double max = gameWagers.main_bets?.small?.GetMaxBet("novice") ?? 0;
-            NoviceMin_Text.text = $"{min:F2}";
-            NoviceMax_Text.text = $"{max:F2}";
-        }
-
-        if (ExpertMin_Text && ExpertMax_Text && gameBets.expert != null && gameBets.expert.Count > 0)
-        {
-            double min = gameBets.expert[0];
-            double max = gameWagers.main_bets?.small?.GetMaxBet("expert") ?? 0;
-            ExpertMin_Text.text = $"{min:F2}";
-            ExpertMax_Text.text = $"{max:F2}";
-        }
-
-        if (HighRollerMin_Text && HighRollerMax_Text && gameBets.high_roller != null && gameBets.high_roller.Count > 0)
-        {
-            double min = gameBets.high_roller[0];
-            double max = gameWagers.main_bets?.small?.GetMaxBet("high_roller") ?? 0;
-            HighRollerMin_Text.text = $"{min:F2}";
-            HighRollerMax_Text.text = $"{max:F2}";
-        }
+    private void UpdateRoomMinMax(string room, List<double> chips, TMP_Text minText, TMP_Text maxText)
+    {
+        if (chips == null || chips.Count == 0) return;
+        double min = chips[0];
+        double max = gameWagers.main_bets?.small?.GetMaxBet(room) ?? 0;
+        if (minText) minText.text = $"{min:F2}";
+        if (maxText) maxText.text = $"{max:F2}";
     }
     #endregion
 
-    #region Betting Timer API
-    internal void ShowBettingPhase(int seconds)
-    {
-        if (betTimerController) betTimerController.ShowBettingPhase(seconds);
-    }
-
-    internal void ShowBetLocked()
-    {
-        if (betTimerController) betTimerController.ShowBetLocked();
-    }
-
-    internal void ShowNextRound(int seconds)
-    {
-        if (betTimerController) betTimerController.ShowNextRound(seconds);
-    }
-
-    internal void HideAllTimers()
-    {
-        if (betTimerController) betTimerController.HideAll();
-    }
+    #region Timer API
+    internal void ShowBettingPhase(int seconds) => betTimerController?.ShowBettingPhase(seconds);
+    internal void ShowBetLocked() => betTimerController?.ShowBetLocked();
+    internal void ShowNextRound(int seconds) => betTimerController?.ShowNextRound(seconds);
+    internal void HideAllTimers() => betTimerController?.HideAll();
     #endregion
 
-    #region Animations
+    #region Win Animation
     internal void ShowWinAnimation(double winAmount)
     {
         if (WinAmount_Text == null || WinPanel == null) return;
-
         winTween?.Kill();
-
         WinAmount_Text.text = $"+{winAmount:F2}";
         WinAmount_Text.gameObject.SetActive(true);
-        WinPanel.transform.localScale = Vector3.zero; // always reset before animating
+        WinPanel.transform.localScale = Vector3.zero;
         WinPanel.SetActive(true);
 
         winTween = DOTween.Sequence()
@@ -829,8 +533,6 @@ public class UIController : MonoBehaviour
                 if (WinAmount_Text) WinAmount_Text.gameObject.SetActive(false);
             });
     }
-
-
     #endregion
 
     #region Loading Screen
@@ -847,11 +549,10 @@ public class UIController : MonoBehaviour
     }
     #endregion
 
-    #region Player Avatar
+    #region Avatar
     private void UpdatePlayerAvatars()
     {
         if (playerAvatarSprites == null || selectedAvatarIndex >= playerAvatarSprites.Length) return;
-
         Sprite avatar = playerAvatarSprites[selectedAvatarIndex];
         if (PlayerAvatar_HomeScreen != null) PlayerAvatar_HomeScreen.sprite = avatar;
         if (PlayerAvatar_GameScreen != null) PlayerAvatar_GameScreen.sprite = avatar;

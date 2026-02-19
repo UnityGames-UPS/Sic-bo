@@ -2,9 +2,6 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// Base class for all bet areas with common functionality
-/// </summary>
 [System.Serializable]
 public abstract class BaseBetArea
 {
@@ -12,79 +9,57 @@ public abstract class BaseBetArea
     public Button Button;
     public GameObject WinImage;
     public Transform PlayerBetContainer;
-    public Transform OpponentBetContainer;  // Used by OpponentChipManager
+    public Transform OpponentBetContainer;
 
     [HideInInspector] public PlayerBetComponent playerBetComponent;
 
-    public virtual void AddBet(double amount, int chipIndex)
+    internal virtual void AddBet(double amount, int chipIndex)
     {
-        if (playerBetComponent != null)
-            playerBetComponent.AddBet(amount, chipIndex);
+        playerBetComponent?.AddBet(amount, chipIndex);
     }
 
-    public virtual void RemoveLastBet()
+    internal virtual void RemoveLastBet()
     {
-        if (playerBetComponent != null)
-            playerBetComponent.RemoveLastBet();
+        playerBetComponent?.RemoveLastBet();
     }
 
-    public virtual void ClearBets()
+    internal virtual void ClearBets()
     {
-        if (playerBetComponent != null)
-            playerBetComponent.Clear();
+        playerBetComponent?.Clear();
     }
 
-    public double GetTotalBet() =>
-        playerBetComponent != null ? playerBetComponent.GetTotalBet() : 0;
+    internal double GetTotalBet() => playerBetComponent != null ? playerBetComponent.GetTotalBet() : 0;
+    internal bool HasBets() => playerBetComponent != null && playerBetComponent.HasBets();
 
-    public bool HasBets() =>
-        playerBetComponent != null && playerBetComponent.HasBets();
-
-    public void SetHighlight(bool highlight)
+    internal void SetHighlight(bool highlight)
     {
         if (WinImage) WinImage.SetActive(highlight);
     }
 }
 
-/// <summary>
-/// Bet area with win ratio display (Main bets, Sum bets)
-/// </summary>
 [System.Serializable]
 public class SimpleBetArea : BaseBetArea
 {
     public TMP_Text WinRatio_Text;
 
-    public void SetWinRatio(string ratio)
+    internal void SetWinRatio(string ratio)
     {
         if (WinRatio_Text) WinRatio_Text.text = ratio;
     }
 }
 
-/// <summary>
-/// Bet area for triple dice (specific_3_1 to specific_3_6)
-/// </summary>
 [System.Serializable]
-public class TripleSameDiceArea : BaseBetArea
-{
-}
+public class TripleSameDiceArea : BaseBetArea { }
 
-/// <summary>
-/// Bet area for single dice matches (single_1 to single_6)
-/// </summary>
 [System.Serializable]
-public class SingleDiceArea : BaseBetArea
-{
-}
+public class SingleDiceArea : BaseBetArea { }
 
-/// <summary>
-/// Bet area for sum bets (sum_4 to sum_17)
-/// </summary>
 [System.Serializable]
 public class SumArea : BaseBetArea
 {
     public TMP_Text WinRatio_Text;
 
-    public void SetWinRatio(string ratio)
+    internal void SetWinRatio(string ratio)
     {
         if (WinRatio_Text) WinRatio_Text.text = ratio;
     }

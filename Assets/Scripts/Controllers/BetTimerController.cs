@@ -3,9 +3,6 @@ using UnityEngine;
 using TMPro;
 using DG.Tweening;
 
-/// <summary>
-/// Manages betting timer UI with phase flow - AUDIO INTEGRATED
-/// </summary>
 public class BetTimerController : MonoBehaviour
 {
     #region Serialized Fields
@@ -38,11 +35,11 @@ public class BetTimerController : MonoBehaviour
     {
         StopCountdown();
         StopClockTick();
-        if (bettingTimer_Text) bettingTimer_Text.transform.DOKill();
+        bettingTimer_Text?.transform.DOKill();
     }
     #endregion
 
-    #region Public API
+    #region Internal API
     internal void ShowBettingPhase(int secondsRemaining)
     {
         StopCountdown();
@@ -53,7 +50,6 @@ public class BetTimerController : MonoBehaviour
         if (placeBetPanel) placeBetPanel.SetActive(true);
         if (betLockedPanel) betLockedPanel.SetActive(false);
         if (nextRoundPanel) nextRoundPanel.SetActive(false);
-
         if (bettingTimer_Text) bettingTimer_Text.transform.localScale = Vector3.one;
 
         UpdateBettingTimer(secondsRemaining);
@@ -71,33 +67,20 @@ public class BetTimerController : MonoBehaviour
             {
                 PopTimerText();
 
-                // Start clock tick sound if not already playing
-                if (!isClockTickActive && secondsRemaining == 5)
-                {
+                if (!isClockTickActive)
                     StartClockTick();
-                }
             }
-            else
+            else if (secondsRemaining > 5 && isClockTickActive)
             {
-                // Stop clock tick if seconds > 5
-                if (isClockTickActive && secondsRemaining > 5)
-                {
-                    StopClockTick();
-                }
+                StopClockTick();
             }
         }
 
         if (last5SecIndicator)
-        {
-            bool showIndicator = secondsRemaining <= 5 && secondsRemaining > 0;
-            last5SecIndicator.SetActive(showIndicator);
-        }
+            last5SecIndicator.SetActive(secondsRemaining <= 5 && secondsRemaining > 0);
 
-        // Stop clock tick when timer hits 0
         if (secondsRemaining == 0)
-        {
             StopClockTick();
-        }
     }
 
     internal void ShowBetLocked()
@@ -127,18 +110,13 @@ public class BetTimerController : MonoBehaviour
         if (last5SecIndicator) last5SecIndicator.SetActive(false);
 
         UpdateNextRoundTimer(secondsUntilNextRound);
-
         countdownCoroutine = StartCoroutine(NextRoundCountdown());
     }
 
     internal void UpdateNextRoundTimer(int seconds)
     {
         currentSeconds = seconds;
-
-        if (nextRoundTimer_Text)
-        {
-            nextRoundTimer_Text.text = seconds.ToString();
-        }
+        if (nextRoundTimer_Text) nextRoundTimer_Text.text = seconds.ToString();
     }
 
     internal void HideAll()
@@ -155,11 +133,10 @@ public class BetTimerController : MonoBehaviour
     }
 
     internal BetTimerState GetState() => currentState;
-
     internal int GetCurrentSeconds() => currentSeconds;
     #endregion
 
-    #region Private Methods - Countdown
+    #region Countdown
     private IEnumerator NextRoundCountdown()
     {
         while (currentSeconds > 0 && currentState == BetTimerState.NextRound)
@@ -168,57 +145,40 @@ public class BetTimerController : MonoBehaviour
             currentSeconds--;
             UpdateNextRoundTimer(currentSeconds);
         }
-
         countdownCoroutine = null;
     }
 
     private void StopCountdown()
     {
-        if (countdownCoroutine != null)
-        {
-            StopCoroutine(countdownCoroutine);
-            countdownCoroutine = null;
-        }
+        if (countdownCoroutine != null) { StopCoroutine(countdownCoroutine); countdownCoroutine = null; }
     }
     #endregion
 
-    #region Private Methods - Animation
+    #region Animation
     private void PopTimerText()
     {
         if (bettingTimer_Text == null) return;
-
         bettingTimer_Text.transform.DOKill();
         bettingTimer_Text.transform.localScale = Vector3.one;
-
         bettingTimer_Text.transform.DOScale(heartbeatScale, heartbeatDuration)
             .SetEase(Ease.OutBack)
-            .OnComplete(() =>
-            {
-                bettingTimer_Text.transform.DOScale(1f, heartbeatDuration)
-                    .SetEase(Ease.InBack);
-            });
+            .OnComplete(() => bettingTimer_Text.transform.DOScale(1f, heartbeatDuration).SetEase(Ease.InBack));
     }
     #endregion
 
-    #region Audio Integration
+    #region Clock Tick
     private void StartClockTick()
     {
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.StartClockTick();
-            isClockTickActive = true;
-            Debug.Log("[BetTimerController] Clock tick started");
-        }
+        if (AudioManager.Instance == null) return;
+        AudioManager.Instance.StartClockTick();
+        isClockTickActive = true;
     }
 
     private void StopClockTick()
     {
         if (AudioManager.Instance != null && isClockTickActive)
-        {
             AudioManager.Instance.StopClockTick();
-            isClockTickActive = false;
-            Debug.Log("[BetTimerController] Clock tick stopped");
-        }
+        isClockTickActive = false;
     }
     #endregion
 }

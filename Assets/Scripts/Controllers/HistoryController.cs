@@ -3,9 +3,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Manages bet history display with pagination
-/// </summary>
 public class HistoryController : MonoBehaviour
 {
     #region Serialized Fields
@@ -43,59 +40,27 @@ public class HistoryController : MonoBehaviour
     #region Setup
     private void SetupButtons()
     {
-        if (PrevPage_Button) PrevPage_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
-            OnPrevPageClicked();
-        });
-
-        if (NextPage_Button) NextPage_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
-            OnNextPageClicked();
-        });
-
-        if (Prev5Page_Button) Prev5Page_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
-            OnPrev5PageClicked();
-        });
-
-        if (Next5Page_Button) Next5Page_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
-            OnNext5PageClicked();
-        });
-
-        if (Close_Button) Close_Button.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            HideHistoryPanel();
-        });
+        PrevPage_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); OnPrevPageClicked(); });
+        NextPage_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); OnNextPageClicked(); });
+        Prev5Page_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); OnPrev5PageClicked(); });
+        Next5Page_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); OnNext5PageClicked(); });
+        Close_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); HideHistoryPanel(); });
     }
 
     private void InitializeRows()
     {
         if (HistoryRows == null) return;
-
         foreach (var row in HistoryRows)
-        {
-            if (row != null)
-            {
-                row.gameObject.SetActive(false);
-            }
-        }
+            row?.gameObject.SetActive(false);
     }
     #endregion
 
-    #region Public API
+    #region Internal API
     internal void ShowHistoryPanel()
     {
         if (HistoryPanel) HistoryPanel.SetActive(true);
-
         currentPage = 1;
         totalPages = 1;
-
         RequestPage(1);
     }
 
@@ -107,11 +72,7 @@ public class HistoryController : MonoBehaviour
 
     internal void UpdateHistoryData(List<HistoryEntry> history, HistoryMeta meta)
     {
-        if (history == null || meta == null)
-        {
-            isWaitingForData = false;
-            return;
-        }
+        if (history == null || meta == null) { isWaitingForData = false; return; }
 
         isWaitingForData = false;
         currentHistoryData = history;
@@ -124,19 +85,14 @@ public class HistoryController : MonoBehaviour
     }
     #endregion
 
-    #region Private Methods - Pagination
+    #region Pagination
     private void RequestPage(int page)
     {
-        if (page < 1) return;
-
-        if (isWaitingForData) return;
+        if (page < 1 || isWaitingForData) return;
 
         if (totalPages > 0 && page > totalPages)
         {
-            if (uiController)
-            {
-                uiController.ShowErrorPopup("No more history available");
-            }
+            uiController?.ShowErrorPopup("No more history available");
             return;
         }
 
@@ -146,67 +102,42 @@ public class HistoryController : MonoBehaviour
 
     private void OnPrevPageClicked()
     {
-        if (currentPage > 1)
-        {
-            RequestPage(currentPage - 1);
-        }
+        if (currentPage > 1) RequestPage(currentPage - 1);
     }
+
     private void OnPrev5PageClicked()
     {
-        if (currentPage > 5)
-        {
-            RequestPage(currentPage - 5);
-        }
+        if (currentPage > 5) RequestPage(currentPage - 5);
     }
+
     private void OnNextPageClicked()
     {
         if (currentPage < totalPages)
-        {
             RequestPage(currentPage + 1);
-        }
         else
-        {
-            if (uiController)
-            {
-                uiController.ShowErrorPopup("No more history available");
-            }
-        }
+            uiController?.ShowErrorPopup("No more history available");
     }
 
     private void OnNext5PageClicked()
     {
-        if (currentPage + 5 <= totalPages)
-        {
-            RequestPage(currentPage + 5);
-        }
-        else
-        {
-            RequestPage(totalPages);
-        }
+        RequestPage(currentPage + 5 <= totalPages ? currentPage + 5 : totalPages);
     }
     #endregion
 
-    #region Private Methods - Display
+    #region Display
     private void UpdateRows()
     {
         if (HistoryRows == null || currentHistoryData == null) return;
 
         foreach (var row in HistoryRows)
-        {
-            if (row != null)
-            {
-                row.gameObject.SetActive(false);
-            }
-        }
+            row?.gameObject.SetActive(false);
 
         int rowsToShow = Mathf.Min(HistoryRows.Count, currentHistoryData.Count);
-
         for (int i = 0; i < rowsToShow; i++)
         {
             if (HistoryRows[i] != null && currentHistoryData[i] != null)
             {
                 int displayRowNumber = ((currentPage - 1) * HistoryRows.Count) + i + 1;
-
                 HistoryRows[i].SetData(currentHistoryData[i], displayRowNumber);
                 HistoryRows[i].gameObject.SetActive(true);
             }
@@ -215,37 +146,15 @@ public class HistoryController : MonoBehaviour
 
     private void UpdatePageInfo()
     {
-        if (PageInfo_Text)
-        {
-            PageInfo_Text.text = $"{currentPage} / {totalPages}";
-        }
+        if (PageInfo_Text) PageInfo_Text.text = $"{currentPage} / {totalPages}";
     }
 
     private void UpdateNavigationButtons()
     {
-        if (PrevPage_Button)
-        {
-            bool canGoPrev = currentPage > 1 && !isWaitingForData;
-            PrevPage_Button.interactable = canGoPrev;
-        }
-
-        if (NextPage_Button)
-        {
-            bool canGoNext = currentPage < totalPages && !isWaitingForData;
-            NextPage_Button.interactable = canGoNext;
-        }
-
-        if (Prev5Page_Button)
-        {
-            bool canGoPrev5 = currentPage > 5 && !isWaitingForData;
-            Prev5Page_Button.interactable = canGoPrev5;
-        }
-
-        if (Next5Page_Button)
-        {
-            bool canGoNext5 = currentPage + 5 <= totalPages && !isWaitingForData;
-            Next5Page_Button.interactable = canGoNext5;
-        }
+        if (PrevPage_Button) PrevPage_Button.interactable = currentPage > 1 && !isWaitingForData;
+        if (NextPage_Button) NextPage_Button.interactable = currentPage < totalPages && !isWaitingForData;
+        if (Prev5Page_Button) Prev5Page_Button.interactable = currentPage > 5 && !isWaitingForData;
+        if (Next5Page_Button) Next5Page_Button.interactable = currentPage + 5 <= totalPages && !isWaitingForData;
     }
     #endregion
 }

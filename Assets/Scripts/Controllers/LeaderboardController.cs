@@ -21,11 +21,8 @@ public class LeaderboardController : MonoBehaviour
     [SerializeField] private float balanceDuration = 2f;
     [SerializeField] private float fadeSpeed = 0.3f;
     [SerializeField] private float loopInterval = 0f;
-
-    [Tooltip("Cards slide exactly this many units. Richest: -300→0   Winners: +300→0")]
     [SerializeField] private float slideDistance = 300f;
     [SerializeField] private float slideDuration = 0.5f;
-
     [SerializeField] private float minRandomOffset = 0f;
     [SerializeField] private float maxRandomOffset = 2f;
 
@@ -42,22 +39,60 @@ public class LeaderboardController : MonoBehaviour
     private Dictionary<int, LeaderboardEntry> currentRichest = new Dictionary<int, LeaderboardEntry>();
     private Dictionary<int, LeaderboardEntry> currentWinners = new Dictionary<int, LeaderboardEntry>();
     private Dictionary<int, List<Coroutine>> blockCoroutines = new Dictionary<int, List<Coroutine>>();
-
-    // Local player identity — set by UIController once login data arrives
     private string localPlayerUsername = null;
     private Sprite localPlayerAvatar = null;
     #endregion
 
-    #region Public API — Local Player
-    /// <summary>
-    /// Call this once from UIController after the player's name and chosen avatar are known.
-    /// Any leaderboard block whose username matches will display this avatar instead of a random one.
-    /// </summary>
-    public void SetLocalPlayer(string username, Sprite avatar)
+    #region Internal API — Local Player
+    internal void SetLocalPlayer(string username, Sprite avatar)
     {
         localPlayerUsername = username;
         localPlayerAvatar = avatar;
-        Debug.Log($"[LeaderboardController] Local player set: {username}");
+    }
+    #endregion
+
+    #region Unity Lifecycle
+    private void OnDestroy() => StopAllAnimations();
+    #endregion
+
+    #region Internal API
+    internal void Initialize()
+    {
+        foreach (var b in richestBlocks) b?.HideAll();
+        foreach (var b in winnersBlocks) b?.HideAll();
+
+        currentRichest.Clear();
+        currentWinners.Clear();
+        StopAllAnimations();
+
+        if (leaderboardParent != null) leaderboardParent.SetActive(false);
+    }
+
+    internal void UpdateLeaderboard(Leaderboards leaderboards)
+    {
+        var richestData = PadToThree(leaderboards?.richest);
+        var winnersData = PadToThree(leaderboards?.winners);
+
+        if (leaderboardParent != null && !leaderboardParent.activeSelf)
+            leaderboardParent.SetActive(true);
+
+        for (int i = 0; i < 3; i++)
+            UpdatePlayerBlock(richestBlocks, currentRichest, i, richestData[i], -1f, false);
+
+        for (int i = 0; i < 3; i++)
+            UpdatePlayerBlock(winnersBlocks, currentWinners, i, winnersData[i], 1f, true);
+    }
+
+    internal void Hide()
+    {
+        if (leaderboardParent != null) leaderboardParent.SetActive(false);
+
+        foreach (var b in richestBlocks) b?.HideAll();
+        foreach (var b in winnersBlocks) b?.HideAll();
+
+        currentRichest.Clear();
+        currentWinners.Clear();
+        StopAllAnimations();
     }
     #endregion
 
@@ -72,65 +107,9 @@ public class LeaderboardController : MonoBehaviour
 
     private List<LeaderboardEntry> PadToThree(List<LeaderboardEntry> source)
     {
-        var result = source != null
-            ? new List<LeaderboardEntry>(source)
-            : new List<LeaderboardEntry>();
-
-        while (result.Count < 3)
-            result.Add(MakeDummy(result.Count + 1));
-
+        var result = source != null ? new List<LeaderboardEntry>(source) : new List<LeaderboardEntry>();
+        while (result.Count < 3) result.Add(MakeDummy(result.Count + 1));
         return result;
-    }
-    #endregion
-
-    #region Unity Lifecycle
-    private void OnDestroy() => StopAllAnimations();
-    #endregion
-
-    #region Public API
-    public void Initialize()
-    {
-        Debug.Log("[LeaderboardController] Initialize called");
-
-        foreach (var b in richestBlocks) if (b != null) b.HideAll();
-        foreach (var b in winnersBlocks) if (b != null) b.HideAll();
-
-        currentRichest.Clear();
-        currentWinners.Clear();
-        StopAllAnimations();
-
-        if (leaderboardParent != null) leaderboardParent.SetActive(false);
-    }
-
-    public void UpdateLeaderboard(Leaderboards leaderboards)
-    {
-        List<LeaderboardEntry> richestData = PadToThree(leaderboards?.richest);
-        List<LeaderboardEntry> winnersData = PadToThree(leaderboards?.winners);
-
-        if (leaderboardParent != null && !leaderboardParent.activeSelf)
-            leaderboardParent.SetActive(true);
-
-        // Richest (left panel)  — slideDir = -1  → off-screen at x - 300
-        for (int i = 0; i < 3; i++)
-            UpdatePlayerBlock(richestBlocks, currentRichest, i, richestData[i],
-                              slideDir: -1f, isWinners: false);
-
-        // Winners (right panel) — slideDir = +1  → off-screen at x + 300
-        for (int i = 0; i < 3; i++)
-            UpdatePlayerBlock(winnersBlocks, currentWinners, i, winnersData[i],
-                              slideDir: 1f, isWinners: true);
-    }
-
-    public void Hide()
-    {
-        if (leaderboardParent != null) leaderboardParent.SetActive(false);
-
-        foreach (var b in richestBlocks) if (b != null) b.HideAll();
-        foreach (var b in winnersBlocks) if (b != null) b.HideAll();
-
-        currentRichest.Clear();
-        currentWinners.Clear();
-        StopAllAnimations();
     }
     #endregion
 
@@ -148,14 +127,12 @@ public class LeaderboardController : MonoBehaviour
         LeaderboardPlayerBlock block = blocks[index];
         bool isFirstTime = !currentData.ContainsKey(index);
         bool playerChanged = !isFirstTime && currentData[index].username != newEntry.username;
-
         double displayValue = isWinners ? newEntry.totalWins : newEntry.balance;
 
         if (isFirstTime)
         {
             currentData[index] = newEntry;
             block.SetPlayerData(newEntry.username, displayValue, PickAvatar(newEntry.username));
-
             float offset = Random.Range(minRandomOffset, maxRandomOffset);
             AddBlockCoroutine(block, StartCoroutine(DelayedAlternateStart(block, offset)));
         }
@@ -163,8 +140,7 @@ public class LeaderboardController : MonoBehaviour
         {
             currentData[index] = newEntry;
             StopBlockAnimation(block);
-            AddBlockCoroutine(block,
-                StartCoroutine(SlideOutAndUpdate(block, newEntry, slideDir, displayValue)));
+            AddBlockCoroutine(block, StartCoroutine(SlideOutAndUpdate(block, newEntry, slideDir, displayValue)));
         }
         else
         {
@@ -185,11 +161,6 @@ public class LeaderboardController : MonoBehaviour
     #endregion
 
     #region Animations
-
-    /// <summary>
-    /// Richest (slideDir = -1):  exit x→x-300,  re-enter x-300→x
-    /// Winners (slideDir = +1):  exit x→x+300,  re-enter x+300→x
-    /// </summary>
     private IEnumerator SlideOutAndUpdate(
         LeaderboardPlayerBlock block,
         LeaderboardEntry entry,
@@ -204,22 +175,13 @@ public class LeaderboardController : MonoBehaviour
             Vector2 restPos = blockRect.anchoredPosition;
             Vector2 offScreenPos = restPos + new Vector2(slideDir * slideDistance, 0f);
 
-            // Slide OUT
-            yield return blockRect
-                .DOAnchorPos(offScreenPos, slideDuration)
-                .SetEase(Ease.InQuad)
-                .WaitForCompletion();
+            yield return blockRect.DOAnchorPos(offScreenPos, slideDuration).SetEase(Ease.InQuad).WaitForCompletion();
 
-            // Swap content while off-screen
             ResetTextState(block.NameText);
             ResetTextState(block.BalanceText);
             block.SetPlayerData(entry.username, displayValue, PickAvatar(entry.username));
 
-            // Slide IN (already at offScreenPos, tween back to rest)
-            yield return blockRect
-                .DOAnchorPos(restPos, slideDuration)
-                .SetEase(Ease.OutQuad)
-                .WaitForCompletion();
+            yield return blockRect.DOAnchorPos(restPos, slideDuration).SetEase(Ease.OutQuad).WaitForCompletion();
         }
         else
         {
@@ -298,27 +260,24 @@ public class LeaderboardController : MonoBehaviour
     private void ResetTextState(TMP_Text textComponent)
     {
         if (textComponent == null) return;
-        CanvasGroup cg = textComponent.GetComponent<CanvasGroup>();
+        var cg = textComponent.GetComponent<CanvasGroup>();
         if (cg != null) cg.alpha = 1f;
-        RectTransform rt = textComponent.GetComponent<RectTransform>();
-        if (rt != null) rt.DOKill(complete: false);
+        textComponent.GetComponent<RectTransform>()?.DOKill(complete: false);
     }
 
     private CanvasGroup GetOrAddCanvasGroup(GameObject go)
     {
-        CanvasGroup cg = go.GetComponent<CanvasGroup>();
-        if (cg == null) cg = go.AddComponent<CanvasGroup>();
-        return cg;
+        var cg = go.GetComponent<CanvasGroup>();
+        return cg != null ? cg : go.AddComponent<CanvasGroup>();
     }
     #endregion
 
-    #region Coroutine Tracking (Per-Block)
+    #region Coroutine Tracking
     private void AddBlockCoroutine(LeaderboardPlayerBlock block, Coroutine coroutine)
     {
         if (block == null || coroutine == null) return;
         int id = block.GetInstanceID();
-        if (!blockCoroutines.ContainsKey(id))
-            blockCoroutines[id] = new List<Coroutine>();
+        if (!blockCoroutines.ContainsKey(id)) blockCoroutines[id] = new List<Coroutine>();
         blockCoroutines[id].Add(coroutine);
     }
 
@@ -326,15 +285,12 @@ public class LeaderboardController : MonoBehaviour
     {
         if (block == null) return;
         int id = block.GetInstanceID();
-
-        if (blockCoroutines.TryGetValue(id, out List<Coroutine> coroutines))
+        if (blockCoroutines.TryGetValue(id, out var coroutines))
         {
             foreach (var c in coroutines) if (c != null) StopCoroutine(c);
             coroutines.Clear();
         }
-
-        RectTransform blockRect = block.GetComponent<RectTransform>();
-        if (blockRect != null) blockRect.DOKill(complete: false);
+        block.GetComponent<RectTransform>()?.DOKill(complete: false);
     }
 
     private void StopAllAnimations()
@@ -349,19 +305,12 @@ public class LeaderboardController : MonoBehaviour
     #endregion
 
     #region Helpers
-
-    /// <summary>
-    /// Returns the local player's fixed avatar if the username matches,
-    /// otherwise picks a random one from the pool.
-    /// </summary>
     private Sprite PickAvatar(string username)
     {
         if (!string.IsNullOrEmpty(localPlayerUsername) &&
             localPlayerAvatar != null &&
             username == localPlayerUsername)
-        {
             return localPlayerAvatar;
-        }
 
         return GetRandomAvatar();
     }

@@ -2,9 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// Manages menu screen navigation (History and Info panels)
-/// </summary>
 public class MenuController : MonoBehaviour
 {
     #region Serialized Fields
@@ -45,39 +42,15 @@ public class MenuController : MonoBehaviour
     #region Setup
     private void SetupButtons()
     {
-        if (mainCloseButton) mainCloseButton.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            CloseMenu();
-        });
-
-        if (historyNavButton) historyNavButton.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            ShowHistoryPanel();
-        });
-
-        if (infoNavButton) infoNavButton.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
-            ShowInfoPanel();
-        });
-
-        if (forwardButton) forwardButton.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
-            NextInfoPage();
-        });
-
-        if (backwardButton) backwardButton.onClick.AddListener(() =>
-        {
-            if (AudioManager.Instance != null) AudioManager.Instance.PlayArrowButton();
-            PreviousInfoPage();
-        });
+        mainCloseButton?.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); CloseMenu(); });
+        historyNavButton?.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); ShowHistoryPanel(); });
+        infoNavButton?.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); ShowInfoPanel(); });
+        forwardButton?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); NextInfoPage(); });
+        backwardButton?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); PreviousInfoPage(); });
     }
     #endregion
 
-    #region Public API
+    #region Internal API
     internal void OpenMenuWithHistory()
     {
         ShowMenu();
@@ -91,52 +64,42 @@ public class MenuController : MonoBehaviour
         ShowInfoPage(0);
     }
 
-    internal void CloseMenu()
-    {
-        HideMenu();
-    }
+    internal void CloseMenu() => HideMenu();
     #endregion
 
-    #region Private Methods - Menu Management
-    private void ShowMenu()
-    {
-        if (menuScreen) menuScreen.SetActive(true);
-    }
+    #region Menu Management
+    private void ShowMenu() => menuScreen?.SetActive(true);
 
     private void HideMenu()
     {
-        if (menuScreen) menuScreen.SetActive(false);
+        menuScreen?.SetActive(false);
         HideAllPanels();
     }
 
     private void HideAllPanels()
     {
-        if (historyPanel) historyPanel.SetActive(false);
-        if (infoPanel) infoPanel.SetActive(false);
+        historyPanel?.SetActive(false);
+        infoPanel?.SetActive(false);
     }
     #endregion
 
-    #region Private Methods - Panel Navigation
+    #region Panel Navigation
     private void ShowHistoryPanel()
     {
         HideAllPanels();
-
-        if (historyPanel) historyPanel.SetActive(true);
-
-        if (historyController) historyController.ShowHistoryPanel();
+        historyPanel?.SetActive(true);
+        historyController?.ShowHistoryPanel();
     }
 
     private void ShowInfoPanel()
     {
         HideAllPanels();
-
-        if (infoPanel) infoPanel.SetActive(true);
-
+        infoPanel?.SetActive(true);
         ShowInfoPage(0);
     }
     #endregion
 
-    #region Private Methods - Info Page Navigation
+    #region Info Page Navigation
     private void ShowInfoPage(int pageIndex)
     {
         if (infoPages == null || infoPages.Count == 0) return;
@@ -144,43 +107,25 @@ public class MenuController : MonoBehaviour
         currentInfoPage = Mathf.Clamp(pageIndex, 0, TOTAL_INFO_PAGES - 1);
 
         for (int i = 0; i < infoPages.Count; i++)
-        {
-            if (infoPages[i] != null)
-            {
-                infoPages[i].SetActive(i == currentInfoPage);
-            }
-        }
+            infoPages[i]?.SetActive(i == currentInfoPage);
 
         UpdateInfoNavigationButtons();
     }
 
     private void NextInfoPage()
     {
-        if (currentInfoPage < TOTAL_INFO_PAGES - 1)
-        {
-            ShowInfoPage(currentInfoPage + 1);
-        }
+        if (currentInfoPage < TOTAL_INFO_PAGES - 1) ShowInfoPage(currentInfoPage + 1);
     }
 
     private void PreviousInfoPage()
     {
-        if (currentInfoPage > 0)
-        {
-            ShowInfoPage(currentInfoPage - 1);
-        }
+        if (currentInfoPage > 0) ShowInfoPage(currentInfoPage - 1);
     }
 
     private void UpdateInfoNavigationButtons()
     {
-        if (forwardButton)
-        {
-            forwardButton.interactable = currentInfoPage < TOTAL_INFO_PAGES - 1;
-        }
-
-        if (backwardButton)
-        {
-            backwardButton.interactable = currentInfoPage > 0;
-        }
+        if (forwardButton) forwardButton.interactable = currentInfoPage < TOTAL_INFO_PAGES - 1;
+        if (backwardButton) backwardButton.interactable = currentInfoPage > 0;
     }
     #endregion
 }

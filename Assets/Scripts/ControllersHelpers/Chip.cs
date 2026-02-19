@@ -9,27 +9,18 @@ public class Chip : MonoBehaviour
     [SerializeField] internal TMP_Text chipText;
 
     [Header("Leaderboard Badges")]
-    [Tooltip("Enable this ONLY on chips spawned inside bet areas (not selector/decoration chips)")]
     [SerializeField] private bool chipUsedForBetting = false;
-    [Tooltip("Badge shown when the chip owner is in the Richest top-3")]
     [SerializeField] private GameObject richestBadgeObject;
-    [Tooltip("Badge shown when the chip owner is in the Winners top-3")]
     [SerializeField] private GameObject winnersBadgeObject;
     #endregion
 
-    #region Public Properties
     internal int chipIndex { get; private set; }
-    #endregion
 
     #region Unity Lifecycle
-    private void Awake()
-    {
-        // Always start with badges hidden so decorative chips are never affected
-        HideBadgesInternal();
-    }
+    private void Awake() => HideBadgesInternal();
     #endregion
 
-    #region Public API - Core
+    #region Internal API
     internal void SetData(Sprite chip, string amount, int chipIndex)
     {
         if (chipImage != null) chipImage.sprite = chip;
@@ -47,21 +38,9 @@ public class Chip : MonoBehaviour
         if (chipImage != null) chipImage.sprite = chip;
     }
 
-    internal void SetActive(bool active)
-    {
-        gameObject.SetActive(active);
-    }
-
+    internal void SetActive(bool active) => gameObject.SetActive(active);
     internal bool IsActive() => gameObject.activeSelf;
-    #endregion
 
-    #region Public API - Leaderboard Badges
-    /// <summary>
-    /// Shows the richest or winners badge on this chip.
-    /// Has NO effect if chipUsedForBetting is false (selector / decoration chips stay clean).
-    /// Both badges are mutually exclusive: richest takes priority if both flags are true.
-    /// Call this right after a chip is placed into a bet area.
-    /// </summary>
     internal void SetLeaderboardBadge(bool isRichest, bool isWinner)
     {
         if (!chipUsedForBetting) return;
@@ -82,14 +61,7 @@ public class Chip : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Hides both badges. Call when the chip is cleared / returned to pool.
-    /// Safe to call on non-betting chips (no-op because badges are already hidden).
-    /// </summary>
-    internal void ClearLeaderboardBadge()
-    {
-        HideBadgesInternal();
-    }
+    internal void ClearLeaderboardBadge() => HideBadgesInternal();
     #endregion
 
     #region Private Helpers

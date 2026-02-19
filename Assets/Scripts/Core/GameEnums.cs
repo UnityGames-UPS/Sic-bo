@@ -1,13 +1,21 @@
-/// <summary>
-/// All enums used in Sic Bo game
-/// </summary>
-
-#region Bet Timer States
 public enum BetTimerState
 {
     Hidden,
-    Betting,    // Show "Place Bet" with time remaining
-    Locked,     // Show "Bet Locked" during dice roll
-    NextRound   // Show "Next Round in X" countdown
+    Betting,
+    Locked,
+    NextRound
 }
-#endregion
+
+public enum DiceBoxState
+{
+    Hidden, 
+    Shaking, 
+    Idle, 
+    ZoomingIn, 
+    ZoomedIn, 
+    Opening, 
+    Open, 
+    Closing, 
+    ZoomingOut, 
+    Waiting
+}

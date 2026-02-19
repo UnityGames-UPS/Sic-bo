@@ -23429,9 +23429,10 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: f421673323734ea0bc1689ec94ad91a4
+  testToken: 98c470fdaf2140e8a2c129e59bc491c5
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
+  showDebugLogs: 1
 --- !u!4 &410521237
 Transform:
   m_ObjectHideFlags: 0
@@ -42352,7 +42353,6 @@ MonoBehaviour:
   dice4Sprite: {fileID: -1486991833, guid: 2e147c329247c408ebe882c66130a1d9, type: 3}
   dice5Sprite: {fileID: 1320610689, guid: 2e147c329247c408ebe882c66130a1d9, type: 3}
   dice6Sprite: {fileID: -5551808395782546969, guid: 47939d68273e2d04385f5c369d717519, type: 3}
-  enableDebugLogs: 1
 --- !u!4 &760194024
 Transform:
   m_ObjectHideFlags: 0
@@ -89046,7 +89046,6 @@ MonoBehaviour:
   evenSumColor: {r: 0, g: 0, b: 0, a: 1}
   uiController: {fileID: 1759262012}
   betController: {fileID: 275686507}
-  gameManager: {fileID: 1673436615}
   diceBoxAnimController: {fileID: 1317873481}
   diceResultSoundDelay: 0.7
 --- !u!4 &1629638715
@@ -91530,6 +91529,7 @@ MonoBehaviour:
   resultPlaneController: {fileID: 760194023}
   socketManager: {fileID: 410521236}
   raycastBlocker: {fileID: 776184813}
+  showDebugLogs: 0
 --- !u!4 &1673436616
 Transform:
   m_ObjectHideFlags: 0
@@ -110930,7 +110930,6 @@ MonoBehaviour:
   chipWorkingScale: 1
   animationStartPercent: 0.6
   enableWinAnimations: 1
-  showDebugLogs: 0
 --- !u!4 &2046684978
 Transform:
   m_ObjectHideFlags: 0

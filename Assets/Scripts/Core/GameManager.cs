@@ -3,10 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
-/// <summary>
-/// Main game coordinator handling all game flow and socket communication
-/// UPDATED: Now supports array-based bonus multipliers
-/// </summary>
 public class GameManager : MonoBehaviour
 {
     #region Serialized Fields
@@ -27,9 +23,11 @@ public class GameManager : MonoBehaviour
     [Header("Blocker")]
     [SerializeField] private GameObject raycastBlocker;
 
+    [Header("Debug")]
+    [SerializeField] private bool showDebugLogs = false;
     #endregion
 
-    #region Public Properties
+    #region Internal Properties
     internal string CurrentRoom { get; private set; }
     internal string PlayerUsername { get; private set; }
     internal double CurrentBalance { get; private set; }
@@ -44,17 +42,18 @@ public class GameManager : MonoBehaviour
 
         CurrentBalance = socketManager.PlayerData.balance;
         CurrentWagers = socketManager.InitialData.wagers;
+        PlayerUsername = socketManager.PlayerData.username;
 
-        betController.SetCurrentPlayerUsername(socketManager.PlayerData.username);
+        betController.SetCurrentPlayerUsername(PlayerUsername);
         betController.SetLeaderboardData(socketManager.InitialData.leaderboards);
+
         uiController.SetupInitialData(
-            socketManager.PlayerData.username,
+            PlayerUsername,
             CurrentBalance,
             socketManager.InitialData.leaderboards,
             socketManager.InitialData.wagers,
             socketManager.InitialData.bets
         );
-        betController.SetCurrentPlayerUsername(socketManager.PlayerData.username);
 
         if (socketManager.InitialData.lobby != null)
         {
@@ -68,10 +67,6 @@ public class GameManager : MonoBehaviour
 
         uiController.ShowHomeScreen();
     }
-
-    internal void OnDataRefreshed()
-    {
-    }
     #endregion
 
     #region Socket Callbacks - Room
@@ -80,34 +75,21 @@ public class GameManager : MonoBehaviour
         if (payload == null) return;
 
         uiController.HideLoadingScreen();
-
         uiController.UpdateTotalPlayerCount(payload.playerCount);
-
-        // Always try to update leaderboards
-        Debug.Log($"[GameManager] OnRoomJoinedWithData - leaderboards is {(payload.leaderboards == null ? "null" : "not null")}");
-        if (payload.leaderboards == null)
-        {
-            Debug.LogWarning("[GameManager] Leaderboards data is null in room join payload");
-        }
-
         uiController.UpdateLeaderboards(payload.leaderboards);
         betController.SetLeaderboardData(payload.leaderboards);
 
-        // FIX Issue 1 & 2: Handle mid-round join by reading roundState.phase
         if (payload.roundState != null && !string.IsNullOrEmpty(payload.roundState.roundId))
         {
             CurrentRoundId = payload.roundState.roundId;
             uiController.UpdateRoundId(payload.roundState.roundId);
-            Debug.Log($"[GameManager] Round ID set on room join: {payload.roundState.roundId}");
 
             string phase = (payload.roundState.phase ?? "").ToLower();
-            Debug.Log($"[GameManager] Mid-round join detected. Phase='{phase}'");
 
             switch (phase)
             {
                 case "betting":
                     {
-                        // Round is in betting phase — enable betting and show correct timer
                         int timeRemaining = GameUtilities.CalculateTimeRemaining(
                             payload.roundState.bettingEndTime,
                             payload.roundState.serverTime);
@@ -116,51 +98,37 @@ public class GameManager : MonoBehaviour
                         uiController.UpdateRoundPhase("BETTING");
                         betController.EnableBetting();
 
-                        // Build a synthetic RoundStartData so RoundController starts its
-                        // animation cycle correctly from mid-round position
-                        var syntheticRoundStart = new RoundStartData
+                        roundController.StartRound(new RoundStartData
                         {
                             roundId = payload.roundState.roundId,
                             startedAt = payload.roundState.startedAt,
                             bettingEndTime = payload.roundState.bettingEndTime,
                             serverTime = payload.roundState.serverTime,
                             playerCount = payload.playerCount
-                        };
-                        roundController.StartRound(syntheticRoundStart);
+                        });
                         break;
                     }
-
                 case "rolling":
                 case "result":
-                    {
-                        // Dice are being rolled or result is shown — lock betting, show idle
-                        uiController.ShowBetLocked();
-                        uiController.UpdateRoundPhase("ROLLING");
-                        betController.DisableBetting();
-                        Debug.Log("[GameManager] Mid-round join in rolling/result phase — bet locked");
-                        break;
-                    }
-
+                    uiController.ShowBetLocked();
+                    uiController.UpdateRoundPhase("ROLLING");
+                    betController.DisableBetting();
+                    break;
                 case "nextround":
                     {
                         int secondsUntilNext = GameUtilities.CalculateTimeRemaining(
-                            payload.roundState.bettingEndTime,   // reuse as proxy if nextRoundStartTime not present
+                            payload.roundState.bettingEndTime,
                             payload.roundState.serverTime);
                         uiController.ShowNextRound(secondsUntilNext);
                         uiController.UpdateRoundPhase("NEXTROUND");
                         betController.DisableBetting();
                         break;
                     }
-
                 default:
-                    {
-                        // Unknown phase — safe default: show bet locked
-                        uiController.ShowBetLocked();
-                        uiController.UpdateRoundPhase("WAITING");
-                        betController.DisableBetting();
-                        Debug.Log($"[GameManager] Mid-round join: unknown phase '{phase}' — defaulting to locked");
-                        break;
-                    }
+                    uiController.ShowBetLocked();
+                    uiController.UpdateRoundPhase("WAITING");
+                    betController.DisableBetting();
+                    break;
             }
         }
         else
@@ -169,7 +137,6 @@ public class GameManager : MonoBehaviour
             uiController.UpdateRoundId(null);
             uiController.UpdateRoundPhase("WAITING");
             uiController.HideAllTimers();
-            Debug.Log("[GameManager] No active round — showing waiting state");
         }
     }
     #endregion
@@ -184,10 +151,7 @@ public class GameManager : MonoBehaviour
         int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
         uiController.UpdatePlayerCountInLevel(data.playerCount);
-
         uiController.UpdateRoundId(data.roundId);
-        Debug.Log($"[GameManager] Round ID updated: {data.roundId}");
-
         uiController.ShowBettingPhase(timeRemaining);
         uiController.UpdateRoundPhase("BETTING");
 
@@ -195,133 +159,51 @@ public class GameManager : MonoBehaviour
         betController.OnRoundStart();
         betController.EnableBetting();
 
-        // Reset chip animation pool ready for next round
         chipWinAnimationController?.ResetAll();
-
-        // Clear bonus indicators from previous round
         bonusIndicatorController?.ClearAllIndicators();
     }
 
     internal void OnBettingTimer(TimerData data)
     {
-        // SECURITY: Validate server data before processing
-        if (!ValidateTimerData(data))
-        {
-            Debug.LogError("[SECURITY] Invalid timer data from server - ignoring");
-            return;
-        }
-
-        if (data == null) return;
+        if (!ValidateTimerData(data)) return;
 
         int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
-
         roundController.UpdateTimer(timeRemaining);
         uiController.UpdateTimer(timeRemaining);
     }
 
     internal void OnBonus(BonusData data)
     {
-        if (data == null) return;
-
-        if (data.HasBonusDictionary())
-        {
-            // NEW: Show array-based bonus announcements
-            bonusIndicatorController?.ShowBonusAnnouncements(data.bonus);
-
-            // Build debug message
-            string bonusText = "BONUS: ";
-            foreach (var kvp in data.bonus)
-            {
-                string betOption = FormatBetOptionName(kvp.Key);
-                List<int> multipliers = kvp.Value;
-
-                if (multipliers.Count == 1)
-                {
-                    bonusText += $"{betOption} x{multipliers[0]}, ";
-                }
-                else
-                {
-                    bonusText += $"{betOption} [";
-                    for (int i = 0; i < multipliers.Count; i++)
-                    {
-                        bonusText += $"x{multipliers[i]}";
-                        if (i < multipliers.Count - 1) bonusText += ", ";
-                    }
-                    bonusText += "], ";
-                }
-            }
-            bonusText = bonusText.TrimEnd(',', ' ');
-
-            if (showDebugLogs)
-                Debug.Log($"[GameManager] {bonusText}");
-        }
-    }
-
-    private bool showDebugLogs = true;  // Can be made a serialized field if needed
-
-    private string FormatBetOptionName(string betOption)
-    {
-        // Convert bet option to readable name
-        if (betOption == "small") return "SMALL";
-        if (betOption == "big") return "BIG";
-        if (betOption == "odd") return "ODD";
-        if (betOption == "even") return "EVEN";
-
-        if (betOption.StartsWith("single_"))
-        {
-            string num = betOption.Substring(7);
-            return $"DICE {num}";
-        }
-
-        if (betOption.StartsWith("specific_3_"))
-        {
-            string num = betOption.Substring(11);
-            return $"TRIPLE {num}";
-        }
-
-        if (betOption.StartsWith("sum_"))
-        {
-            string num = betOption.Substring(4);
-            return $"SUM {num}";
-        }
-
-        return betOption.ToUpper();
+        if (data == null || !data.HasBonusDictionary()) return;
+        bonusIndicatorController?.ShowBonusAnnouncements(data.bonus);
     }
 
     internal void OnDiceResult(DiceResultData data)
     {
-        // SECURITY: Validate server data before processing
-        if (!ValidateDiceResult(data))
-        {
-            Debug.LogError("[SECURITY] Invalid dice result from server - ignoring");
-            return;
-        }
+        if (!ValidateDiceResult(data)) return;
 
-        if (data == null) return;
-        if (resultPlaneController != null)
-        {
-            resultPlaneController.AddNewResult(data);
-        }
-        else
-        {
-            Debug.LogWarning("[GameManager] ResultPlaneController is not assigned!");
-        }
+        resultPlaneController?.AddNewResult(data);
+
         betController.DisableBetting();
-
         uiController.ShowBetLocked();
         uiController.UpdateRoundPhase("RESULT");
 
         roundController.ShowDiceResult(data);
-
         betController.HighlightWinningAreas(data.matchSide, data.sum);
         betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
 
-        // Get winning bet options
-        List<string> winningBetOptions = betController.GetWinningBetOptions();
+        if (bonusIndicatorController != null)
+        {
+            List<string> currentBetOptions = betController.GetCurrentBetOptions();
+            bonusIndicatorController.UpdatePlayerBetAreas(currentBetOptions);
 
+            if (showDebugLogs)
+                Debug.Log($"[GameManager] Pre-result sync: {currentBetOptions.Count} player bet area(s) registered.");
+        }
+
+        List<string> winningBetOptions = betController.GetWinningBetOptions();
         bonusIndicatorController?.HandleDiceResult(winningBetOptions);
 
-        // Trigger chip animation for winning areas (dealer → bet area)
         if (chipWinAnimationController != null)
         {
             List<WinAreaData> winAreas = betController.GetWinningAreasData();
@@ -333,11 +215,6 @@ public class GameManager : MonoBehaviour
     internal void OnBetPlaced(BetPlacedData data)
     {
         if (data == null) return;
-
-        // FIX Issue 3: Forward ALL bet broadcasts to BetController.
-        // BetController.OnBetPlacedBroadcast() already separates own vs opponent bets
-        // internally via HandleOpponentBet(). The old guard here was silently dropping
-        // every opponent chip — that is why gray chips never appeared.
         betController.OnBetPlacedBroadcast(data);
     }
 
@@ -355,26 +232,20 @@ public class GameManager : MonoBehaviour
         {
             foreach (var payout in data.payouts)
             {
-                if (payout.username == socketManager.PlayerData.username)
+                if (payout.username == PlayerUsername)
                 {
-                    // SECURITY: Use validated balance update
-                    OnBalanceUpdated(payout.balance);
+                    ApplyBalanceUpdate(payout.balance);
 
                     if (payout.win > 0)
                     {
-                        // Display SERVER's win amount (not client-calculated)
                         uiController.ShowWinAnimation(payout.win);
-
-                        // Trigger cashout chip sweep animation (bet area → player)
                         chipWinAnimationController?.PlayCashoutAnimation();
                     }
                 }
             }
         }
 
-        // Trigger opponent chip cashout animation (bet area → dealers)
         opponentChipManager?.PlayCashoutAnimation();
-
         betController.ClearAllBets(false);
     }
 
@@ -383,7 +254,6 @@ public class GameManager : MonoBehaviour
         if (data == null) return;
 
         int secondsUntilNextRound = GameUtilities.CalculateTimeRemaining(data.nextRoundStartTime, data.serverTime);
-
         uiController.ShowNextRound(secondsUntilNextRound);
         uiController.UpdateRoundPhase("NEXTROUND");
         betController.OnRoundEnd();
@@ -400,23 +270,13 @@ public class GameManager : MonoBehaviour
             data.lobby.high_roller
         );
 
-        // NEW: Calculate and display total players (optional)
-        int totalPlayers = data.lobby.casual + data.lobby.novice +
-                          data.lobby.expert + data.lobby.high_roller;
-        uiController.UpdateTotalPlayerCount(totalPlayers);
-
-        Debug.Log($"[GameManager] Lobby counts updated - Total: {totalPlayers}, " +
-                 $"Casual: {data.lobby.casual}, Novice: {data.lobby.novice}, " +
-                 $"Expert: {data.lobby.expert}, High Roller: {data.lobby.high_roller}");
+        int total = data.lobby.casual + data.lobby.novice + data.lobby.expert + data.lobby.high_roller;
+        uiController.UpdateTotalPlayerCount(total);
     }
-
 
     internal void OnHistoryReceived(List<HistoryEntry> history, HistoryMeta meta)
     {
-        if (historyController != null)
-        {
-            historyController.UpdateHistoryData(history, meta);
-        }
+        historyController?.UpdateHistoryData(history, meta);
     }
 
     internal void OnBetActionResponse(BetAckResponse response)
@@ -430,50 +290,29 @@ public class GameManager : MonoBehaviour
         if (response.success)
         {
             if (response.payload != null)
-            {
-                // SECURITY: Use validated balance update
-                OnBalanceUpdated(response.payload.balance);
-            }
+                ApplyBalanceUpdate(response.payload.balance);
 
             betController.OnBetActionResponse(response);
         }
         else
         {
-            // IMPORTANT: All bet action failures are GAME NOTIFICATIONS, not errors
-            // They should use ShowInGamePopup(), NOT ShowErrorPopup()
-            //
-            // ShowInGamePopup = Game notifications (auto-closes after 1 second)
-            // ShowErrorPopup = Connection/system errors (requires user to click OK)
-
             string errorMsg = response.payload?.message ?? "Bet action failed";
 
             if (errorMsg == "Limit reached")
-            {
-                // Specific handling for limit - BetController shows detailed message
                 betController.OnBetLimitReached();
-            }
             else if (errorMsg.Contains("Insufficient"))
-            {
-                // Insufficient balance notification
                 uiController.ShowInGamePopup("Insufficient balance");
-            }
             else if (errorMsg.Contains("not active") || errorMsg.Contains("locked"))
-            {
-                // Betting phase ended notification
                 uiController.ShowInGamePopup("Betting is locked");
-            }
             else
-            {
-                // Any other bet-related message from server
                 uiController.ShowInGamePopup(errorMsg);
-            }
 
             betController.OnBetActionResponse(null);
         }
     }
     #endregion
 
-    #region Public API - Room Management
+    #region Internal API - Room Management
     internal void JoinRoom(string roomName)
     {
         uiController.ShowLoadingScreen("Joining Room...");
@@ -512,92 +351,52 @@ public class GameManager : MonoBehaviour
         socketManager.ReturnHome();
         uiController.ShowHomeScreen();
         uiController.HideAllTimers();
+
         CurrentRoom = null;
         CurrentRoundId = null;
         uiController.ClearRoundId();
     }
     #endregion
 
-    #region Public API - Betting Actions
+    #region Internal API - Betting Actions
     internal void PlaceBet(string betOption, int chipIndex)
     {
         if (string.IsNullOrEmpty(CurrentRoom)) return;
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlayPlayerBetPlace();
-        }
-        string betType = GetBetType(betOption);
 
-        socketManager.PlaceBet(betType, betOption, chipIndex, CurrentRoom);
+        AudioManager.Instance?.PlayPlayerBetPlace();
+
+        socketManager.PlaceBet(GetBetType(betOption), betOption, chipIndex, CurrentRoom);
     }
 
-    internal void UndoBet()
-    {
-        socketManager.UndoBet();
-    }
-
-    internal void CancelAllBets()
-    {
-        socketManager.CancelBet();
-    }
-
-    internal void DoubleBet()
-    {
-        socketManager.DoubleBet(CurrentRoom);
-    }
-
-    internal void RepeatBet()
-    {
-        socketManager.RepeatBet();
-    }
+    internal void UndoBet() => socketManager.UndoBet();
+    internal void CancelAllBets() => socketManager.CancelBet();
+    internal void DoubleBet() => socketManager.DoubleBet(CurrentRoom);
+    internal void RepeatBet() => socketManager.RepeatBet();
     #endregion
 
-    #region Public API - History and Exit
-    internal void RequestHistory(int page)
-    {
-        socketManager.RequestHistory(page);
-    }
+    #region Internal API - History and Exit
+    internal void RequestHistory(int page) => socketManager.RequestHistory(page);
 
     internal void ExitGame()
     {
-        Debug.Log("[GameManager] ExitGame called");
-
         uiController.ShowLoadingScreen("Exiting Game...");
+        raycastBlocker?.SetActive(true);
 
-        // 1. Activate raycast blocker (prevent user input)
-        if (raycastBlocker != null)
-        {
-            raycastBlocker.SetActive(true);
-        }
-
-        // 2. Disable betting
         betController?.DisableBetting();
-
-        // 3. Clear all game state
         betController?.ClearAllBets(true);
         betController?.ClearAllWinHighlights();
         roundController?.ClearRoundDisplay();
 
-        // 4. Clear current room
         CurrentRoom = null;
-
-        // 5. Close socket (async)
         StartCoroutine(socketManager.CloseSocket());
     }
     #endregion
 
-    #region Public API - NEW: Bet Limit Query
+    #region Internal API - Wager Queries
     internal double GetMaxBetForBetOption(string betOption)
     {
         if (string.IsNullOrEmpty(CurrentRoom) || CurrentWagers == null) return 0;
-
-        BetWager wager = GetWagerForBetOption(betOption);
-        if (wager != null)
-        {
-            return wager.GetMaxBet(CurrentRoom);
-        }
-
-        return 0;
+        return GetWagerForBetOption(betOption)?.GetMaxBet(CurrentRoom) ?? 0;
     }
 
     internal BetWager GetWagerForBetOption(string betOption)
@@ -613,10 +412,9 @@ public class GameManager : MonoBehaviour
         if (betOption.StartsWith("specific_3_")) return CurrentWagers.side_bets?.specific_3;
         if (betOption == "specific_2") return CurrentWagers.side_bets?.specific_2;
 
-        if (betOption.StartsWith("sum_"))
+        if (betOption.StartsWith("sum_") && int.TryParse(betOption.Substring(4), out int sumVal))
         {
-            int sumValue = int.Parse(betOption.Substring(4));
-            return sumValue switch
+            return sumVal switch
             {
                 4 => CurrentWagers.op_bets?.sum_4,
                 5 => CurrentWagers.op_bets?.sum_5,
@@ -640,37 +438,28 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
-    #region Private Helpers - Balance & State
-
-    /// <summary>
-    /// Update player balance with validation
-    /// </summary>
-    private void OnBalanceUpdated(double newBalance)
+    #region Private Helpers
+    private void ApplyBalanceUpdate(double newBalance)
     {
-        // SECURITY: Validate balance before updating
-        if (!ValidateBalanceUpdate(newBalance))
+        if (newBalance < 0)
         {
-            Debug.LogError("[SECURITY] Invalid balance update - keeping current balance");
+            Debug.LogError($"[GameManager] Negative balance received: {newBalance}");
             return;
         }
-
         CurrentBalance = newBalance;
         uiController.UpdateBalance(newBalance);
     }
 
     private List<double> GetChipValuesForRoom(string roomName)
     {
-        if (socketManager.InitialData?.bets == null)
-        {
-            return new List<double>();
-        }
+        if (socketManager.InitialData?.bets == null) return new List<double>();
 
         return roomName switch
         {
-            "casual" => socketManager.InitialData.bets.casual,
-            "novice" => GameUtilities.ConvertToDoubleList(socketManager.InitialData.bets.novice),
-            "expert" => GameUtilities.ConvertToDoubleList(socketManager.InitialData.bets.expert),
-            "high_roller" => GameUtilities.ConvertToDoubleList(socketManager.InitialData.bets.high_roller),
+            "casual" => socketManager.InitialData.bets.casual ?? new List<double>(),
+            "novice" => socketManager.InitialData.bets.novice ?? new List<double>(),
+            "expert" => socketManager.InitialData.bets.expert ?? new List<double>(),
+            "high_roller" => socketManager.InitialData.bets.high_roller ?? new List<double>(),
             _ => new List<double>()
         };
     }
@@ -678,125 +467,43 @@ public class GameManager : MonoBehaviour
     private string GetBetType(string betOption)
     {
         if (betOption == "small" || betOption == "big" || betOption == "odd" || betOption == "even")
-        {
             return "main_bets";
-        }
 
-        if (betOption.StartsWith("single_") ||
-            betOption == "specific_2" ||
-            betOption.StartsWith("specific_3_"))
-        {
+        if (betOption.StartsWith("single_") || betOption == "specific_2" || betOption.StartsWith("specific_3_"))
             return "side_bets";
-        }
 
         if (betOption.StartsWith("sum_"))
-        {
             return "op_bets";
-        }
 
         return "main_bets";
     }
-    #endregion
 
-    #region Server Data Validation - SECURITY IMPROVEMENTS
-
-    /// <summary>
-    /// Validate dice result from server to prevent malformed data
-    /// </summary>
     private bool ValidateDiceResult(DiceResultData data)
     {
-        if (data == null)
+        if (data == null) return false;
+
+        if (data.dice1 < 1 || data.dice1 > 6 ||
+            data.dice2 < 1 || data.dice2 > 6 ||
+            data.dice3 < 1 || data.dice3 > 6)
         {
-            Debug.LogError("[SECURITY] DiceResultData is null");
+            Debug.LogError($"[GameManager] Invalid dice values: {data.dice1},{data.dice2},{data.dice3}");
             return false;
         }
 
-        // Validate dice values are in range 1-6
-        if (!IsValidDiceValue(data.dice1) ||
-            !IsValidDiceValue(data.dice2) ||
-            !IsValidDiceValue(data.dice3))
+        if (data.sum != data.dice1 + data.dice2 + data.dice3)
         {
-            Debug.LogError($"[SECURITY] Invalid dice values: d1={data.dice1}, d2={data.dice2}, d3={data.dice3}");
+            Debug.LogError($"[GameManager] Dice sum mismatch. Expected {data.dice1 + data.dice2 + data.dice3}, got {data.sum}");
             return false;
-        }
-
-        // Validate sum matches dice total
-        int expectedSum = data.dice1 + data.dice2 + data.dice3;
-        if (data.sum != expectedSum)
-        {
-            Debug.LogError($"[SECURITY] Sum mismatch. Expected: {expectedSum}, Got: {data.sum}");
-            return false;
-        }
-
-        // Validate matchSide logic
-        bool isTriple = (data.dice1 == data.dice2 && data.dice2 == data.dice3);
-        if (!isTriple)
-        {
-            string expectedSide = (data.sum >= 4 && data.sum <= 10) ? "small" : "big";
-            if (data.matchSide != expectedSide)
-            {
-                Debug.LogWarning($"[SECURITY] MatchSide unexpected. Sum={data.sum}, Expected={expectedSide}, Got={data.matchSide}");
-                // Don't fail - server is authoritative
-            }
         }
 
         return true;
     }
 
-    private bool IsValidDiceValue(int value)
-    {
-        return value >= 1 && value <= 6;
-    }
-
-    /// <summary>
-    /// Validate timer data from server
-    /// </summary>
     private bool ValidateTimerData(TimerData data)
     {
-        if (data == null)
-        {
-            Debug.LogError("[SECURITY] TimerData is null");
-            return false;
-        }
-
-        // Validate roundId matches if we have a current round
-        if (!string.IsNullOrEmpty(CurrentRoundId) && data.roundId != CurrentRoundId)
-        {
-            Debug.LogWarning($"[SECURITY] Timer roundId mismatch. Current={CurrentRoundId}, Received={data.roundId}");
-            // Don't fail - might be new round starting
-        }
-
-        // Validate timeRemaining is reasonable (0 to 60 seconds)
-        if (data.timeRemaining < 0 || data.timeRemaining > 60000)
-        {
-            Debug.LogError($"[SECURITY] Invalid timeRemaining: {data.timeRemaining}ms");
-            return false;
-        }
-
+        if (data == null) return false;
+        if (data.timeRemaining < 0 || data.timeRemaining > 60000) return false;
         return true;
     }
-
-    /// <summary>
-    /// Validate balance update from server
-    /// </summary>
-    private bool ValidateBalanceUpdate(double newBalance)
-    {
-        // Balance should never be negative
-        if (newBalance < 0)
-        {
-            Debug.LogError($"[SECURITY] Negative balance received: {newBalance}");
-            return false;
-        }
-
-        // Log large balance changes for monitoring
-        double balanceDiff = Math.Abs(newBalance - CurrentBalance);
-        if (balanceDiff > 1000)
-        {
-            Debug.Log($"[SECURITY] Large balance change: {balanceDiff:F2} (Old: {CurrentBalance:F2}, New: {newBalance:F2})");
-        }
-
-        return true;
-    }
-
     #endregion
 }
