@@ -274,6 +274,7 @@ public class PlayerBetComponent : MonoBehaviour
         if (Mathf.Approximately((float)fromAmount, (float)toAmount))
         {
             totalBetAmountText.text = GameUtilities.FormatCurrency(toAmount);
+            PlayBackgroundScaleAnimation(); // still give visual feedback for 1:1 bets (small/big/single)
             isAnimatingWin = false;
             return;
         }

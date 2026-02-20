@@ -175,7 +175,10 @@ internal class ChipWinAnimationController : MonoBehaviour
         yield return new WaitForSeconds(0.22f);
 
         foreach (var (chip, _, _) in assignments)
+        {
             chip.SetParent(canvasRoot, worldPositionStays: true);
+            chip.SetSiblingIndex(0); // render below bet areas so text stays visible
+        }
 
         float chipFlightTime = 0f;
         float animationTriggerTime = dealerToBetDuration * animationStartPercent;
@@ -202,17 +205,19 @@ internal class ChipWinAnimationController : MonoBehaviour
 
     private void TriggerAllWinCountingAnimations(List<WinAreaData> winAreas)
     {
-        if (betController == null || gameManager == null) return;
+        if (betController == null) return;
 
         foreach (var winArea in winAreas)
         {
             PlayerBetComponent playerBetComp = betController.GetPlayerBetComponent(winArea.betOption);
             if (playerBetComp == null) continue;
+            if (winArea.betAmount <= 0) continue;
 
-            BetWager wager = gameManager.GetWagerForBetOption(winArea.betOption);
-            if (wager == null || wager.payout == null || wager.payout.Count < 2) continue;
-
-            playerBetComp.AnimateWinWithRatio(wager.payout[1]);
+            // Use actual win/bet ratio from WinAreaData directly.
+            // Fixes small/big (1:1), single dice (always returned wrong single_match_1 wager),
+            // and specific_3 (mismatched second lookup). WinAreaData already has correct computed values.
+            double ratio = winArea.winAmount / winArea.betAmount;
+            playerBetComp.AnimateWinWithRatio(ratio);
         }
     }
     #endregion
@@ -248,6 +253,7 @@ internal class ChipWinAnimationController : MonoBehaviour
         foreach (var chip in extraChips)
         {
             chip.SetParent(canvasRoot, worldPositionStays: true);
+            chip.SetSiblingIndex(0); // render below bet areas so text stays visible
             toSweep.Add(chip);
         }
 
