@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 
-public class ChipWinAnimationController : MonoBehaviour
+internal class ChipWinAnimationController : MonoBehaviour
 {
     #region Serialized Fields
     [Header("References")]
@@ -134,7 +134,7 @@ public class ChipWinAnimationController : MonoBehaviour
         double totalWin = 0;
         foreach (var a in winAreas) totalWin += a.winAmount;
 
-        var assignments = new List<(RectTransform chip, Vector2 dest)>();
+        var assignments = new List<(RectTransform chip, Vector2 dest, WinAreaData area)>();
         int poolIdx = 0;
 
         foreach (var area in winAreas)
@@ -167,21 +167,21 @@ public class ChipWinAnimationController : MonoBehaviour
                     Random.Range(-betAreaScatterX, betAreaScatterX),
                     Random.Range(-betAreaScatterY, betAreaScatterY));
 
-                assignments.Add((chip, dest));
+                assignments.Add((chip, dest, area));
                 activeWinChips.Add(chip);
             }
         }
 
         yield return new WaitForSeconds(0.22f);
 
-        foreach (var (chip, _) in assignments)
+        foreach (var (chip, _, _) in assignments)
             chip.SetParent(canvasRoot, worldPositionStays: true);
 
         float chipFlightTime = 0f;
         float animationTriggerTime = dealerToBetDuration * animationStartPercent;
         bool animationsTriggered = false;
 
-        foreach (var (chip, dest) in assignments)
+        foreach (var (chip, dest, area) in assignments)
         {
             chip.DOAnchorPos(dest, dealerToBetDuration).SetEase(Ease.OutQuad);
             yield return new WaitForSeconds(chipStaggerDelay);
@@ -190,8 +190,7 @@ public class ChipWinAnimationController : MonoBehaviour
             if (enableWinAnimations && !animationsTriggered && chipFlightTime >= animationTriggerTime)
             {
                 animationsTriggered = true;
-                foreach (var area in winAreas)
-                    TriggerWinCountingAnimation(area);
+                TriggerAllWinCountingAnimations(winAreas);
             }
         }
 
@@ -201,17 +200,20 @@ public class ChipWinAnimationController : MonoBehaviour
         winCoroutine = null;
     }
 
-    private void TriggerWinCountingAnimation(WinAreaData winArea)
+    private void TriggerAllWinCountingAnimations(List<WinAreaData> winAreas)
     {
         if (betController == null || gameManager == null) return;
 
-        PlayerBetComponent playerBetComp = betController.GetPlayerBetComponent(winArea.betOption);
-        if (playerBetComp == null) return;
+        foreach (var winArea in winAreas)
+        {
+            PlayerBetComponent playerBetComp = betController.GetPlayerBetComponent(winArea.betOption);
+            if (playerBetComp == null) continue;
 
-        BetWager wager = gameManager.GetWagerForBetOption(winArea.betOption);
-        if (wager == null || wager.payout == null || wager.payout.Count < 2) return;
+            BetWager wager = gameManager.GetWagerForBetOption(winArea.betOption);
+            if (wager == null || wager.payout == null || wager.payout.Count < 2) continue;
 
-        playerBetComp.AnimateWinWithRatio(wager.payout[1]);
+            playerBetComp.AnimateWinWithRatio(wager.payout[1]);
+        }
     }
     #endregion
 
@@ -318,8 +320,8 @@ public class ChipWinAnimationController : MonoBehaviour
 [System.Serializable]
 internal class WinAreaData
 {
-    public string betOption;
-    public Transform betAreaTarget;
-    public double betAmount;
-    public double winAmount;
+    internal string betOption;
+    internal Transform betAreaTarget;
+    internal double betAmount;
+    internal double winAmount;
 }

@@ -99,7 +99,7 @@ public class GameManager : MonoBehaviour
                             payload.roundState.serverTime);
 
                         uiController.ShowBettingPhase(timeRemaining);
-                        uiController.UpdateRoundPhase("BETTING");
+                        //uiController.UpdateRoundPhase("BETTING");
                         betController.EnableBetting();
 
                         roundController.StartRound(new RoundStartData
@@ -115,7 +115,7 @@ public class GameManager : MonoBehaviour
                 case "rolling":
                 case "result":
                     uiController.ShowBetLocked();
-                    uiController.UpdateRoundPhase("ROLLING");
+                    //uiController.UpdateRoundPhase("ROLLING");
                     betController.DisableBetting();
                     break;
                 case "nextround":
@@ -124,13 +124,13 @@ public class GameManager : MonoBehaviour
                             payload.roundState.bettingEndTime,
                             payload.roundState.serverTime);
                         uiController.ShowNextRound(secondsUntilNext);
-                        uiController.UpdateRoundPhase("NEXTROUND");
+                        //uiController.UpdateRoundPhase("NEXTROUND");
                         betController.DisableBetting();
                         break;
                     }
                 default:
                     uiController.ShowBetLocked();
-                    uiController.UpdateRoundPhase("WAITING");
+                    //uiController.UpdateRoundPhase("WAITING");
                     betController.DisableBetting();
                     break;
             }
@@ -139,7 +139,7 @@ public class GameManager : MonoBehaviour
         {
             CurrentRoundId = null;
             uiController.UpdateRoundId(null);
-            uiController.UpdateRoundPhase("WAITING");
+            //uiController.UpdateRoundPhase("WAITING");
             uiController.HideAllTimers();
         }
     }
@@ -157,7 +157,7 @@ public class GameManager : MonoBehaviour
         uiController.UpdatePlayerCountInLevel(data.playerCount);
         uiController.UpdateRoundId(data.roundId);
         uiController.ShowBettingPhase(timeRemaining);
-        uiController.UpdateRoundPhase("BETTING");
+        //uiController.UpdateRoundPhase("BETTING");
 
         roundController.StartRound(data);
         betController.OnRoundStart();
@@ -190,16 +190,14 @@ public class GameManager : MonoBehaviour
 
         betController.DisableBetting();
         uiController.ShowBetLocked();
-        uiController.UpdateRoundPhase("RESULT");
+        //uiController.UpdateRoundPhase("RESULT");
 
         roundController.ShowDiceResult(data);
         betController.HighlightWinningAreas(data.matchSide, data.sum);
         betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
 
-
-
-        List<string> winningBetOptions = betController.GetWinningBetOptions();
-        bonusIndicatorController?.HandleDiceResult(winningBetOptions);
+        List<string> winningBetOptions = betController.GetWinningBetOptions(); // keep for chip animation
+        bonusIndicatorController?.HandleDiceResult(GetAllWinningAreasFromDice(data)); // use dice-based list
 
         if (chipWinAnimationController != null)
         {
@@ -208,7 +206,35 @@ public class GameManager : MonoBehaviour
                 chipWinAnimationController.PlayDiceResultAnimation(winAreas);
         }
     }
+    private List<string> GetAllWinningAreasFromDice(DiceResultData data)
+    {
+        var winners = new List<string>();
 
+        // Main bets - from matchSide
+        string side = (data.matchSide ?? "").ToLower();
+        if (side == "small") winners.Add("small");
+        if (side == "big") winners.Add("big");
+        if (side == "odd") winners.Add("odd");
+        if (side == "even") winners.Add("even");
+
+        // Sum areas
+        winners.Add($"sum_{data.sum}");
+
+        // Single dice (1-6)
+        var diceValues = new[] { data.dice1, data.dice2, data.dice3 };
+        var seen = new HashSet<int>();
+        foreach (int d in diceValues)
+        {
+            if (seen.Add(d))
+                winners.Add($"single_{d}");
+        }
+
+        // Triple same dice → specific_3_X
+        if (data.dice1 == data.dice2 && data.dice2 == data.dice3)
+            winners.Add($"specific_3_{data.dice1}");
+
+        return winners;
+    }
     internal void OnBetPlaced(BetPlacedData data)
     {
         if (data == null) return;
@@ -252,7 +278,7 @@ public class GameManager : MonoBehaviour
 
         int secondsUntilNextRound = GameUtilities.CalculateTimeRemaining(data.nextRoundStartTime, data.serverTime);
         uiController.ShowNextRound(secondsUntilNextRound);
-        uiController.UpdateRoundPhase("NEXTROUND");
+        //uiController.UpdateRoundPhase("NEXTROUND");
         betController.OnRoundEnd();
     }
 

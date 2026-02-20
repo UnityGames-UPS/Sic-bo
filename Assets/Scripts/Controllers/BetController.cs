@@ -12,6 +12,7 @@ public class BetController : MonoBehaviour
     [SerializeField] private Button MainChip_Button;
     [SerializeField] private Image MainChip_Image;
     [SerializeField] private TMP_Text MainChip_Text;
+    [SerializeField] private RectTransform MainChip_RectTransform;
     [SerializeField] private GameObject ChipSelector_Panel;
     [SerializeField] private GameObject ChipSelector_BlackBG;
     [SerializeField] private Transform ChipOptions_Container;
@@ -99,6 +100,8 @@ public class BetController : MonoBehaviour
     private int receivedBroadcastCount = 0;
     private Sequence chipAnimationSequence;
     private Coroutine repeatPanelCoroutine;
+    private Vector2 mainChipOriginalPosition;
+    private Tween mainChipTween;
     #endregion
 
     #region Private Fields - Opponent System
@@ -116,6 +119,8 @@ public class BetController : MonoBehaviour
     private const float REPEAT_PANEL_SHOW_DURATION = 5f;
     private const float REPEAT_PANEL_DELAY = 0.5f;
     private const int MAX_CHIP_COMBINATION_COUNT = 20;
+    private const float MAIN_CHIP_Y_OFFSET = 20f;
+    private const float MAIN_CHIP_ANIMATION_DURATION = 0.3f;
     #endregion
 
     #region Unity Lifecycle
@@ -230,7 +235,7 @@ public class BetController : MonoBehaviour
     #region Setup
     private void SetupButtonListeners()
     {
-        if (MainChip_Button) MainChip_Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); ToggleChipSelector(); });
+        if (MainChip_Button) MainChip_Button.onClick.AddListener(() => { AudioManager.Instance?.PlayChipSelectionOpen(); ToggleChipSelector(); });
 
         if (ChipSelector_BlackBG)
         {
@@ -275,6 +280,7 @@ public class BetController : MonoBehaviour
 
     private void InitializeExistingChips()
     {
+
         existingChips.Clear();
         originalChipPositions.Clear();
         if (ChipOptions_Container == null) return;
@@ -821,8 +827,17 @@ public class BetController : MonoBehaviour
         isChipSelectorOpen = true;
         AudioManager.Instance?.PlayChipSelectionOpen();
         AnimateChipsOpen();
+        AnimateMainChipUp();
+    }
+    private void AnimateMainChipUp()
+    {
+        if (MainChip_RectTransform == null) return;
+        mainChipTween?.Kill();
+        Vector2 targetPosition = new Vector2(mainChipOriginalPosition.x, mainChipOriginalPosition.y + MAIN_CHIP_Y_OFFSET);
+        mainChipTween = MainChip_RectTransform.DOAnchorPos(targetPosition, MAIN_CHIP_ANIMATION_DURATION).SetEase(Ease.OutQuad);
     }
 
+   
     private void CloseChipSelector()
     {
         AudioManager.Instance?.PlayChipSelectionOpen();
@@ -832,8 +847,14 @@ public class BetController : MonoBehaviour
             if (ChipSelector_BlackBG) ChipSelector_BlackBG.SetActive(false);
             isChipSelectorOpen = false;
         });
+        AnimateMainChipDown();
     }
-
+    private void AnimateMainChipDown()
+    {
+        if (MainChip_RectTransform == null) return;
+        mainChipTween?.Kill();
+        mainChipTween = MainChip_RectTransform.DOAnchorPos(mainChipOriginalPosition, MAIN_CHIP_ANIMATION_DURATION).SetEase(Ease.InQuad);
+    }
     private void AnimateChipsOpen()
     {
         chipAnimationSequence?.Kill();

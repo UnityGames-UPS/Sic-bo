@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
 
-public class BonusIndicatorController : MonoBehaviour
+internal class BonusIndicatorController : MonoBehaviour
 {
     #region Serialized Fields
     [Header("Number Sprites - Brown (Announced)")]
@@ -44,7 +44,6 @@ public class BonusIndicatorController : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = false;
-    [SerializeField] private bool forceWinAnimation = false;
     #endregion
 
     #region Private Fields
@@ -139,21 +138,20 @@ public class BonusIndicatorController : MonoBehaviour
             if (indicator == null) continue;
 
             bool isWinning = winningSet.Contains(betOption);
-            bool shouldPlayWin = forceWinAnimation || isWinning;
 
-            if (shouldPlayWin)
+            if (isWinning)
             {
                 AnimateIndicatorToGreen(indicator, betOption);
 
                 if (showDebugLogs)
-                    Debug.Log($"[BonusIndicator] {betOption} → GREEN (forced={forceWinAnimation}, winning={isWinning}).");
+                    Debug.Log($"[BonusIndicator] {betOption} → GREEN (winning).");
             }
             else
             {
                 indicator.gameObject.SetActive(false);
 
                 if (showDebugLogs)
-                    Debug.Log($"[BonusIndicator] {betOption} → hidden (winning={isWinning}).");
+                    Debug.Log($"[BonusIndicator] {betOption} → hidden (not winning).");
             }
         }
     }
@@ -386,4 +384,4 @@ public class BonusIndicatorController : MonoBehaviour
         }
     }
     #endregion
-}
+}   

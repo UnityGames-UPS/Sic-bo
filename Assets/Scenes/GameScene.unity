@@ -14703,6 +14703,7 @@ MonoBehaviour:
   MainChip_Button: {fileID: 958152558}
   MainChip_Image: {fileID: 958152559}
   MainChip_Text: {fileID: 170785493}
+  MainChip_RectTransform: {fileID: 958152557}
   ChipSelector_Panel: {fileID: 1765690010}
   ChipSelector_BlackBG: {fileID: 1051902751}
   ChipOptions_Container: {fileID: 1765690011}
@@ -14808,7 +14809,7 @@ MonoBehaviour:
     playerBetComponent: {fileID: 0}
   - Button: {fileID: 2098396716}
     WinImage: {fileID: 1405595829}
-    PlayerBetContainer: {fileID: 669258925}
+    PlayerBetContainer: {fileID: 2098396715}
     OpponentBetContainer: {fileID: 624604217}
     playerBetComponent: {fileID: 0}
   SumAreas:
@@ -67805,7 +67806,6 @@ MonoBehaviour:
   winExitEase: 26
   supportDecimalMultipliers: 1
   showDebugLogs: 0
-  forceWinAnimation: 0
 --- !u!4 &1209887416
 Transform:
   m_ObjectHideFlags: 0
@@ -95855,7 +95855,6 @@ MonoBehaviour:
   RoundId_Text: {fileID: 1742872697}
   GameBalance_Text: {fileID: 1056463210}
   PlayerCount_Text: {fileID: 576061293}
-  RoundPhase_Text: {fileID: 0}
   SideMenuOpen_Button: {fileID: 1910597275}
   SideMenuClose_Button: {fileID: 1580192895}
   ExitGame_Button: {fileID: 1055280192}

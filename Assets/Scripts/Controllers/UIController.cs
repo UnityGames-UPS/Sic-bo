@@ -42,7 +42,7 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text RoundId_Text;
     [SerializeField] private TMP_Text GameBalance_Text;
     [SerializeField] private TMP_Text PlayerCount_Text;
-    [SerializeField] private TMP_Text RoundPhase_Text;
+    //[SerializeField] private TMP_Text RoundPhase_Text;
     [SerializeField] private Button SideMenuOpen_Button;
 
     [Header("Side Menu")]
@@ -512,16 +512,16 @@ public class UIController : MonoBehaviour
     internal void UpdateTotalPlayerCount(int total) { if (TotalPlayers_Text) TotalPlayers_Text.text = total.ToString(); }
     internal void UpdatePlayerCountInLevel(int count) { if (PlayerCount_Text) PlayerCount_Text.text = count.ToString(); }
 
-    internal void UpdateRoundPhase(string phase)
+    /*internal void UpdateRoundPhase(string phase)
     {
-        if (RoundPhase_Text) RoundPhase_Text.text = phase.ToUpper();
+       // if (RoundPhase_Text) RoundPhase_Text.text = phase.ToUpper();
         if (betTimerController != null)
         {
             string lower = phase.ToLower();
             if (lower == "rolling" || lower == "result")
                 betTimerController.ShowBetLocked();
         }
-    }
+    }*/
 
     internal void UpdateLobbyPlayerCounts(int casual = 0, int novice = 0, int expert = 0, int highRoller = 0)
     {

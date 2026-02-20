@@ -91,7 +91,7 @@ public class RoundController : MonoBehaviour
             data.serverTime
         );
 
-        uiController.UpdateRoundPhase("BETTING");
+        //uiController.UpdateRoundPhase("BETTING");
 
         int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
         uiController.UpdateTimer(timeRemaining);
@@ -115,7 +115,7 @@ public class RoundController : MonoBehaviour
         diceResultReceived = true;
 
         betController.DisableBetting();
-        uiController.UpdateRoundPhase("RESULT");
+        ////uiController.UpdateRoundPhase("RESULT");
 
         if (diceBoxAnimController != null)
             diceBoxAnimController.RevealDiceResult();
