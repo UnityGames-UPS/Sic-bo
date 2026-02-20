@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.EventSystems;
 
 public class HistoryController : MonoBehaviour
 {
@@ -45,6 +46,42 @@ public class HistoryController : MonoBehaviour
         Prev5Page_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); OnPrev5PageClicked(); });
         Next5Page_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); OnNext5PageClicked(); });
         Close_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); HideHistoryPanel(); });
+
+        AddButtonPressAnimation(PrevPage_Button, 1.2f);
+        AddButtonPressAnimation(NextPage_Button, 1.2f);
+        AddButtonPressAnimation(Prev5Page_Button, 1.2f);
+        AddButtonPressAnimation(Next5Page_Button, 1.2f);
+        AddButtonPressAnimation(Close_Button, 0.95f);
+    }
+
+    private void AddButtonPressAnimation(Button button, float targetScale)
+    {
+        if (button == null) return;
+
+        EventTrigger trigger = button.gameObject.GetComponent<EventTrigger>();
+        if (trigger == null) trigger = button.gameObject.AddComponent<EventTrigger>();
+
+        EventTrigger.Entry pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => { OnButtonPressed(button.transform, targetScale); });
+        trigger.triggers.Add(pointerDown);
+
+        EventTrigger.Entry pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => { OnButtonReleased(button.transform); });
+        trigger.triggers.Add(pointerUp);
+
+        EventTrigger.Entry pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => { OnButtonReleased(button.transform); });
+        trigger.triggers.Add(pointerExit);
+    }
+
+    private void OnButtonPressed(Transform buttonTransform, float targetScale)
+    {
+        buttonTransform.localScale = Vector3.one * targetScale;
+    }
+
+    private void OnButtonReleased(Transform buttonTransform)
+    {
+        buttonTransform.localScale = Vector3.one;
     }
 
     private void InitializeRows()

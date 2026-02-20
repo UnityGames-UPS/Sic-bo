@@ -5,7 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
 
-public class ResultPlaneController : MonoBehaviour  
+public class ResultPlaneController : MonoBehaviour
 {
     #region Serialized Fields
     [Header("Row References")]
@@ -57,18 +57,29 @@ public class ResultPlaneController : MonoBehaviour
     private void CacheSlotPositions()
     {
         slotPositions = new Vector2[11];
-        for (int i = 0; i < resultRows.Count; i++)
+
+        // Store positions 0-9 directly from the scene – these are the visible slots
+        for (int i = 0; i < 10; i++)
         {
             var rt = GetRT(resultRows[i]);
             if (rt != null) slotPositions[i] = rt.anchoredPosition;
         }
 
+        // Derive uniform row spacing from rows 0 and 1
         var rt0 = GetRT(resultRows[0]);
         var rt1 = GetRT(resultRows[1]);
         if (rt0 != null && rt1 != null)
             rowWidth = Mathf.Abs(rt1.anchoredPosition.x - rt0.anchoredPosition.x);
 
         if (rowWidth < 1f) rowWidth = 100f;
+
+        // Position 10 (staging slot) is always exactly one rowWidth to the right of slot 9,
+        // regardless of where row 10 was placed in the scene – this eliminates the gap mismatch
+        slotPositions[10] = slotPositions[9] + new Vector2(rowWidth, 0f);
+
+        // Physically move the staging row to that calculated position so it is correct from frame 1
+        var rt10 = GetRT(resultRows[10]);
+        if (rt10 != null) rt10.anchoredPosition = slotPositions[10];
     }
 
     private void InitializeDisplay()

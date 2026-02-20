@@ -35,6 +35,10 @@ public class GameManager : MonoBehaviour
     internal Wagers CurrentWagers { get; private set; }
     #endregion
 
+    #region Private Fields
+    private string pendingRoomSwitch = null;
+    #endregion
+
     #region Socket Callbacks - Initialization
     internal void OnInitDataReceived()
     {
@@ -192,14 +196,7 @@ public class GameManager : MonoBehaviour
         betController.HighlightWinningAreas(data.matchSide, data.sum);
         betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
 
-        if (bonusIndicatorController != null)
-        {
-            List<string> currentBetOptions = betController.GetCurrentBetOptions();
-            bonusIndicatorController.UpdatePlayerBetAreas(currentBetOptions);
 
-            if (showDebugLogs)
-                Debug.Log($"[GameManager] Pre-result sync: {currentBetOptions.Count} player bet area(s) registered.");
-        }
 
         List<string> winningBetOptions = betController.GetWinningBetOptions();
         bonusIndicatorController?.HandleDiceResult(winningBetOptions);
@@ -355,6 +352,55 @@ public class GameManager : MonoBehaviour
         CurrentRoom = null;
         CurrentRoundId = null;
         uiController.ClearRoundId();
+    }
+
+    /// <summary>
+    /// Switches to a different room without going back to the home screen.
+    /// Cleans up the current room, emits HOME to the server, then waits for
+    /// OnLeaveAcknowledged (fired from OnHomeAck) before joining the new room.
+    /// </summary>
+    internal void SwitchRoom(string targetRoom)
+    {
+        if (targetRoom == CurrentRoom) return;
+
+        pendingRoomSwitch = targetRoom;
+
+        uiController.ShowLoadingScreen("Joining Room...");
+
+        betController.DisableBetting();
+        betController.ClearAllBets(true);
+        betController.ClearAllWinHighlights();
+        roundController.ClearRoundDisplay();
+        resultPlaneController?.ClearAllResults();
+        bonusIndicatorController?.ClearAllIndicators();
+        uiController.HideAllTimers();
+
+        CurrentRoom = null;
+        CurrentRoundId = null;
+        uiController.ClearRoundId();
+
+        // Emit HOME — OnLeaveAcknowledged is called when server confirms leave
+        socketManager.ReturnHome();
+    }
+
+    /// <summary>
+    /// Called by SocketIOManager.OnHomeAck when the server confirms the player has left.
+    /// If a room switch is pending, joins that room; otherwise hides the loading screen
+    /// (normal leave flow — home screen was already shown by LeaveRoom).
+    /// </summary>
+    internal void OnLeaveAcknowledged()
+    {
+        if (!string.IsNullOrEmpty(pendingRoomSwitch))
+        {
+            string target = pendingRoomSwitch;
+            pendingRoomSwitch = null;
+            JoinRoom(target);
+        }
+        else
+        {
+            // Normal leave — home screen is already visible, just hide loading
+            uiController.HideLoadingScreen();
+        }
     }
     #endregion
 

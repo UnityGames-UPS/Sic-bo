@@ -1,5 +1,7 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class MenuController : MonoBehaviour
@@ -24,11 +26,17 @@ public class MenuController : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private HistoryController historyController;
+
+    [Header("Animation Settings")]
+    [SerializeField] private GameObject mainArea;
+    [SerializeField] private float popupDuration = 0.3f;
+    [SerializeField] private AnimationCurve popupCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
     #endregion
 
     #region Private Fields
     private int currentInfoPage = 0;
     private const int TOTAL_INFO_PAGES = 3;
+    private Coroutine popupCoroutine;
     #endregion
 
     #region Unity Lifecycle
@@ -47,6 +55,42 @@ public class MenuController : MonoBehaviour
         infoNavButton?.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); ShowInfoPanel(); });
         forwardButton?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); NextInfoPage(); });
         backwardButton?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); PreviousInfoPage(); });
+
+        AddButtonPressAnimation(mainCloseButton, 0.95f);
+        AddButtonPressAnimation(historyNavButton, 0.95f);
+        AddButtonPressAnimation(infoNavButton, 0.95f);
+        AddButtonPressAnimation(forwardButton, 1.2f);
+        AddButtonPressAnimation(backwardButton, 1.2f);
+    }
+
+    private void AddButtonPressAnimation(Button button, float targetScale)
+    {
+        if (button == null) return;
+
+        EventTrigger trigger = button.gameObject.GetComponent<EventTrigger>();
+        if (trigger == null) trigger = button.gameObject.AddComponent<EventTrigger>();
+
+        EventTrigger.Entry pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => { OnButtonPressed(button.transform, targetScale); });
+        trigger.triggers.Add(pointerDown);
+
+        EventTrigger.Entry pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => { OnButtonReleased(button.transform); });
+        trigger.triggers.Add(pointerUp);
+
+        EventTrigger.Entry pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => { OnButtonReleased(button.transform); });
+        trigger.triggers.Add(pointerExit);
+    }
+
+    private void OnButtonPressed(Transform buttonTransform, float targetScale)
+    {
+        buttonTransform.localScale = Vector3.one * targetScale;
+    }
+
+    private void OnButtonReleased(Transform buttonTransform)
+    {
+        buttonTransform.localScale = Vector3.one;
     }
     #endregion
 
@@ -68,18 +112,59 @@ public class MenuController : MonoBehaviour
     #endregion
 
     #region Menu Management
-    private void ShowMenu() => menuScreen?.SetActive(true);
+    private void ShowMenu()
+    {
+        if (menuScreen == null) return;
+        menuScreen.SetActive(true);
+        if (popupCoroutine != null) StopCoroutine(popupCoroutine);
+        popupCoroutine = StartCoroutine(PlayPopupAnimation(true));
+    }
 
     private void HideMenu()
     {
-        menuScreen?.SetActive(false);
-        HideAllPanels();
+        if (popupCoroutine != null) StopCoroutine(popupCoroutine);
+        popupCoroutine = StartCoroutine(PlayPopupAnimation(false));
     }
 
     private void HideAllPanels()
     {
         historyPanel?.SetActive(false);
         infoPanel?.SetActive(false);
+    }
+    #endregion
+
+    #region Animation
+    private IEnumerator PlayPopupAnimation(bool isOpening)
+    {
+        if (mainArea == null) yield break;
+
+        float startScale = isOpening ? 0f : 1f;
+        float endScale = isOpening ? 1f : 0f;
+        float elapsed = 0f;
+
+        mainArea.transform.localScale = Vector3.one * startScale;
+
+        while (elapsed < popupDuration)
+        {
+            elapsed += Time.deltaTime;
+            float progress = elapsed / popupDuration;
+            float curveValue = popupCurve.Evaluate(progress);
+            float scale = Mathf.Lerp(startScale, endScale, curveValue);
+
+            mainArea.transform.localScale = Vector3.one * scale;
+
+            yield return null;
+        }
+
+        mainArea.transform.localScale = Vector3.one * endScale;
+
+        if (!isOpening)
+        {
+            menuScreen?.SetActive(false);
+            HideAllPanels();
+        }
+
+        popupCoroutine = null;
     }
     #endregion
 

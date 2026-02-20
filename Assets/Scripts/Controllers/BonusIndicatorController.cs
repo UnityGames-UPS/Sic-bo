@@ -50,7 +50,6 @@ public class BonusIndicatorController : MonoBehaviour
     #region Private Fields
     private readonly Dictionary<string, BonusIndicator> indicatorPool = new Dictionary<string, BonusIndicator>();
     private readonly HashSet<string> activeBonusOptions = new HashSet<string>();
-    private readonly HashSet<string> playerBetAreas = new HashSet<string>();
     private readonly Dictionary<string, List<int>> currentMultipliers = new Dictionary<string, List<int>>();
     private bool isPoolInitialized = false;
     #endregion
@@ -106,6 +105,7 @@ public class BonusIndicatorController : MonoBehaviour
     #endregion
 
     #region Public API – called by GameManager
+
     internal void ShowBonusAnnouncements(Dictionary<string, List<int>> bonuses)
     {
         HideAllActiveIndicators();
@@ -128,11 +128,9 @@ public class BonusIndicatorController : MonoBehaviour
             Debug.Log($"[BonusIndicator] Showing bonuses for {activeBonusOptions.Count} bet option(s).");
     }
 
+
     internal void HandleDiceResult(List<string> winningBetOptions)
     {
-        if (showDebugLogs && playerBetAreas.Count == 0)
-            Debug.LogWarning("[BonusIndicator] HandleDiceResult called but playerBetAreas is empty – win animations won't play for any area!");
-
         var winningSet = new HashSet<string>(winningBetOptions);
 
         foreach (string betOption in activeBonusOptions)
@@ -140,26 +138,22 @@ public class BonusIndicatorController : MonoBehaviour
             if (!indicatorPool.TryGetValue(betOption, out BonusIndicator indicator)) continue;
             if (indicator == null) continue;
 
-            bool playerHasBet = playerBetAreas.Contains(betOption);
             bool isWinning = winningSet.Contains(betOption);
-
-            bool shouldPlayWin = forceWinAnimation || (playerHasBet && isWinning);
+            bool shouldPlayWin = forceWinAnimation || isWinning;
 
             if (shouldPlayWin)
             {
                 AnimateIndicatorToGreen(indicator, betOption);
 
                 if (showDebugLogs)
-                    Debug.Log($"[BonusIndicator] {betOption} → GREEN " +
-                              $"(forced={forceWinAnimation}, playerBet={playerHasBet}, winning={isWinning}).");
+                    Debug.Log($"[BonusIndicator] {betOption} → GREEN (forced={forceWinAnimation}, winning={isWinning}).");
             }
             else
             {
                 indicator.gameObject.SetActive(false);
 
                 if (showDebugLogs)
-                    Debug.Log($"[BonusIndicator] {betOption} → hidden " +
-                              $"(playerBet={playerHasBet}, winning={isWinning}).");
+                    Debug.Log($"[BonusIndicator] {betOption} → hidden (winning={isWinning}).");
             }
         }
     }
@@ -190,23 +184,11 @@ public class BonusIndicatorController : MonoBehaviour
         }
 
         activeBonusOptions.Clear();
-        playerBetAreas.Clear();
         currentMultipliers.Clear();
 
         if (showDebugLogs)
             Debug.Log("[BonusIndicator] All indicators cleared.");
     }
-
-    internal void UpdatePlayerBetAreas(List<string> betOptions)
-    {
-        playerBetAreas.Clear();
-        if (betOptions != null)
-            foreach (string opt in betOptions)
-                playerBetAreas.Add(opt);
-    }
-
-    internal void AddPlayerBetArea(string betOption) => playerBetAreas.Add(betOption);
-    internal void RemovePlayerBetArea(string betOption) => playerBetAreas.Remove(betOption);
     #endregion
 
     #region Private – Display Helpers

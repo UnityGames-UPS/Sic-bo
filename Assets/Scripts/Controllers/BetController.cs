@@ -230,7 +230,7 @@ public class BetController : MonoBehaviour
     #region Setup
     private void SetupButtonListeners()
     {
-        if (MainChip_Button) MainChip_Button.onClick.AddListener(ToggleChipSelector);
+        if (MainChip_Button) MainChip_Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); ToggleChipSelector(); });
 
         if (ChipSelector_BlackBG)
         {
@@ -238,10 +238,10 @@ public class BetController : MonoBehaviour
             bgButton.onClick.AddListener(CloseChipSelector);
         }
 
-        if (Undo_Button) Undo_Button.onClick.AddListener(OnUndoClicked);
-        if (Cancel_Button) Cancel_Button.onClick.AddListener(OnCancelClicked);
-        if (Double_Button) Double_Button.onClick.AddListener(OnDoubleClicked);
-        if (Repeat_Button) Repeat_Button.onClick.AddListener(OnRepeatClicked);
+        if (Undo_Button) Undo_Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); OnUndoClicked(); });
+        if (Cancel_Button) Cancel_Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); OnCancelClicked(); });
+        if (Double_Button) Double_Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); OnDoubleClicked(); });
+        if (Repeat_Button) Repeat_Button.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); OnRepeatClicked(); });
     }
 
     private void SetupBetAreaListeners()
@@ -434,7 +434,7 @@ public class BetController : MonoBehaviour
         areaBets.Clear();
         currentTotalBet = 0;
         betHistory.Clear();
-        bonusIndicatorController?.UpdatePlayerBetAreas(null);
+
 
         ClearArea(SmallArea);
         ClearArea(BigArea);
@@ -533,7 +533,7 @@ public class BetController : MonoBehaviour
         if (!areaBets.ContainsKey(data.betOption)) areaBets[data.betOption] = 0;
         areaBets[data.betOption] += data.amount;
         currentTotalBet += data.amount;
-        bonusIndicatorController?.AddPlayerBetArea(data.betOption);
+
 
         betHistory.Add(new BetAction
         {
@@ -557,8 +557,6 @@ public class BetController : MonoBehaviour
         if (!areaBets.ContainsKey(data.betOption)) areaBets[data.betOption] = 0;
         areaBets[data.betOption] += data.amount;
         currentTotalBet += data.amount;
-        bonusIndicatorController?.AddPlayerBetArea(data.betOption);
-
         betHistory.Add(new BetAction { betOption = data.betOption, amount = data.amount, chipIndex = GetChipIndexForAmount(data.amount) });
         UpdateTotalBet();
     }
@@ -571,8 +569,6 @@ public class BetController : MonoBehaviour
         if (!areaBets.ContainsKey(data.betOption)) areaBets[data.betOption] = 0;
         areaBets[data.betOption] += data.amount;
         currentTotalBet += data.amount;
-        bonusIndicatorController?.AddPlayerBetArea(data.betOption);
-
         betHistory.Add(new BetAction { betOption = data.betOption, amount = data.amount, chipIndex = GetChipIndexForAmount(data.amount) });
         UpdateTotalBet();
     }
@@ -593,7 +589,6 @@ public class BetController : MonoBehaviour
             if (areaBets[data.betOption] <= 0.01)
             {
                 areaBets.Remove(data.betOption);
-                bonusIndicatorController?.RemovePlayerBetArea(data.betOption);
             }
         }
 
@@ -623,8 +618,7 @@ public class BetController : MonoBehaviour
             areaBets[data.betOption] -= removeAmount;
             if (areaBets[data.betOption] <= 0.01)
             {
-                areaBets.Remove(data.betOption); 
-                bonusIndicatorController?.RemovePlayerBetArea(data.betOption);
+                areaBets.Remove(data.betOption);
             }
         }
 
@@ -735,7 +729,6 @@ public class BetController : MonoBehaviour
                 areaBets.Clear();
                 betHistory.Clear();
                 currentTotalBet = 0;
-                bonusIndicatorController?.UpdatePlayerBetAreas(null);
                 UpdateTotalBet();
                 break;
 
@@ -851,10 +844,15 @@ public class BetController : MonoBehaviour
             if (!existingChips[i].gameObject.activeSelf) continue;
             Transform t = existingChips[i].transform;
             Vector3 targetPos = originalChipPositions[i];
+
             t.localPosition = Vector3.zero;
-            t.localRotation = Quaternion.identity;
+            t.localRotation = Quaternion.Euler(0, 0, 180);
+
+            if (i == 0)
+                targetPos.y += 20f;
+
             chipAnimationSequence.Join(t.DOLocalMove(targetPos, CHIP_OPEN_DURATION).SetEase(Ease.OutBack));
-            chipAnimationSequence.Join(t.DOLocalRotate(new Vector3(0, 0, 360), CHIP_OPEN_DURATION, RotateMode.FastBeyond360).SetEase(Ease.OutQuad));
+            chipAnimationSequence.Join(t.DOLocalRotate(new Vector3(0, 0, 0), CHIP_OPEN_DURATION, RotateMode.FastBeyond360).SetEase(Ease.OutQuad));
         }
         chipAnimationSequence.Play();
     }
@@ -869,7 +867,7 @@ public class BetController : MonoBehaviour
             if (!existingChips[i].gameObject.activeSelf) continue;
             Transform t = existingChips[i].transform;
             chipAnimationSequence.Join(t.DOLocalMove(Vector3.zero, CHIP_CLOSE_DURATION).SetEase(Ease.InBack));
-            chipAnimationSequence.Join(t.DOLocalRotate(new Vector3(0, 0, -360), CHIP_CLOSE_DURATION, RotateMode.FastBeyond360).SetEase(Ease.InQuad));
+            chipAnimationSequence.Join(t.DOLocalRotate(new Vector3(0, 0, 180), CHIP_CLOSE_DURATION, RotateMode.FastBeyond360).SetEase(Ease.InQuad));
         }
         if (onComplete != null) chipAnimationSequence.OnComplete(() => onComplete());
         chipAnimationSequence.Play();

@@ -635,8 +635,6 @@ public class SocketIOManager : MonoBehaviour
 
             if (response != null && response.success && response.payload != null)
             {
-                uiController?.HideLoadingScreen();
-
                 if (!string.IsNullOrEmpty(response.payload.roomId))
                     CurrentRoomId = response.payload.roomId;
 
@@ -648,6 +646,9 @@ public class SocketIOManager : MonoBehaviour
 
                 if (response.payload.lobby != null)
                     gameManager.OnLobbyCount(new LobbyCountData { lobby = response.payload.lobby });
+
+                // Let GameManager decide: hide loading (normal leave) or join pending room (switch)
+                gameManager?.OnLeaveAcknowledged();
             }
         }
         catch (Exception e)

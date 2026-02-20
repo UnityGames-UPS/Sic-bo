@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public class UIController : MonoBehaviour
 {
@@ -100,6 +101,7 @@ public class UIController : MonoBehaviour
     [SerializeField] private float slideDistance = 1000f;
     [SerializeField] private float slideDuration = 0.3f;
     [SerializeField] private float inGamePopupDisplayTime = 1f;
+    
 
     [Header("Controllers")]
     [SerializeField] private GameManager gameManager;
@@ -174,6 +176,52 @@ public class UIController : MonoBehaviour
         Bind(DisconnectOK_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseDisconnectPopup(); gameManager.ExitGame(); });
         Bind(QuitYes_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseQuitPopup(); gameManager.ExitGame(); });
         Bind(QuitNo_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseQuitPopup(); });
+
+        AddButtonPressAnimation(CasualRoom_Button, 0.95f);
+        AddButtonPressAnimation(NoviceRoom_Button, 0.95f);
+        AddButtonPressAnimation(ExpertRoom_Button, 0.95f);
+        AddButtonPressAnimation(HighRollerRoom_Button, 0.95f);
+        AddButtonPressAnimation(HistoryHome_Button, 0.95f);
+        AddButtonPressAnimation(SettingsHome_Button, 0.95f);
+        AddButtonPressAnimation(SideMenuOpen_Button, 0.95f);
+        AddButtonPressAnimation(SideMenuClose_Button, 0.95f);
+        AddButtonPressAnimation(ExitGame_Button, 0.95f);
+        AddButtonPressAnimation(HistoryGame_Button, 0.95f);
+        AddButtonPressAnimation(SettingsGame_Button, 0.95f);
+        AddButtonPressAnimation(ErrorOK_Button, 0.95f);
+        AddButtonPressAnimation(DisconnectOK_Button, 0.95f);
+        AddButtonPressAnimation(QuitYes_Button, 0.95f);
+        AddButtonPressAnimation(QuitNo_Button, 0.95f);
+    }
+
+    private void AddButtonPressAnimation(Button button, float targetScale)
+    {
+        if (button == null) return;
+
+        EventTrigger trigger = button.gameObject.GetComponent<EventTrigger>();
+        if (trigger == null) trigger = button.gameObject.AddComponent<EventTrigger>();
+
+        EventTrigger.Entry pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => { OnButtonPressed(button.transform, targetScale); });
+        trigger.triggers.Add(pointerDown);
+
+        EventTrigger.Entry pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => { OnButtonReleased(button.transform); });
+        trigger.triggers.Add(pointerUp);
+
+        EventTrigger.Entry pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => { OnButtonReleased(button.transform); });
+        trigger.triggers.Add(pointerExit);
+    }
+
+    private void OnButtonPressed(Transform buttonTransform, float targetScale)
+    {
+        buttonTransform.localScale = Vector3.one * targetScale;
+    }
+
+    private void OnButtonReleased(Transform buttonTransform)
+    {
+        buttonTransform.localScale = Vector3.one;
     }
 
     private void InitializePopups()

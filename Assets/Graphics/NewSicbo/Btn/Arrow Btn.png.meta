@@ -1,10 +1,25 @@
 fileFormatVersion: 2
-guid: ced928f15a6cffd45809e81477da4da3
+guid: 8f40d3c40547d0a48b238d4ff4c8dd0f
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 7053529155089468011
-    second: L Btn_0
+      213: 33340404794420436
+    second: Arrow Btn_0
+  - first:
+      213: -9076446800040836682
+    second: Arrow Btn_1
+  - first:
+      213: -4254786309945455509
+    second: Arrow Btn_2
+  - first:
+      213: 6192297376631951940
+    second: Arrow Btn_3
+  - first:
+      213: 3874482765416684208
+    second: Arrow Btn_4
+  - first:
+      213: 1960376691875329152
+    second: Arrow Btn_5
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,13 +154,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: L Btn_0
+      name: Arrow Btn_0
       rect:
         serializedVersion: 2
-        x: 1
-        y: 0
-        width: 57
-        height: 48
+        x: 49
+        y: 534
+        width: 236
+        height: 198
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +169,118 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: b6a08f5356b23e160800000000000000
-      internalID: 7053529155089468011
+      spriteID: 4dc6078ebe2767000800000000000000
+      internalID: 33340404794420436
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Arrow Btn_1
+      rect:
+        serializedVersion: 2
+        x: 415
+        y: 534
+        width: 236
+        height: 198
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6b1c5d479bbf90280800000000000000
+      internalID: -9076446800040836682
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Arrow Btn_2
+      rect:
+        serializedVersion: 2
+        x: 49
+        y: 291
+        width: 236
+        height: 198
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b6c8188d466f3f4c0800000000000000
+      internalID: -4254786309945455509
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Arrow Btn_3
+      rect:
+        serializedVersion: 2
+        x: 415
+        y: 291
+        width: 236
+        height: 198
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4421bb5e7a57fe550800000000000000
+      internalID: 6192297376631951940
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Arrow Btn_4
+      rect:
+        serializedVersion: 2
+        x: 49
+        y: 49
+        width: 240
+        height: 198
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0bad8091c8de4c530800000000000000
+      internalID: 3874482765416684208
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Arrow Btn_5
+      rect:
+        serializedVersion: 2
+        x: 411
+        y: 49
+        width: 240
+        height: 198
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0843f29f638a43b10800000000000000
+      internalID: 1960376691875329152
       vertices: []
       indices: 
       edges: []
@@ -174,7 +299,12 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      L Btn_0: 7053529155089468011
+      Arrow Btn_0: 33340404794420436
+      Arrow Btn_1: -9076446800040836682
+      Arrow Btn_2: -4254786309945455509
+      Arrow Btn_3: 6192297376631951940
+      Arrow Btn_4: 3874482765416684208
+      Arrow Btn_5: 1960376691875329152
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -1,8 +1,9 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// Manages bet limit display panel
@@ -22,6 +23,10 @@ public class BetLimitManager : MonoBehaviour
     [SerializeField] private GameObject mainArea;
     [SerializeField] private Button openPanelButton;
     [SerializeField] private Button closePanelButton;
+    [SerializeField] private Button confirmButton;
+
+    [Header("Dependencies")]
+    [SerializeField] private GameManager gameManager;
 
     [Header("Room Selection Buttons")]
     [SerializeField] private Button casualButton;
@@ -77,17 +82,20 @@ public class BetLimitManager : MonoBehaviour
     private void SetupButtonListeners()
     {
         if (openPanelButton != null)
-            openPanelButton.onClick.AddListener(() =>
-            {
-                if (AudioManager.Instance != null) AudioManager.Instance.PlayPopupOpen();
-                OpenPanel();
-            });
+            openPanelButton.onClick.AddListener(() => { OpenPanel(); });
 
         if (closePanelButton != null)
             closePanelButton.onClick.AddListener(() =>
             {
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
                 ClosePanel();
+            });
+
+        if (confirmButton != null)
+            confirmButton.onClick.AddListener(() =>
+            {
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
+                OnConfirmClicked();
             });
 
         if (casualButton != null)
@@ -117,6 +125,44 @@ public class BetLimitManager : MonoBehaviour
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayButtonClick();
                 OnRoomButtonClicked("high_roller");
             });
+
+        AddButtonPressAnimation(openPanelButton, 0.95f);
+        AddButtonPressAnimation(closePanelButton, 0.95f);
+        AddButtonPressAnimation(confirmButton, 0.95f);
+        AddButtonPressAnimation(casualButton, 0.95f);
+        AddButtonPressAnimation(noviceButton, 0.95f);
+        AddButtonPressAnimation(expertButton, 0.95f);
+        AddButtonPressAnimation(highRollerButton, 0.95f);
+    }
+
+    private void AddButtonPressAnimation(Button button, float targetScale)
+    {
+        if (button == null) return;
+
+        EventTrigger trigger = button.gameObject.GetComponent<EventTrigger>();
+        if (trigger == null) trigger = button.gameObject.AddComponent<EventTrigger>();
+
+        EventTrigger.Entry pointerDown = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
+        pointerDown.callback.AddListener((data) => { OnButtonPressed(button.transform, targetScale); });
+        trigger.triggers.Add(pointerDown);
+
+        EventTrigger.Entry pointerUp = new EventTrigger.Entry { eventID = EventTriggerType.PointerUp };
+        pointerUp.callback.AddListener((data) => { OnButtonReleased(button.transform); });
+        trigger.triggers.Add(pointerUp);
+
+        EventTrigger.Entry pointerExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
+        pointerExit.callback.AddListener((data) => { OnButtonReleased(button.transform); });
+        trigger.triggers.Add(pointerExit);
+    }
+
+    private void OnButtonPressed(Transform buttonTransform, float targetScale)
+    {
+        buttonTransform.localScale = Vector3.one * targetScale;
+    }
+
+    private void OnButtonReleased(Transform buttonTransform)
+    {
+        buttonTransform.localScale = Vector3.one;
     }
     #endregion
 
@@ -166,6 +212,7 @@ public class BetLimitManager : MonoBehaviour
         currentSelectedRoom = playerCurrentRoom;
         UpdateRoomSelection();
         UpdateBetLimitDisplays();
+        UpdateConfirmButton();
 
         if (popupCoroutine != null)
             StopCoroutine(popupCoroutine);
@@ -178,6 +225,38 @@ public class BetLimitManager : MonoBehaviour
             StopCoroutine(popupCoroutine);
         popupCoroutine = StartCoroutine(PlayPopupAnimation(false));
     }
+    #endregion
+
+    #region Confirm / Room Switch
+
+    private void OnConfirmClicked()
+    {
+        // Same room selected — just close the panel
+        if (currentSelectedRoom == playerCurrentRoom)
+        {
+            ClosePanel();
+            return;
+        }
+
+        string targetRoom = currentSelectedRoom;
+
+        // Kill popup immediately — no close animation during a room switch
+        if (popupCoroutine != null) StopCoroutine(popupCoroutine);
+        betLimitPanel.SetActive(false);
+
+        // Hand off to GameManager: leave current room → wait for server ack → join target room
+        gameManager?.SwitchRoom(targetRoom);
+    }
+
+    /// <summary>
+    /// Dims the confirm button when the player has already selected their current room.
+    /// </summary>
+    private void UpdateConfirmButton()
+    {
+        if (confirmButton == null) return;
+        confirmButton.interactable = currentSelectedRoom != playerCurrentRoom;
+    }
+
     #endregion
 
     #region Private Methods - Animation
@@ -220,6 +299,7 @@ public class BetLimitManager : MonoBehaviour
         currentSelectedRoom = roomName;
         UpdateRoomSelection();
         UpdateBetLimitDisplays();
+        UpdateConfirmButton();
 
         Canvas.ForceUpdateCanvases();
     }

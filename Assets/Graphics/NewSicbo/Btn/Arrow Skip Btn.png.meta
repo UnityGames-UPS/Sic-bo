@@ -1,10 +1,19 @@
 fileFormatVersion: 2
-guid: 29a0db1959c128a428afc31256be9647
+guid: 983a74661b41fc84f8b7da1d703a6e82
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6985667017940488148
-    second: Base_Table_of_Sic_bo_KM_0
+      213: -7962018285629048855
+    second: Arrow Skip Btn_0
+  - first:
+      213: 2108345283364353583
+    second: Arrow Skip Btn_1
+  - first:
+      213: 5159026510568949109
+    second: Arrow Skip Btn_2
+  - first:
+      213: 1316834625767568510
+    second: Arrow Skip Btn_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,23 +148,89 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Base_Table_of_Sic_bo_KM_0
+      name: Arrow Skip Btn_0
       rect:
         serializedVersion: 2
-        x: 1
-        y: 0
-        width: 1080
-        height: 1055
+        x: 54
+        y: 475
+        width: 319
+        height: 202
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: c20be7cdbdced0f90800000000000000
-      internalID: -6985667017940488148
+      spriteID: 9e77ae5cd8a318190800000000000000
+      internalID: -7962018285629048855
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Arrow Skip Btn_1
+      rect:
+        serializedVersion: 2
+        x: 469
+        y: 475
+        width: 319
+        height: 202
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f267dce5dd8524d10800000000000000
+      internalID: 2108345283364353583
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Arrow Skip Btn_2
+      rect:
+        serializedVersion: 2
+        x: 54
+        y: 86
+        width: 319
+        height: 202
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5750945174b889740800000000000000
+      internalID: 5159026510568949109
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Arrow Skip Btn_3
+      rect:
+        serializedVersion: 2
+        x: 469
+        y: 86
+        width: 319
+        height: 202
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e747fc08d16564210800000000000000
+      internalID: 1316834625767568510
       vertices: []
       indices: 
       edges: []
@@ -164,7 +239,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 4f0be104d57073d48afa625ae02143b7
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +249,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Base_Table_of_Sic_bo_KM_0: -6985667017940488148
+      Arrow Skip Btn_0: -7962018285629048855
+      Arrow Skip Btn_1: 2108345283364353583
+      Arrow Skip Btn_2: 5159026510568949109
+      Arrow Skip Btn_3: 1316834625767568510
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
