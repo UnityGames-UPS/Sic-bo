@@ -132,23 +132,26 @@ internal class ChipWinAnimationController : MonoBehaviour
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : dealerSpawnPoint.parent;
 
         double totalWin = 0;
-        foreach (var a in winAreas) totalWin += a.winAmount;
+        foreach (var a in winAreas)
+            totalWin += a.winAmount;
 
-        var assignments = new List<(RectTransform chip, Vector2 dest, WinAreaData area)>();
+        var assignments = new List<(RectTransform chip, Vector2 dest)>();
         int poolIdx = 0;
 
         foreach (var area in winAreas)
         {
             if (area.betAreaTarget == null) continue;
+
             RectTransform targetRT = area.betAreaTarget as RectTransform
                                      ?? area.betAreaTarget.GetComponent<RectTransform>();
             if (targetRT == null) continue;
 
+
+            AudioManager.Instance?.PlayChipAdd();
+
             int count = totalWin > 0
                 ? Mathf.Clamp(Mathf.RoundToInt((float)(area.winAmount / totalWin) * 10f), 1, 6)
                 : 1;
-
-            AudioManager.Instance?.PlayChipAdd();
 
             for (int i = 0; i < count && poolIdx < dealerPool.Count; i++, poolIdx++)
             {
@@ -156,10 +159,12 @@ internal class ChipWinAnimationController : MonoBehaviour
                 if (chip == null) continue;
 
                 SetSprite(chip, SpriteIndex(area.winAmount));
+
                 chip.gameObject.SetActive(true);
                 chip.localPosition = new Vector3(
                     Random.Range(-dealerScatterX, dealerScatterX),
                     Random.Range(-dealerScatterY, dealerScatterY), 0f);
+
                 chip.localScale = Vector3.zero;
                 chip.DOScale(chipWorkingScale, 0.18f).SetEase(Ease.OutBack);
 
@@ -167,34 +172,32 @@ internal class ChipWinAnimationController : MonoBehaviour
                     Random.Range(-betAreaScatterX, betAreaScatterX),
                     Random.Range(-betAreaScatterY, betAreaScatterY));
 
-                assignments.Add((chip, dest, area));
+                assignments.Add((chip, dest));
                 activeWinChips.Add(chip);
             }
         }
 
-        yield return new WaitForSeconds(0.22f);
+        yield return new WaitForSeconds(0.20f);
 
-        foreach (var (chip, _, _) in assignments)
+        foreach (var (chip, _) in assignments)
         {
             chip.SetParent(canvasRoot, worldPositionStays: true);
-            chip.SetSiblingIndex(0); // render below bet areas so text stays visible
+            //chip.SetAsFirstSibling();
         }
 
-        float chipFlightTime = 0f;
-        float animationTriggerTime = dealerToBetDuration * animationStartPercent;
-        bool animationsTriggered = false;
-
-        foreach (var (chip, dest, area) in assignments)
+        if (enableWinAnimations && assignments.Count > 0)
         {
-            chip.DOAnchorPos(dest, dealerToBetDuration).SetEase(Ease.OutQuad);
-            yield return new WaitForSeconds(chipStaggerDelay);
-            chipFlightTime += chipStaggerDelay;
+            DOVirtual.DelayedCall(
+                dealerToBetDuration * animationStartPercent,
+                () => TriggerAllWinCountingAnimations(winAreas));
+        }
 
-            if (enableWinAnimations && !animationsTriggered && chipFlightTime >= animationTriggerTime)
-            {
-                animationsTriggered = true;
-                TriggerAllWinCountingAnimations(winAreas);
-            }
+        foreach (var (chip, dest) in assignments)
+        {
+            chip.DOAnchorPos(dest, dealerToBetDuration)
+                .SetEase(Ease.OutQuad);
+
+            yield return new WaitForSeconds(chipStaggerDelay);
         }
 
         yield return new WaitForSeconds(dealerToBetDuration);
@@ -202,7 +205,6 @@ internal class ChipWinAnimationController : MonoBehaviour
         isAnimating = false;
         winCoroutine = null;
     }
-
     private void TriggerAllWinCountingAnimations(List<WinAreaData> winAreas)
     {
         if (betController == null) return;
@@ -213,9 +215,6 @@ internal class ChipWinAnimationController : MonoBehaviour
             if (playerBetComp == null) continue;
             if (winArea.betAmount <= 0) continue;
 
-            // Use actual win/bet ratio from WinAreaData directly.
-            // Fixes small/big (1:1), single dice (always returned wrong single_match_1 wager),
-            // and specific_3 (mismatched second lookup). WinAreaData already has correct computed values.
             double ratio = winArea.winAmount / winArea.betAmount;
             playerBetComp.AnimateWinWithRatio(ratio);
         }
@@ -227,7 +226,6 @@ internal class ChipWinAnimationController : MonoBehaviour
     {
         if (playerNameTarget == null) yield break;
 
-        Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : dealerSpawnPoint.parent;
         var toSweep = new List<RectTransform>(activeWinChips);
 
         int extraNeeded = Mathf.Min(3, dealerPool.Count);
@@ -250,12 +248,12 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         yield return new WaitForSeconds(0.18f);
 
-        foreach (var chip in extraChips)
+       /* foreach (var chip in extraChips)
         {
             chip.SetParent(canvasRoot, worldPositionStays: true);
-            chip.SetSiblingIndex(0); // render below bet areas so text stays visible
+            chip.SetSiblingIndex(0); 
             toSweep.Add(chip);
-        }
+        }*/
 
         Vector2 playerPos = GetCanvasPosition(playerNameTarget);
 
