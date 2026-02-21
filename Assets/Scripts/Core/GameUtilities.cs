@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using UnityEngine;
 
 public static class GameUtilities
@@ -93,6 +94,93 @@ public static class GameUtilities
     {
         if (list == null || index < 0 || index >= list.Count) return null;
         return list[index];
+    }
+    #endregion
+
+    #region Stats
+    internal static StatsResult CalculateStats(List<string> rawStats)
+    {
+        StatsResult result = new StatsResult();
+
+        if (rawStats == null || rawStats.Count == 0) return result;
+
+        int validRounds = 0;
+        int[] diceCounts = new int[6];
+        int totalDiceRolls = 0;
+        int smallCount = 0, bigCount = 0, oddCount = 0;
+
+        foreach (string entry in rawStats)
+        {
+            ResultData data = null;
+            try { data = Newtonsoft.Json.JsonConvert.DeserializeObject<ResultData>(entry); }
+            catch { continue; }
+
+            if (data == null) continue;
+            if (data.dice1 < 1 || data.dice1 > 6 || data.dice2 < 1 || data.dice2 > 6 || data.dice3 < 1 || data.dice3 > 6) continue;
+
+            validRounds++;
+
+            int computedSum = data.dice1 + data.dice2 + data.dice3;
+
+            int[] diceVals = { data.dice1, data.dice2, data.dice3 };
+            foreach (int d in diceVals)
+            {
+                diceCounts[d - 1]++;
+                totalDiceRolls++;
+            }
+
+            if (computedSum >= 4 && computedSum <= 10) smallCount++;
+            else if (computedSum >= 11 && computedSum <= 17) bigCount++;
+
+            if (computedSum % 2 != 0) oddCount++;
+        }
+
+        result.totalRounds = validRounds;
+        if (validRounds == 0) return result;
+
+        int evenCount = validRounds - oddCount;
+
+        int[] diceInts = LargestRemainder(diceCounts, totalDiceRolls > 0 ? totalDiceRolls : 1, 100);
+        for (int i = 0; i < 6; i++) result.dicePct[i] = diceInts[i];
+
+        int smallBigTotal = smallCount + bigCount;
+        int[] smallBigInts = LargestRemainder(new[] { smallCount, bigCount }, smallBigTotal > 0 ? smallBigTotal : 1, 100);
+        result.smallPct = smallBigInts[0];
+        result.bigPct = smallBigInts[1];
+
+        int[] oddEvenInts = LargestRemainder(new[] { oddCount, evenCount }, validRounds, 100);
+        result.oddPct = oddEvenInts[0];
+        result.evenPct = oddEvenInts[1];
+
+        return result;
+    }
+
+    private static int[] LargestRemainder(int[] counts, int total, int target)
+    {
+        int n = counts.Length;
+        double[] exact = new double[n];
+        int[] floored = new int[n];
+        double[] remainders = new double[n];
+        int[] result = new int[n];
+        int flooredSum = 0;
+
+        for (int i = 0; i < n; i++)
+        {
+            exact[i] = (double)counts[i] / total * target;
+            floored[i] = (int)exact[i];
+            remainders[i] = exact[i] - floored[i];
+            flooredSum += floored[i];
+        }
+
+        int leftover = target - flooredSum;
+        int[] indices = new int[n];
+        for (int i = 0; i < n; i++) indices[i] = i;
+        System.Array.Sort(indices, (a, b) => remainders[b].CompareTo(remainders[a]));
+
+        for (int i = 0; i < n; i++) result[i] = floored[i];
+        for (int i = 0; i < leftover && i < n; i++) result[indices[i]]++;
+
+        return result;
     }
     #endregion
 }

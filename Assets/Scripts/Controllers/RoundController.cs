@@ -121,8 +121,9 @@ public class RoundController : MonoBehaviour
             diceBoxAnimController.RevealDiceResult();
         else
         {
+            bool isTriple = data.dice1 == data.dice2 && data.dice2 == data.dice3;
             SetDiceValues(data);
-            ShowResult(data.sum, data.matchSide);
+            ShowResult(data.sum, data.matchSide, isTriple);
             PlayDiceResultSounds(data);
         }
     }
@@ -167,9 +168,11 @@ public class RoundController : MonoBehaviour
     {
         if (currentDiceResult == null) return;
 
+        bool isTriple = currentDiceResult.dice1 == currentDiceResult.dice2 && currentDiceResult.dice2 == currentDiceResult.dice3;
+
         SetDiceValues(currentDiceResult);
         if (DiceContainer) DiceContainer.SetActive(true);
-        ShowResult(currentDiceResult.sum, currentDiceResult.matchSide);
+        ShowResult(currentDiceResult.sum, currentDiceResult.matchSide, isTriple);
         AudioManager.Instance?.PlayDiceShow();
         PlayDiceResultSounds(currentDiceResult);
 
@@ -207,7 +210,7 @@ public class RoundController : MonoBehaviour
         diceImage.sprite = DiceSprites[faceIndex];
     }
 
-    private void ShowResult(int sum, string matchSide)
+    private void ShowResult(int sum, string matchSide, bool isTriple)
     {
         if (Sum_Text)
         {
@@ -219,10 +222,13 @@ public class RoundController : MonoBehaviour
         if (OddImage) OddImage.SetActive(false);
         if (EvenImage) EvenImage.SetActive(false);
 
-        if (sum >= 4 && sum <= 10 && SmallImage) SmallImage.SetActive(true);
-        if (sum >= 11 && sum <= 17 && BigImage) BigImage.SetActive(true);
-        if (sum % 2 != 0 && OddImage) OddImage.SetActive(true);
-        else if (sum % 2 == 0 && EvenImage) EvenImage.SetActive(true);
+        if (!isTriple)
+        {
+            if (sum >= 4 && sum <= 10 && SmallImage) SmallImage.SetActive(true);
+            if (sum >= 11 && sum <= 17 && BigImage) BigImage.SetActive(true);
+            if (sum % 2 != 0 && OddImage) OddImage.SetActive(true);
+            else if (sum % 2 == 0 && EvenImage) EvenImage.SetActive(true);
+        }
 
         if (ResultPanel) ResultPanel.SetActive(true);
     }

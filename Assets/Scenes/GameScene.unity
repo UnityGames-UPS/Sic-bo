@@ -2430,7 +2430,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &46738961
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2783,7 +2783,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 5, y: -2.5}
-  m_SizeDelta: {x: 62.82, y: 22}
+  m_SizeDelta: {x: 0, y: 22}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &55954851
 MonoBehaviour:
@@ -5065,7 +5065,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 80, y: 0}
-  m_SizeDelta: {x: 33.49, y: 50}
+  m_SizeDelta: {x: 0, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &96190419
 MonoBehaviour:
@@ -28132,7 +28132,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 95.5, y: 103.24}
-  m_SizeDelta: {x: 93, y: 80}
+  m_SizeDelta: {x: 0, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &507807960
 MonoBehaviour:
@@ -47669,7 +47669,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 5, y: -2.5}
-  m_SizeDelta: {x: 64.26, y: 22}
+  m_SizeDelta: {x: 0, y: 22}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &856070317
 MonoBehaviour:
@@ -56894,7 +56894,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 35}
-  m_SizeDelta: {x: 93, y: 80}
+  m_SizeDelta: {x: 0, y: 80}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1050689493
 MonoBehaviour:
@@ -79970,7 +79970,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 5, y: -2.5}
-  m_SizeDelta: {x: 62.82, y: 22}
+  m_SizeDelta: {x: 0, y: 22}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1453128218
 MonoBehaviour:
@@ -85210,7 +85210,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 5, y: -2.5}
-  m_SizeDelta: {x: 62.82, y: 22}
+  m_SizeDelta: {x: 0, y: 22}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1549115466
 MonoBehaviour:
@@ -95908,6 +95908,37 @@ MonoBehaviour:
   menuController: {fileID: 226403981}
   betTimerController: {fileID: 1713741160}
   leaderboardController: {fileID: 1759262014}
+  StatsRoundCount_Text: {fileID: 456553621}
+  StatsDice1_Text: {fileID: 1013433085}
+  StatsDice2_Text: {fileID: 656144862}
+  StatsDice3_Text: {fileID: 1742731044}
+  StatsDice4_Text: {fileID: 827632242}
+  StatsDice5_Text: {fileID: 837462971}
+  StatsDice6_Text: {fileID: 1297499076}
+  StatsSmall_Text: {fileID: 1979393422}
+  StatsBig_Text: {fileID: 33869558}
+  StatsOdd_Text: {fileID: 962466972}
+  StatsEven_Text: {fileID: 309363439}
+  WRMainBets_Text: {fileID: 1960858491}
+  WRSingleMatch1_Text: {fileID: 630548388}
+  WRSingleMatch2_Text: {fileID: 1892132370}
+  WRSingleMatch3_Text: {fileID: 993899367}
+  WRSpecific2_Text: {fileID: 1147445225}
+  WRSpecific3_Text: {fileID: 1225973682}
+  WRSum4_Text: {fileID: 660247464}
+  WRSum5_Text: {fileID: 758790756}
+  WRSum6_Text: {fileID: 102204357}
+  WRSum7_Text: {fileID: 438145711}
+  WRSum8_Text: {fileID: 1969842749}
+  WRSum9_Text: {fileID: 1539954545}
+  WRSum10_Text: {fileID: 1413636555}
+  WRSum11_Text: {fileID: 784729308}
+  WRSum12_Text: {fileID: 364620275}
+  WRSum13_Text: {fileID: 715478166}
+  WRSum14_Text: {fileID: 371807266}
+  WRSum15_Text: {fileID: 792799378}
+  WRSum16_Text: {fileID: 2023704396}
+  WRSum17_Text: {fileID: 1784739045}
 --- !u!4 &1759262013
 Transform:
   m_ObjectHideFlags: 0
@@ -104225,7 +104256,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 5, y: -2.5}
-  m_SizeDelta: {x: 62.82, y: 22}
+  m_SizeDelta: {x: 0, y: 22}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1923544894
 MonoBehaviour:
@@ -108223,7 +108254,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 5, y: -2.5}
-  m_SizeDelta: {x: 62.82, y: 22}
+  m_SizeDelta: {x: 0, y: 22}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1993567852
 MonoBehaviour:

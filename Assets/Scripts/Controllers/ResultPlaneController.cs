@@ -270,8 +270,9 @@ public class ResultPlaneController : MonoBehaviour
                     : new Color(0.8f, 0.1f, 0.1f, 1f);
             }
 
-            bool showSmall = data.sum >= 4 && data.sum <= 10;
-            bool showBig = data.sum >= 11 && data.sum <= 17;
+            bool isTriple = data.dice1 == data.dice2 && data.dice2 == data.dice3;
+            bool showSmall = !isTriple && data.sum >= 4 && data.sum <= 10;
+            bool showBig = !isTriple && data.sum >= 11 && data.sum <= 17;
 
             bigImage?.SetActive(showBig);
             smallImage?.SetActive(showSmall);

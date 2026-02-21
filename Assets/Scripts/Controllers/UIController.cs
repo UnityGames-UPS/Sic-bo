@@ -101,13 +101,48 @@ public class UIController : MonoBehaviour
     [SerializeField] private float slideDistance = 1000f;
     [SerializeField] private float slideDuration = 0.3f;
     [SerializeField] private float inGamePopupDisplayTime = 1f;
-    
+
 
     [Header("Controllers")]
     [SerializeField] private GameManager gameManager;
     [SerializeField] private MenuController menuController;
     [SerializeField] private BetTimerController betTimerController;
     [SerializeField] private LeaderboardController leaderboardController;
+
+    [Header("Stats Display")]
+    [SerializeField] private TMP_Text StatsRoundCount_Text;
+    [SerializeField] private TMP_Text StatsDice1_Text;
+    [SerializeField] private TMP_Text StatsDice2_Text;
+    [SerializeField] private TMP_Text StatsDice3_Text;
+    [SerializeField] private TMP_Text StatsDice4_Text;
+    [SerializeField] private TMP_Text StatsDice5_Text;
+    [SerializeField] private TMP_Text StatsDice6_Text;
+    [SerializeField] private TMP_Text StatsSmall_Text;
+    [SerializeField] private TMP_Text StatsBig_Text;
+    [SerializeField] private TMP_Text StatsOdd_Text;
+    [SerializeField] private TMP_Text StatsEven_Text;
+
+    [Header("Win Ratio Display")]
+    [SerializeField] private TMP_Text WRMainBets_Text;
+    [SerializeField] private TMP_Text WRSingleMatch1_Text;
+    [SerializeField] private TMP_Text WRSingleMatch2_Text;
+    [SerializeField] private TMP_Text WRSingleMatch3_Text;
+    [SerializeField] private TMP_Text WRSpecific2_Text;
+    [SerializeField] private TMP_Text WRSpecific3_Text;
+    [SerializeField] private TMP_Text WRSum4_Text;
+    [SerializeField] private TMP_Text WRSum5_Text;
+    [SerializeField] private TMP_Text WRSum6_Text;
+    [SerializeField] private TMP_Text WRSum7_Text;
+    [SerializeField] private TMP_Text WRSum8_Text;
+    [SerializeField] private TMP_Text WRSum9_Text;
+    [SerializeField] private TMP_Text WRSum10_Text;
+    [SerializeField] private TMP_Text WRSum11_Text;
+    [SerializeField] private TMP_Text WRSum12_Text;
+    [SerializeField] private TMP_Text WRSum13_Text;
+    [SerializeField] private TMP_Text WRSum14_Text;
+    [SerializeField] private TMP_Text WRSum15_Text;
+    [SerializeField] private TMP_Text WRSum16_Text;
+    [SerializeField] private TMP_Text WRSum17_Text;
     #endregion
 
     #region Private Fields
@@ -532,6 +567,66 @@ public class UIController : MonoBehaviour
     }
 
     internal void UpdateLeaderboards(Leaderboards leaderboards) => leaderboardController?.UpdateLeaderboard(leaderboards);
+
+    internal void UpdateStats(StatsResult stats)
+    {
+        if (stats == null) return;
+
+        if (StatsRoundCount_Text)
+        {
+            StatsRoundCount_Text.text = $"Last {stats.totalRounds} Rounds";
+            AnimateStatText(StatsRoundCount_Text, 0f);
+        }
+
+        TMP_Text[] diceTexts = { StatsDice1_Text, StatsDice2_Text, StatsDice3_Text, StatsDice4_Text, StatsDice5_Text, StatsDice6_Text };
+        for (int i = 0; i < diceTexts.Length; i++)
+        {
+            if (diceTexts[i] == null) continue;
+            diceTexts[i].text = $"{stats.dicePct[i]}%";
+            diceTexts[i].color = stats.dicePct[i] >= 18 ? Color.red : Color.black;
+            AnimateStatText(diceTexts[i], (i + 1) * 0.04f);
+        }
+
+        float baseDelay = 7 * 0.04f;
+
+        if (StatsSmall_Text) { StatsSmall_Text.text = $"{stats.smallPct}%"; AnimateStatText(StatsSmall_Text, baseDelay); }
+        if (StatsBig_Text) { StatsBig_Text.text = $"{stats.bigPct}%"; AnimateStatText(StatsBig_Text, baseDelay + 0.04f); }
+        if (StatsOdd_Text) { StatsOdd_Text.text = $"{stats.oddPct}%"; AnimateStatText(StatsOdd_Text, baseDelay + 0.08f); }
+        if (StatsEven_Text) { StatsEven_Text.text = $"{stats.evenPct}%"; AnimateStatText(StatsEven_Text, baseDelay + 0.12f); }
+    }
+
+    private void AnimateStatText(TMP_Text text, float delay)
+    {
+        text.transform.DOKill();
+        text.transform.localScale = Vector3.one;
+        text.transform.DOPunchScale(Vector3.one * 0.35f, 0.3f, 1, 0.5f).SetDelay(delay);
+    }
+
+    internal void SetupWinRatios(Wagers wagers)
+    {
+        if (wagers == null) return;
+
+        if (WRMainBets_Text) WRMainBets_Text.text = wagers.main_bets?.small?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSingleMatch1_Text) WRSingleMatch1_Text.text = wagers.side_bets?.single_match_1?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSingleMatch2_Text) WRSingleMatch2_Text.text = wagers.side_bets?.single_match_2?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSingleMatch3_Text) WRSingleMatch3_Text.text = wagers.side_bets?.single_match_3?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSpecific2_Text) WRSpecific2_Text.text = wagers.side_bets?.specific_2?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSpecific3_Text) WRSpecific3_Text.text = wagers.side_bets?.specific_3?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum4_Text) WRSum4_Text.text = wagers.op_bets?.sum_4?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum5_Text) WRSum5_Text.text = wagers.op_bets?.sum_5?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum6_Text) WRSum6_Text.text = wagers.op_bets?.sum_6?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum7_Text) WRSum7_Text.text = wagers.op_bets?.sum_7?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum8_Text) WRSum8_Text.text = wagers.op_bets?.sum_8?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum9_Text) WRSum9_Text.text = wagers.op_bets?.sum_9?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum10_Text) WRSum10_Text.text = wagers.op_bets?.sum_10?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum11_Text) WRSum11_Text.text = wagers.op_bets?.sum_11?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum12_Text) WRSum12_Text.text = wagers.op_bets?.sum_12?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum13_Text) WRSum13_Text.text = wagers.op_bets?.sum_13?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum14_Text) WRSum14_Text.text = wagers.op_bets?.sum_14?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum15_Text) WRSum15_Text.text = wagers.op_bets?.sum_15?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum16_Text) WRSum16_Text.text = wagers.op_bets?.sum_16?.GetPayoutRatioString() ?? "1 : 1";
+        if (WRSum17_Text) WRSum17_Text.text = wagers.op_bets?.sum_17?.GetPayoutRatioString() ?? "1 : 1";
+    }
 
     private void UpdateLobbyMinMaxDisplay()
     {

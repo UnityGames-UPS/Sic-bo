@@ -218,6 +218,7 @@ public class RoomPayload
     public Lobby lobby;
     public List<Payout> payouts;
     public List<BetInfo> bets;
+    public List<string> stats;
 }
 
 [Serializable]
@@ -347,6 +348,7 @@ public class CashoutData
 {
     public Leaderboards leaderboards;
     public List<Payout> payouts;
+    public List<string> stats;
 }
 
 [Serializable]
@@ -499,6 +501,17 @@ public class ResultData
     public int dice3;
     public int sum;
     public string matchSide;
+}
+
+[System.Serializable]
+public class StatsResult
+{
+    public int totalRounds;
+    public int[] dicePct = new int[6];
+    public int smallPct;
+    public int bigPct;
+    public int oddPct;
+    public int evenPct;
 }
 #endregion
 

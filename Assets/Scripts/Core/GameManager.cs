@@ -59,6 +59,8 @@ public class GameManager : MonoBehaviour
             socketManager.InitialData.bets
         );
 
+        uiController.SetupWinRatios(socketManager.InitialData.wagers);
+
         if (socketManager.InitialData.lobby != null)
         {
             uiController.UpdateLobbyPlayerCounts(
@@ -82,6 +84,9 @@ public class GameManager : MonoBehaviour
         uiController.UpdateTotalPlayerCount(payload.playerCount);
         uiController.UpdateLeaderboards(payload.leaderboards);
         betController.SetLeaderboardData(payload.leaderboards);
+
+        if (payload.stats != null && payload.stats.Count > 0)
+            uiController.UpdateStats(GameUtilities.CalculateStats(payload.stats));
 
         if (payload.roundState != null && !string.IsNullOrEmpty(payload.roundState.roundId))
         {
@@ -250,6 +255,9 @@ public class GameManager : MonoBehaviour
             uiController.UpdateLeaderboards(data.leaderboards);
             betController.SetLeaderboardData(data.leaderboards);
         }
+
+        if (data.stats != null && data.stats.Count > 0)
+            uiController.UpdateStats(GameUtilities.CalculateStats(data.stats));
 
         if (data.payouts != null)
         {
