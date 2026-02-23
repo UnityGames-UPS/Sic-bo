@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 4adb43e741e81704c80551d899989705
+guid: c2c8d43a30662994c86382a4c92d7199
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 4982485418060520773
-    second: Character_BG_0
+      213: -2524605876844658732
+    second: shrink-24_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,23 +139,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Character_BG_0
+      name: shrink-24_0
       rect:
         serializedVersion: 2
-        x: 18
-        y: 16
-        width: 1079
-        height: 653
+        x: 0
+        y: 0
+        width: 70
+        height: 70
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 54d9f02e618552540800000000000000
-      internalID: 4982485418060520773
+      spriteID: 4df7fc8b45cc6fcd0800000000000000
+      internalID: -2524605876844658732
       vertices: []
       indices: 
       edges: []
@@ -164,7 +164,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 2e73d6894d6fa494baf77f6efc08a119
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Character_BG_0: 4982485418060520773
+      shrink-24_0: -2524605876844658732
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

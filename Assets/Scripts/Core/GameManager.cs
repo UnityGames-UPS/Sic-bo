@@ -20,8 +20,7 @@ public class GameManager : MonoBehaviour
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
 
-    [Header("Blocker")]
-    [SerializeField] private GameObject raycastBlocker;
+
 
     [Header("Debug")]
     [SerializeField] private bool showDebugLogs = false;
@@ -460,7 +459,7 @@ public class GameManager : MonoBehaviour
     internal void ExitGame()
     {
         uiController.ShowLoadingScreen("Exiting Game...");
-        raycastBlocker?.SetActive(true);
+      
 
         betController?.DisableBetting();
         betController?.ClearAllBets(true);

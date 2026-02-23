@@ -283,6 +283,7 @@ public class BetController : MonoBehaviour
 
         existingChips.Clear();
         originalChipPositions.Clear();
+        mainChipOriginalPosition = MainChip_RectTransform != null ? MainChip_RectTransform.anchoredPosition : Vector2.zero;
         if (ChipOptions_Container == null) return;
 
         Chip[] chips = ChipOptions_Container.GetComponentsInChildren<Chip>(true);
@@ -869,8 +870,6 @@ public class BetController : MonoBehaviour
             t.localPosition = Vector3.zero;
             t.localRotation = Quaternion.Euler(0, 0, 180);
 
-            if (i == 0)
-                targetPos.y += 20f;
 
             chipAnimationSequence.Join(t.DOLocalMove(targetPos, CHIP_OPEN_DURATION).SetEase(Ease.OutBack));
             chipAnimationSequence.Join(t.DOLocalRotate(new Vector3(0, 0, 0), CHIP_OPEN_DURATION, RotateMode.FastBeyond360).SetEase(Ease.OutQuad));

@@ -36,5 +36,53 @@ mergeInto(LibraryManager.library, {
           window.parent.dispatchReactUnityEvent(message); 
         }
       }
+    },
+
+    RequestFullscreen: function () {
+      var el = document.documentElement;
+      var req = el.requestFullscreen
+             || el.webkitRequestFullscreen
+             || el.mozRequestFullScreen
+             || el.msRequestFullscreen;
+      if (req) {
+        req.call(el).catch(function(err) {
+          console.warn('RequestFullscreen failed: ' + err);
+        });
+      }
+    },
+
+    ExitFullscreen: function () {
+      var exit = document.exitFullscreen
+              || document.webkitExitFullscreen
+              || document.mozCancelFullScreen
+              || document.msExitFullscreen;
+      if (exit) {
+        exit.call(document).catch(function(err) {
+          console.warn('ExitFullscreen failed: ' + err);
+        });
+      }
+    },
+
+    RegisterFullscreenChangeListener: function (gameObjectNamePtr) {
+      var gameObjectName = UTF8ToString(gameObjectNamePtr);
+      var handled = false;
+
+      var onFullscreenChange = function () {
+        var isFullscreen = !!(
+          document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement
+        );
+        var value = isFullscreen ? '1' : '0';
+        if (typeof SendMessage === 'function') {
+          SendMessage(gameObjectName, 'OnFullscreenChanged', value);
+        }
+      };
+
+      document.addEventListener('fullscreenchange',       onFullscreenChange);
+      document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+      document.addEventListener('mozfullscreenchange',    onFullscreenChange);
+      document.addEventListener('MSFullscreenChange',     onFullscreenChange);
     }
 });

@@ -39,10 +39,10 @@ public class UIController : MonoBehaviour
 
     [Header("Game Screen")]
     [SerializeField] private TMP_Text GamePlayerName_Text;
+    [SerializeField] private TMP_Text GamePlayerId_Text;
     [SerializeField] private TMP_Text RoundId_Text;
     [SerializeField] private TMP_Text GameBalance_Text;
     [SerializeField] private TMP_Text PlayerCount_Text;
-    //[SerializeField] private TMP_Text RoundPhase_Text;
     [SerializeField] private Button SideMenuOpen_Button;
 
     [Header("Side Menu")]
@@ -102,12 +102,12 @@ public class UIController : MonoBehaviour
     [SerializeField] private float slideDuration = 0.3f;
     [SerializeField] private float inGamePopupDisplayTime = 1f;
 
-
     [Header("Controllers")]
     [SerializeField] private GameManager gameManager;
     [SerializeField] private MenuController menuController;
     [SerializeField] private BetTimerController betTimerController;
     [SerializeField] private LeaderboardController leaderboardController;
+    [SerializeField] private JSFunctCalls jsFunctCalls;
 
     [Header("Stats Display")]
     [SerializeField] private TMP_Text StatsRoundCount_Text;
@@ -143,6 +143,19 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text WRSum15_Text;
     [SerializeField] private TMP_Text WRSum16_Text;
     [SerializeField] private TMP_Text WRSum17_Text;
+
+
+    [Header("Expand / Shrink – Home Screen")]
+    [SerializeField] private Button ExpandHome_Button;
+    [SerializeField] private Button ShrinkHome_Button;
+
+    [Header("Expand / Shrink – Menu Screen")]
+    [SerializeField] private Button ExpandMenu_Button;
+    [SerializeField] private Button ShrinkMenu_Button;
+
+    [Header("Expand / Shrink – Side Menu")]
+    [SerializeField] private Button ExpandSideMenu_Button;
+    [SerializeField] private Button ShrinkSideMenu_Button;
     #endregion
 
     #region Private Fields
@@ -158,6 +171,7 @@ public class UIController : MonoBehaviour
     private RectTransform menuPanelContainerRect;
     private Vector2 panelOriginalPosition;
     private int selectedAvatarIndex = -1;
+    private bool isExpanded = false;
     #endregion
 
     #region Unity Lifecycle
@@ -167,6 +181,7 @@ public class UIController : MonoBehaviour
         ShowHomeScreen();
         InitializePopups();
         InitializeSideMenuAnimation();
+        InitializeExpandShrink();
 
         if (LoadingScreen_Object != null) LoadingScreen_Object.SetActive(false);
 
@@ -212,6 +227,13 @@ public class UIController : MonoBehaviour
         Bind(QuitYes_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseQuitPopup(); gameManager.ExitGame(); });
         Bind(QuitNo_Button, () => { AudioManager.Instance?.PlayButtonClick(); CloseQuitPopup(); });
 
+        Bind(ExpandHome_Button, () => { AudioManager.Instance?.PlayButtonClick(); OnExpand(); });
+        Bind(ShrinkHome_Button, () => { AudioManager.Instance?.PlayButtonClick(); OnShrink(); });
+        Bind(ExpandMenu_Button, () => { AudioManager.Instance?.PlayButtonClick(); OnExpand(); });
+        Bind(ShrinkMenu_Button, () => { AudioManager.Instance?.PlayButtonClick(); OnShrink(); });
+        Bind(ExpandSideMenu_Button, () => { AudioManager.Instance?.PlayButtonClick(); OnExpand(); });
+        Bind(ShrinkSideMenu_Button, () => { AudioManager.Instance?.PlayButtonClick(); OnShrink(); });
+
         AddButtonPressAnimation(CasualRoom_Button, 0.95f);
         AddButtonPressAnimation(NoviceRoom_Button, 0.95f);
         AddButtonPressAnimation(ExpertRoom_Button, 0.95f);
@@ -227,6 +249,12 @@ public class UIController : MonoBehaviour
         AddButtonPressAnimation(DisconnectOK_Button, 0.95f);
         AddButtonPressAnimation(QuitYes_Button, 0.95f);
         AddButtonPressAnimation(QuitNo_Button, 0.95f);
+        AddButtonPressAnimation(ExpandHome_Button, 0.95f);
+        AddButtonPressAnimation(ShrinkHome_Button, 0.95f);
+        AddButtonPressAnimation(ExpandMenu_Button, 0.95f);
+        AddButtonPressAnimation(ShrinkMenu_Button, 0.95f);
+        AddButtonPressAnimation(ExpandSideMenu_Button, 0.95f);
+        AddButtonPressAnimation(ShrinkSideMenu_Button, 0.95f);
     }
 
     private void AddButtonPressAnimation(Button button, float targetScale)
@@ -278,7 +306,7 @@ public class UIController : MonoBehaviour
 
         if (PlayerName_Text) PlayerName_Text.text = name;
         if (GamePlayerName_Text) GamePlayerName_Text.text = name;
-
+        if (GamePlayerId_Text) GamePlayerId_Text.text = $"ID: {name}";
         UpdateBalance(balance);
 
         if (leaderboardController != null &&
@@ -310,12 +338,14 @@ public class UIController : MonoBehaviour
                 panelOriginalPosition = menuPanelContainerRect.anchoredPosition;
         }
 
-        List<RectTransform> tempRects = new List<RectTransform>();
+        var tempRects = new List<RectTransform>();
         if (HistoryGame_Button) tempRects.Add(HistoryGame_Button.GetComponent<RectTransform>());
         if (SettingsGame_Button) tempRects.Add(SettingsGame_Button.GetComponent<RectTransform>());
         if (Sound_button) tempRects.Add(Sound_button.GetComponent<RectTransform>());
         if (Music_button) tempRects.Add(Music_button.GetComponent<RectTransform>());
         if (ExitGame_Button) tempRects.Add(ExitGame_Button.GetComponent<RectTransform>());
+        if (ExpandSideMenu_Button) tempRects.Add(ExpandSideMenu_Button.GetComponent<RectTransform>());
+        if (ShrinkSideMenu_Button) tempRects.Add(ShrinkSideMenu_Button.GetComponent<RectTransform>());
 
         menuButtonRects = tempRects.ToArray();
         menuButtonOriginalPositions = new Vector2[menuButtonRects.Length];
@@ -329,6 +359,18 @@ public class UIController : MonoBehaviour
     {
         if (MenuPanel_Object) MenuPanel_Object.SetActive(true);
 
+        if (SideMenuOpen_Button) SideMenuOpen_Button.interactable = false;
+
+
+        if (menuPanelContainerRect != null)
+        {
+            menuPanelContainerRect.DOKill();
+            Vector2 startPos = panelOriginalPosition;
+            startPos.x += panelSlideDistance;
+            menuPanelContainerRect.anchoredPosition = startPos;
+            menuPanelContainerRect.DOAnchorPos(panelOriginalPosition, panelSlideDuration).SetEase(Ease.OutCubic);
+        }
+
         Vector2 closeButtonPos = Vector2.zero;
         if (SideMenuClose_Button)
         {
@@ -336,22 +378,19 @@ public class UIController : MonoBehaviour
             if (r != null) closeButtonPos = r.anchoredPosition;
         }
 
-        if (menuPanelContainerRect != null)
-        {
-            Vector2 startPos = panelOriginalPosition;
-            startPos.x += panelSlideDistance;
-            menuPanelContainerRect.anchoredPosition = startPos;
-            menuPanelContainerRect.DOAnchorPos(panelOriginalPosition, panelSlideDuration).SetEase(Ease.OutCubic);
-        }
-
         for (int i = 0; i < menuButtonRects.Length; i++)
         {
+            menuButtonRects[i].DOKill();
             menuButtonRects[i].gameObject.SetActive(true);
             menuButtonRects[i].anchoredPosition = closeButtonPos;
             menuButtonRects[i].DOAnchorPos(menuButtonOriginalPositions[i], buttonDropDuration)
                 .SetEase(Ease.OutCubic)
                 .SetDelay(i * buttonDropDelay);
         }
+
+        // Both expand/shrink animate but only the correct one is interactable
+        if (ExpandSideMenu_Button) ExpandSideMenu_Button.interactable = !isExpanded;
+        if (ShrinkSideMenu_Button) ShrinkSideMenu_Button.interactable = isExpanded;
     }
 
     private void CloseSideMenu()
@@ -367,22 +406,72 @@ public class UIController : MonoBehaviour
         {
             int reverseIndex = menuButtonRects.Length - 1 - i;
             RectTransform rect = menuButtonRects[reverseIndex];
+            rect.DOKill();
             rect.DOAnchorPos(closeButtonPos, buttonDropDuration * 0.7f)
                 .SetEase(Ease.InCubic)
                 .SetDelay(i * buttonDropDelay)
                 .OnComplete(() => rect.gameObject.SetActive(false));
         }
 
+        float totalButtonTime = (menuButtonRects.Length - 1) * buttonDropDelay + buttonDropDuration * 0.7f;
         if (menuPanelContainerRect != null)
         {
             Vector2 endPos = panelOriginalPosition;
             endPos.x += panelSlideDistance;
-            float totalTime = menuButtonRects.Length * buttonDropDelay + buttonDropDuration * 0.7f;
             menuPanelContainerRect.DOAnchorPos(endPos, panelSlideDuration)
                 .SetEase(Ease.InCubic)
-                .SetDelay(totalTime)
-                .OnComplete(() => { if (MenuPanel_Object) MenuPanel_Object.SetActive(false); });
+                .SetDelay(totalButtonTime)
+                .OnComplete(() =>
+                {
+                    if (MenuPanel_Object) MenuPanel_Object.SetActive(false);
+                    if (SideMenuOpen_Button) SideMenuOpen_Button.interactable = true;
+                });
         }
+        else
+        {
+
+            DOVirtual.DelayedCall(totalButtonTime, () =>
+            {
+                if (SideMenuOpen_Button) SideMenuOpen_Button.interactable = true;
+            });
+        }
+    }
+    #endregion
+
+    #region Expand / Shrink
+
+    private void InitializeExpandShrink()
+    {
+
+        SetExpandShrinkButtons(isExpanded: false);
+    }
+
+    private void OnExpand()
+    {
+        isExpanded = true;
+        jsFunctCalls?.RequestExpandGame();
+        SetExpandShrinkButtons(isExpanded: true);
+    }
+
+    private void OnShrink()
+    {
+        isExpanded = false;
+        jsFunctCalls?.RequestShrinkGame();
+        SetExpandShrinkButtons(isExpanded: false);
+    }
+
+
+    private void SetExpandShrinkButtons(bool isExpanded)
+    {
+        // Home & menu screen: toggle visibility with SetActive
+        if (ExpandHome_Button) ExpandHome_Button.gameObject.SetActive(!isExpanded);
+        if (ShrinkHome_Button) ShrinkHome_Button.gameObject.SetActive(isExpanded);
+        if (ExpandMenu_Button) ExpandMenu_Button.gameObject.SetActive(!isExpanded);
+        if (ShrinkMenu_Button) ShrinkMenu_Button.gameObject.SetActive(isExpanded);
+
+        // Side menu: both always animate, control via interactable so neither pops in/out
+        if (ExpandSideMenu_Button) ExpandSideMenu_Button.interactable = !isExpanded;
+        if (ShrinkSideMenu_Button) ShrinkSideMenu_Button.interactable = isExpanded;
     }
     #endregion
 
@@ -546,17 +635,6 @@ public class UIController : MonoBehaviour
 
     internal void UpdateTotalPlayerCount(int total) { if (TotalPlayers_Text) TotalPlayers_Text.text = total.ToString(); }
     internal void UpdatePlayerCountInLevel(int count) { if (PlayerCount_Text) PlayerCount_Text.text = count.ToString(); }
-
-    /*internal void UpdateRoundPhase(string phase)
-    {
-       // if (RoundPhase_Text) RoundPhase_Text.text = phase.ToUpper();
-        if (betTimerController != null)
-        {
-            string lower = phase.ToLower();
-            if (lower == "rolling" || lower == "result")
-                betTimerController.ShowBetLocked();
-        }
-    }*/
 
     internal void UpdateLobbyPlayerCounts(int casual = 0, int novice = 0, int expert = 0, int highRoller = 0)
     {
