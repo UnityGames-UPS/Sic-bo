@@ -172,6 +172,8 @@ public class UIController : MonoBehaviour
     private Vector2 panelOriginalPosition;
     private int selectedAvatarIndex = -1;
     private bool isExpanded = false;
+    private Vector2 expandSideMenuOriginalPosition;
+    private Vector2 shrinkSideMenuOriginalPosition;
     #endregion
 
     #region Unity Lifecycle
@@ -192,6 +194,9 @@ public class UIController : MonoBehaviour
         }
 
         leaderboardController?.Initialize();
+
+        // Register fullscreen change listener for browser fullscreen events
+        RegisterFullscreenListener();
     }
 
     private void OnDestroy()
@@ -344,13 +349,24 @@ public class UIController : MonoBehaviour
         if (Sound_button) tempRects.Add(Sound_button.GetComponent<RectTransform>());
         if (Music_button) tempRects.Add(Music_button.GetComponent<RectTransform>());
         if (ExitGame_Button) tempRects.Add(ExitGame_Button.GetComponent<RectTransform>());
-        if (ExpandSideMenu_Button) tempRects.Add(ExpandSideMenu_Button.GetComponent<RectTransform>());
-        if (ShrinkSideMenu_Button) tempRects.Add(ShrinkSideMenu_Button.GetComponent<RectTransform>());
+        // Note: Expand/Shrink buttons handled separately in OpenSideMenu based on state
 
         menuButtonRects = tempRects.ToArray();
         menuButtonOriginalPositions = new Vector2[menuButtonRects.Length];
         for (int i = 0; i < menuButtonRects.Length; i++)
             menuButtonOriginalPositions[i] = menuButtonRects[i].anchoredPosition;
+
+        // Store original positions for expand/shrink buttons
+        if (ExpandSideMenu_Button)
+        {
+            RectTransform rect = ExpandSideMenu_Button.GetComponent<RectTransform>();
+            if (rect != null) expandSideMenuOriginalPosition = rect.anchoredPosition;
+        }
+        if (ShrinkSideMenu_Button)
+        {
+            RectTransform rect = ShrinkSideMenu_Button.GetComponent<RectTransform>();
+            if (rect != null) shrinkSideMenuOriginalPosition = rect.anchoredPosition;
+        }
 
         if (MenuPanel_Object) MenuPanel_Object.SetActive(false);
     }
@@ -378,19 +394,71 @@ public class UIController : MonoBehaviour
             if (r != null) closeButtonPos = r.anchoredPosition;
         }
 
+        // FIX ISSUE 1: Only show and animate the appropriate expand/shrink button based on current state
+        Button activeExpandShrinkButton = isExpanded ? ShrinkSideMenu_Button : ExpandSideMenu_Button;
+        Button inactiveExpandShrinkButton = isExpanded ? ExpandSideMenu_Button : ShrinkSideMenu_Button;
+
+        // Disable the inactive button and reset to original position
+        if (inactiveExpandShrinkButton != null)
+        {
+            RectTransform inactiveRect = inactiveExpandShrinkButton.GetComponent<RectTransform>();
+            if (inactiveRect != null)
+            {
+                Vector2 inactiveOriginalPos = (inactiveExpandShrinkButton == ExpandSideMenu_Button)
+                    ? expandSideMenuOriginalPosition
+                    : shrinkSideMenuOriginalPosition;
+                inactiveRect.anchoredPosition = inactiveOriginalPos;
+            }
+            inactiveExpandShrinkButton.gameObject.SetActive(false);
+        }
+
+        // Enable the active button
+        if (activeExpandShrinkButton != null)
+        {
+            activeExpandShrinkButton.gameObject.SetActive(true);
+            activeExpandShrinkButton.interactable = true;
+        }
+
+        // Build list of buttons to animate
+        var animatingRects = new List<RectTransform>();
+        var animatingOriginalPos = new List<Vector2>();
+
+        // Reactivate and add all regular menu buttons (they were deactivated in CloseSideMenu)
         for (int i = 0; i < menuButtonRects.Length; i++)
         {
-            menuButtonRects[i].DOKill();
-            menuButtonRects[i].gameObject.SetActive(true);
-            menuButtonRects[i].anchoredPosition = closeButtonPos;
-            menuButtonRects[i].DOAnchorPos(menuButtonOriginalPositions[i], buttonDropDuration)
+            if (menuButtonRects[i] != null)
+            {
+                menuButtonRects[i].gameObject.SetActive(true); // Reactivate for animation
+                animatingRects.Add(menuButtonRects[i]);
+                animatingOriginalPos.Add(menuButtonOriginalPositions[i]);
+            }
+        }
+
+        // Add the active expand/shrink button to animation
+        if (activeExpandShrinkButton != null)
+        {
+            RectTransform expandShrinkRect = activeExpandShrinkButton.GetComponent<RectTransform>();
+            if (expandShrinkRect != null)
+            {
+                // Use stored original position (not current position which may be at close button)
+                Vector2 expandShrinkOriginalPos = (activeExpandShrinkButton == ExpandSideMenu_Button)
+                    ? expandSideMenuOriginalPosition
+                    : shrinkSideMenuOriginalPosition;
+
+                animatingRects.Add(expandShrinkRect);
+                animatingOriginalPos.Add(expandShrinkOriginalPos);
+            }
+        }
+
+        // Animate all buttons
+        for (int i = 0; i < animatingRects.Count; i++)
+        {
+            animatingRects[i].DOKill();
+            animatingRects[i].anchoredPosition = closeButtonPos;
+            animatingRects[i].DOAnchorPos(animatingOriginalPos[i], buttonDropDuration)
                 .SetEase(Ease.OutCubic)
                 .SetDelay(i * buttonDropDelay);
         }
-
-        // Both expand/shrink animate but only the correct one is interactable
-        if (ExpandSideMenu_Button) ExpandSideMenu_Button.interactable = !isExpanded;
-        if (ShrinkSideMenu_Button) ShrinkSideMenu_Button.interactable = isExpanded;
     }
 
     private void CloseSideMenu()
@@ -402,10 +470,29 @@ public class UIController : MonoBehaviour
             if (r != null) closeButtonPos = r.anchoredPosition;
         }
 
+        // Collect only visible buttons for animation
+        var visibleRects = new List<RectTransform>();
+
         for (int i = 0; i < menuButtonRects.Length; i++)
         {
-            int reverseIndex = menuButtonRects.Length - 1 - i;
-            RectTransform rect = menuButtonRects[reverseIndex];
+            if (menuButtonRects[i] != null && menuButtonRects[i].gameObject.activeSelf)
+                visibleRects.Add(menuButtonRects[i]);
+        }
+
+        // Add the currently visible expand/shrink button
+        Button visibleExpandShrinkButton = isExpanded ? ShrinkSideMenu_Button : ExpandSideMenu_Button;
+        if (visibleExpandShrinkButton != null && visibleExpandShrinkButton.gameObject.activeSelf)
+        {
+            RectTransform expandShrinkRect = visibleExpandShrinkButton.GetComponent<RectTransform>();
+            if (expandShrinkRect != null)
+                visibleRects.Add(expandShrinkRect);
+        }
+
+        // Animate visible buttons in reverse order
+        for (int i = 0; i < visibleRects.Count; i++)
+        {
+            int reverseIndex = visibleRects.Count - 1 - i;
+            RectTransform rect = visibleRects[reverseIndex];
             rect.DOKill();
             rect.DOAnchorPos(closeButtonPos, buttonDropDuration * 0.7f)
                 .SetEase(Ease.InCubic)
@@ -413,7 +500,7 @@ public class UIController : MonoBehaviour
                 .OnComplete(() => rect.gameObject.SetActive(false));
         }
 
-        float totalButtonTime = (menuButtonRects.Length - 1) * buttonDropDelay + buttonDropDuration * 0.7f;
+        float totalButtonTime = (visibleRects.Count - 1) * buttonDropDelay + buttonDropDuration * 0.7f;
         if (menuPanelContainerRect != null)
         {
             Vector2 endPos = panelOriginalPosition;
@@ -469,9 +556,44 @@ public class UIController : MonoBehaviour
         if (ExpandMenu_Button) ExpandMenu_Button.gameObject.SetActive(!isExpanded);
         if (ShrinkMenu_Button) ShrinkMenu_Button.gameObject.SetActive(isExpanded);
 
-        // Side menu: both always animate, control via interactable so neither pops in/out
-        if (ExpandSideMenu_Button) ExpandSideMenu_Button.interactable = !isExpanded;
-        if (ShrinkSideMenu_Button) ShrinkSideMenu_Button.interactable = isExpanded;
+        // Side menu: use SetActive to control visibility and reset to original positions
+        if (ExpandSideMenu_Button)
+        {
+            RectTransform rect = ExpandSideMenu_Button.GetComponent<RectTransform>();
+            if (rect != null) rect.anchoredPosition = expandSideMenuOriginalPosition;
+            ExpandSideMenu_Button.gameObject.SetActive(!isExpanded);
+            ExpandSideMenu_Button.interactable = !isExpanded;
+        }
+        if (ShrinkSideMenu_Button)
+        {
+            RectTransform rect = ShrinkSideMenu_Button.GetComponent<RectTransform>();
+            if (rect != null) rect.anchoredPosition = shrinkSideMenuOriginalPosition;
+            ShrinkSideMenu_Button.gameObject.SetActive(isExpanded);
+            ShrinkSideMenu_Button.interactable = isExpanded;
+        }
+    }
+
+    private void RegisterFullscreenListener()
+    {
+        // Register the callback listener with this GameObject's name
+        // JavaScript will call OnFullscreenChanged on this object
+        jsFunctCalls?.RegisterFullscreenListener(gameObject.name);
+    }
+
+    // FIX ISSUE 2: This method is called by JavaScript when fullscreen state changes
+    // Handles cases where user exits fullscreen via ESC key or browser controls
+    internal void OnFullscreenChanged(string isFullscreen)
+    {
+        bool newExpandedState = isFullscreen == "1";
+        Debug.Log($"[UI] OnFullscreenChanged callback: isFullscreen={isFullscreen}, newState={newExpandedState}");
+
+        // Only update if state actually changed
+        if (isExpanded != newExpandedState)
+        {
+            isExpanded = newExpandedState;
+            SetExpandShrinkButtons(isExpanded);
+            Debug.Log($"[UI] Button states synced to fullscreen: {(isExpanded ? "EXPANDED" : "SHRINK")}");
+        }
     }
     #endregion
 

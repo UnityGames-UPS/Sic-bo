@@ -63,26 +63,27 @@ mergeInto(LibraryManager.library, {
       }
     },
 
-    RegisterFullscreenChangeListener: function (gameObjectNamePtr) {
-      var gameObjectName = UTF8ToString(gameObjectNamePtr);
-      var handled = false;
-
-      var onFullscreenChange = function () {
-        var isFullscreen = !!(
-          document.fullscreenElement ||
-          document.webkitFullscreenElement ||
-          document.mozFullScreenElement ||
-          document.msFullscreenElement
-        );
-        var value = isFullscreen ? '1' : '0';
-        if (typeof SendMessage === 'function') {
-          SendMessage(gameObjectName, 'OnFullscreenChanged', value);
-        }
-      };
-
-      document.addEventListener('fullscreenchange',       onFullscreenChange);
-      document.addEventListener('webkitfullscreenchange', onFullscreenChange);
-      document.addEventListener('mozfullscreenchange',    onFullscreenChange);
-      document.addEventListener('MSFullscreenChange',     onFullscreenChange);
-    }
+RegisterFullscreenChangeListener: function(gameObjectNamePtr) {
+    var gameObjectName = UTF8ToString(gameObjectNamePtr);
+    console.log('[JS] Registering fullscreen listener');
+    
+    window._unityFullscreenCallback = function() {
+        var isFS = !!(document.fullscreenElement || document.webkitFullscreenElement || 
+                      document.mozFullScreenElement || document.msFullscreenElement);
+        console.log('[JS] Fullscreen:', isFS);
+        
+        try {
+            (window.unityInstance || window.gameInstance).SendMessage(
+                gameObjectName, 'OnFullscreenChanged', isFS ? '1' : '0'
+            );
+        } catch (err) { console.error('[JS] Error:', err); }
+    };
+    
+    document.removeEventListener('fullscreenchange', window._unityFullscreenCallback);
+    document.removeEventListener('webkitfullscreenchange', window._unityFullscreenCallback);
+    document.addEventListener('fullscreenchange', window._unityFullscreenCallback);
+    document.addEventListener('webkitfullscreenchange', window._unityFullscreenCallback);
+    
+    setTimeout(window._unityFullscreenCallback, 100);
+}
 });
