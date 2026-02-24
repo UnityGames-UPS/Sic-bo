@@ -85,18 +85,17 @@
       };
 
         
-    var script = document.createElement("script");
-script.src = loaderUrl;
-script.onload = () => {
-  createUnityInstance(canvas, config, (progress) => {
-    
-  }).then((unityInstance) => {
-      window.unityInstance = unityInstance;
-      window.gameInstance = unityInstance;
-  }).catch((message) => {
-    alert(message);
-  });
-};
+        var script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+          createUnityInstance(canvas, config, (progress) => {
+          }).then((unityInstance) => { 
+              window.unityInstance = unityInstance;  
+              window.gameInstance = unityInstance;
+          }).catch((message) => {
+            alert(message);
+          });
+        };
         
         document.body.appendChild(script);
         window.addEventListener('load', resizeCanvas());
