@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en-us">
-
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -18,12 +17,10 @@
       justify-content: center;
       background-color: black;
     }
-
     #unity-canvas {
       height: 100%;
       width: 100%;
     }
-
     #loading-screen {
       position: absolute;
       width: 100%;
@@ -31,42 +28,39 @@
     }
   </style>
 </head>
-
 <body>
-
   <canvas id="unity-canvas" tabindex="-1"></canvas>
   <script>
     const canvas = document.querySelector("#unity-canvas");
-
+    
     function resizeCanvas() {
       const aspectRatio = 16 / 9;
       let windowWidth = window.innerWidth;
       let windowHeight = window.innerHeight;
-
+      
       if (windowWidth < windowHeight) {
         let canvasWidth = windowWidth;
         let canvasHeight = canvasWidth / aspectRatio;
-
+        
         if (canvasHeight > windowHeight) {
           canvasHeight = windowHeight;
           canvasWidth = canvasHeight * aspectRatio;
         }
-
+        
         canvas.style.width = `${canvasWidth}px`;
         canvas.style.height = `${canvasHeight}px`;
-
       } else {
         canvas.style.width = '100%';
         canvas.style.height = '100%';
       }
     }
-
+    
     let resizeTimeout;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(resizeCanvas, 50);
     });
-
+    
     var buildUrl = "Build";
     var loaderUrl = buildUrl + "/Build.loader.js";
     var config = {
@@ -78,190 +72,31 @@
       productName: "ML_SB",
       productVersion: "1.0",
     };
-
+    
     var script = document.createElement("script");
     script.src = loaderUrl;
     script.onload = () => {
       createUnityInstance(canvas, config, (progress) => {
-        // Optional: show loading progress
       }).then((unityInstance) => {
-        
-        console.log('[Unity] ========================================');
-        console.log('[Unity] Instance created successfully!');
-        
-        // Store Unity instance globally in MULTIPLE ways for maximum compatibility
+        // Store globally for jslib access
         window.unityInstance = unityInstance;
-        window.gameInstance = unityInstance;
-        window.unityGame = unityInstance;
-        
-        // Also store in global scope (for React Native WebView and other environments)
-        if (typeof global !== 'undefined') {
-          global.unityInstance = unityInstance;
-          global.gameInstance = unityInstance;
-          global.unityGame = unityInstance;
-        }
-        
-        // Make SendMessage globally accessible (CRITICAL for fullscreen callbacks)
-        if (!window.SendMessage && unityInstance.SendMessage) {
-          window.SendMessage = function(gameObject, methodName, parameter) {
-            return unityInstance.SendMessage(gameObject, methodName, parameter);
-          };
-          console.log('[Unity] Global SendMessage function created');
-        }
-        
-        console.log('[Unity] Instance storage verification:');
-        console.log('[Unity]   - window.unityInstance:', typeof window.unityInstance);
-        console.log('[Unity]   - window.gameInstance:', typeof window.gameInstance);
-        console.log('[Unity]   - window.SendMessage:', typeof window.SendMessage);
-        console.log('[Unity]   - unityInstance.SendMessage:', typeof unityInstance.SendMessage);
-        console.log('[Unity] ========================================');
-        
-        // IMPORTANT: Set up backup fullscreen listeners AFTER Unity loads
-        setupBackupFullscreenListener();
-        
       }).catch((message) => {
         alert(message);
       });
     };
-    
-    // ENHANCED backup fullscreen listener - sets up AFTER Unity loads
-    function setupBackupFullscreenListener() {
-      console.log('[HTML] Setting up ENHANCED backup fullscreen listener...');
-      
-      // Track last known state to detect changes
-      var lastFullscreenState = false;
-      
-      // Create comprehensive fullscreen change handler
-      var backupFullscreenCallback = function(event) {
-        // Check fullscreen state using ALL possible properties
-        var isFS = !!(
-          document.fullscreenElement || 
-          document.webkitFullscreenElement || 
-          document.mozFullScreenElement || 
-          document.msFullscreenElement ||
-          document.webkitIsFullScreen ||
-          document.mozFullScreen
-        );
-        
-        console.log('[HTML Backup] ========================================');
-        console.log('[HTML Backup] Fullscreen event triggered!');
-        console.log('[HTML Backup] Event type:', event ? event.type : 'manual check');
-        console.log('[HTML Backup] Fullscreen state:', isFS ? 'FULLSCREEN' : 'NORMAL');
-        console.log('[HTML Backup] Last state:', lastFullscreenState ? 'FULLSCREEN' : 'NORMAL');
-        
-        // Only notify Unity if state actually changed
-        if (isFS !== lastFullscreenState) {
-          console.log('[HTML Backup] State CHANGED - notifying Unity...');
-          lastFullscreenState = isFS;
-          
-          // Try multiple methods to notify Unity
-          var notified = false;
-          
-          // Method 1: Direct unityInstance
-          var unityInst = window.unityInstance || window.gameInstance;
-          if (unityInst && unityInst.SendMessage) {
-            try {
-              unityInst.SendMessage('UIManager', 'OnFullscreenChanged', isFS ? '1' : '0');
-              console.log('[HTML Backup] ✓ Notified via unityInstance');
-              notified = true;
-            } catch (err) {
-              console.error('[HTML Backup] Failed via unityInstance:', err);
-            }
-          }
-          
-          // Method 2: Global SendMessage
-          if (!notified && typeof window.SendMessage !== 'undefined') {
-            try {
-              window.SendMessage('UIManager', 'OnFullscreenChanged', isFS ? '1' : '0');
-              console.log('[HTML Backup] ✓ Notified via global SendMessage');
-              notified = true;
-            } catch (err) {
-              console.error('[HTML Backup] Failed via SendMessage:', err);
-            }
-          }
-          
-          // Method 3: Module.SendMessage
-          if (!notified && typeof Module !== 'undefined' && Module.SendMessage) {
-            try {
-              Module.SendMessage('UIManager', 'OnFullscreenChanged', isFS ? '1' : '0');
-              console.log('[HTML Backup] ✓ Notified via Module.SendMessage');
-              notified = true;
-            } catch (err) {
-              console.error('[HTML Backup] Failed via Module:', err);
-            }
-          }
-          
-          if (!notified) {
-            console.error('[HTML Backup] ✗ Failed to notify Unity - no working method found');
-          }
-        } else {
-          console.log('[HTML Backup] State unchanged - no notification needed');
-        }
-        
-        console.log('[HTML Backup] ========================================');
-      };
-      
-      // Remove any existing listeners first
-      var eventTypes = [
-        'fullscreenchange',
-        'webkitfullscreenchange',
-        'mozfullscreenchange',
-        'MSFullscreenChange'
-      ];
-      
-      eventTypes.forEach(function(eventType) {
-        // Remove old listeners
-        document.removeEventListener(eventType, backupFullscreenCallback);
-        // Add new listeners - USE CAPTURE PHASE
-        document.addEventListener(eventType, backupFullscreenCallback, true);
-        console.log('[HTML] Added listener for:', eventType);
-      });
-      
-      // ALSO add listeners to document.documentElement and window
-      eventTypes.forEach(function(eventType) {
-        document.documentElement.addEventListener(eventType, backupFullscreenCallback, true);
-        window.addEventListener(eventType, backupFullscreenCallback, true);
-      });
-      
-      // POLLING BACKUP: Check fullscreen state every second
-      // This ensures we catch changes even if events don't fire
-      var lastPolledState = false;
-      setInterval(function() {
-        var isFS = !!(
-          document.fullscreenElement || 
-          document.webkitFullscreenElement || 
-          document.mozFullScreenElement || 
-          document.msFullscreenElement ||
-          document.webkitIsFullScreen ||
-          document.mozFullScreen
-        );
-        
-        if (isFS !== lastPolledState) {
-          console.log('[HTML Polling] State change detected:', isFS ? 'FULLSCREEN' : 'NORMAL');
-          lastPolledState = isFS;
-          backupFullscreenCallback({ type: 'polling' });
-        }
-      }, 500); // Check every 500ms
-      
-      console.log('[HTML] ✓ Backup fullscreen listeners registered');
-      console.log('[HTML] ✓ Polling backup enabled (500ms interval)');
-    }
     
     document.body.appendChild(script);
     window.addEventListener('load', resizeCanvas());
   </script>
   
   <script type="text/javascript">
-    // Optional: Disable console logs for production
-    // console.log = function() {};
-    // console.warn = function() {};
-    // console.error = function() {};
+    console.log = function() {};
+    console.warn = function() {};
+    console.error = function() {};
   </script>
   
   <script>
     window.focus();
   </script>
-
 </body>
-
 </html>
