@@ -88,15 +88,25 @@
         var script = document.createElement("script");
         script.src = loaderUrl;
         script.onload = () => {
-          createUnityInstance(canvas, config, (progress) => {
-          }).then((unityInstance) => { 
-              window.unityInstance = unityInstance;  
-              window.gameInstance = unityInstance;
-          }).catch((message) => {
-            alert(message);
-          });
-        };
-        
+createUnityInstance(canvas, config, (progress) => {
+  
+}).then((unityInstance) => {
+    // Store Unity instance globally - multiple ways for React Native compatibility
+    window.unityInstance = unityInstance;
+    window.gameInstance = unityInstance;
+    
+    // Also store in global scope (for React Native WebView)
+    if (typeof global !== 'undefined') {
+        global.unityInstance = unityInstance;
+        global.gameInstance = unityInstance;
+    }
+    
+    // Debug log to confirm it's stored
+    console.log('[Unity] Instance stored successfully:', !!window.unityInstance);
+    
+}).catch((message) => {
+  alert(message);
+});
         document.body.appendChild(script);
         window.addEventListener('load', resizeCanvas());
   </script>
