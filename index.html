@@ -39,7 +39,7 @@
     const canvas = document.querySelector("#unity-canvas");
 
     function resizeCanvas() {
-      const aspectRatio = 16 / 9; // Aspect ratio of the canvas
+      const aspectRatio = 16 / 9;
       let windowWidth = window.innerWidth;
       let windowHeight = window.innerHeight;
 
@@ -101,7 +101,7 @@
           global.unityGame = unityInstance;
         }
         
-        // Make SendMessage globally accessible (this is critical for fullscreen callbacks)
+        // Make SendMessage globally accessible (CRITICAL for fullscreen callbacks)
         if (!window.SendMessage && unityInstance.SendMessage) {
           window.SendMessage = function(gameObject, methodName, parameter) {
             return unityInstance.SendMessage(gameObject, methodName, parameter);
@@ -116,8 +116,7 @@
         console.log('[Unity]   - unityInstance.SendMessage:', typeof unityInstance.SendMessage);
         console.log('[Unity] ========================================');
         
-        // IMPORTANT: Set up a backup fullscreen listener from HTML side
-        // This ensures the listener works even if Unity's registration has timing issues
+        // IMPORTANT: Set up backup fullscreen listeners AFTER Unity loads
         setupBackupFullscreenListener();
         
       }).catch((message) => {
@@ -125,42 +124,127 @@
       });
     };
     
-    // Backup fullscreen listener setup - this runs from HTML side
+    // ENHANCED backup fullscreen listener - sets up AFTER Unity loads
     function setupBackupFullscreenListener() {
-      console.log('[HTML] Setting up backup fullscreen listener...');
+      console.log('[HTML] Setting up ENHANCED backup fullscreen listener...');
       
-      var backupFullscreenCallback = function() {
+      // Track last known state to detect changes
+      var lastFullscreenState = false;
+      
+      // Create comprehensive fullscreen change handler
+      var backupFullscreenCallback = function(event) {
+        // Check fullscreen state using ALL possible properties
         var isFS = !!(
           document.fullscreenElement || 
           document.webkitFullscreenElement || 
           document.mozFullScreenElement || 
-          document.msFullscreenElement
+          document.msFullscreenElement ||
+          document.webkitIsFullScreen ||
+          document.mozFullScreen
         );
         
-        console.log('[HTML Backup] Fullscreen changed:', isFS ? 'FULLSCREEN' : 'NORMAL');
+        console.log('[HTML Backup] ========================================');
+        console.log('[HTML Backup] Fullscreen event triggered!');
+        console.log('[HTML Backup] Event type:', event ? event.type : 'manual check');
+        console.log('[HTML Backup] Fullscreen state:', isFS ? 'FULLSCREEN' : 'NORMAL');
+        console.log('[HTML Backup] Last state:', lastFullscreenState ? 'FULLSCREEN' : 'NORMAL');
         
-        // Try to notify Unity if instance is available
-        var unityInst = window.unityInstance || window.gameInstance;
-        if (unityInst && unityInst.SendMessage) {
-          try {
-            // Notify UIController GameObject (common name for UI management)
-            unityInst.SendMessage('UIController', 'OnFullscreenChanged', isFS ? '1' : '0');
-            console.log('[HTML Backup] ✓ Notified Unity successfully');
-          } catch (err) {
-            console.error('[HTML Backup] Failed to notify Unity:', err);
+        // Only notify Unity if state actually changed
+        if (isFS !== lastFullscreenState) {
+          console.log('[HTML Backup] State CHANGED - notifying Unity...');
+          lastFullscreenState = isFS;
+          
+          // Try multiple methods to notify Unity
+          var notified = false;
+          
+          // Method 1: Direct unityInstance
+          var unityInst = window.unityInstance || window.gameInstance;
+          if (unityInst && unityInst.SendMessage) {
+            try {
+              unityInst.SendMessage('UIManager', 'OnFullscreenChanged', isFS ? '1' : '0');
+              console.log('[HTML Backup] ✓ Notified via unityInstance');
+              notified = true;
+            } catch (err) {
+              console.error('[HTML Backup] Failed via unityInstance:', err);
+            }
+          }
+          
+          // Method 2: Global SendMessage
+          if (!notified && typeof window.SendMessage !== 'undefined') {
+            try {
+              window.SendMessage('UIManager', 'OnFullscreenChanged', isFS ? '1' : '0');
+              console.log('[HTML Backup] ✓ Notified via global SendMessage');
+              notified = true;
+            } catch (err) {
+              console.error('[HTML Backup] Failed via SendMessage:', err);
+            }
+          }
+          
+          // Method 3: Module.SendMessage
+          if (!notified && typeof Module !== 'undefined' && Module.SendMessage) {
+            try {
+              Module.SendMessage('UIManager', 'OnFullscreenChanged', isFS ? '1' : '0');
+              console.log('[HTML Backup] ✓ Notified via Module.SendMessage');
+              notified = true;
+            } catch (err) {
+              console.error('[HTML Backup] Failed via Module:', err);
+            }
+          }
+          
+          if (!notified) {
+            console.error('[HTML Backup] ✗ Failed to notify Unity - no working method found');
           }
         } else {
-          console.warn('[HTML Backup] Unity instance not available yet');
+          console.log('[HTML Backup] State unchanged - no notification needed');
         }
+        
+        console.log('[HTML Backup] ========================================');
       };
       
-      // Add backup listeners (these won't conflict with Unity's listeners)
-      document.addEventListener('fullscreenchange', backupFullscreenCallback);
-      document.addEventListener('webkitfullscreenchange', backupFullscreenCallback);
-      document.addEventListener('mozfullscreenchange', backupFullscreenCallback);
-      document.addEventListener('MSFullscreenChange', backupFullscreenCallback);
+      // Remove any existing listeners first
+      var eventTypes = [
+        'fullscreenchange',
+        'webkitfullscreenchange',
+        'mozfullscreenchange',
+        'MSFullscreenChange'
+      ];
+      
+      eventTypes.forEach(function(eventType) {
+        // Remove old listeners
+        document.removeEventListener(eventType, backupFullscreenCallback);
+        // Add new listeners - USE CAPTURE PHASE
+        document.addEventListener(eventType, backupFullscreenCallback, true);
+        console.log('[HTML] Added listener for:', eventType);
+      });
+      
+      // ALSO add listeners to document.documentElement and window
+      eventTypes.forEach(function(eventType) {
+        document.documentElement.addEventListener(eventType, backupFullscreenCallback, true);
+        window.addEventListener(eventType, backupFullscreenCallback, true);
+      });
+      
+      // POLLING BACKUP: Check fullscreen state every second
+      // This ensures we catch changes even if events don't fire
+      var lastPolledState = false;
+      setInterval(function() {
+        var isFS = !!(
+          document.fullscreenElement || 
+          document.webkitFullscreenElement || 
+          document.mozFullScreenElement || 
+          document.msFullscreenElement ||
+          document.webkitIsFullScreen ||
+          document.mozFullScreen
+        );
+        
+        if (isFS !== lastPolledState) {
+          console.log('[HTML Polling] State change detected:', isFS ? 'FULLSCREEN' : 'NORMAL');
+          lastPolledState = isFS;
+          backupFullscreenCallback({ type: 'polling' });
+        }
+      }, 500); // Check every 500ms
       
       console.log('[HTML] ✓ Backup fullscreen listeners registered');
+      console.log('[HTML] ✓ Polling backup enabled (500ms interval)');
     }
     
     document.body.appendChild(script);
@@ -168,7 +252,7 @@
   </script>
   
   <script type="text/javascript">
-    // Disable console logs for production (optional)
+    // Optional: Disable console logs for production
     // console.log = function() {};
     // console.warn = function() {};
     // console.error = function() {};
