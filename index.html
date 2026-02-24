@@ -24,15 +24,11 @@
       width: 100%;
     }
 
-      #loading-screen {
+    #loading-screen {
       position: absolute;
       width: 100%;
       height: 100%;
-  }
-
-
-
-
+    }
   </style>
 </head>
 
@@ -40,7 +36,7 @@
 
   <canvas id="unity-canvas" tabindex="-1"></canvas>
   <script>
-    const canvas=document.querySelector("#unity-canvas");
+    const canvas = document.querySelector("#unity-canvas");
 
     function resizeCanvas() {
       const aspectRatio = 16 / 9; // Aspect ratio of the canvas
@@ -60,7 +56,6 @@
         canvas.style.height = `${canvasHeight}px`;
 
       } else {
-
         canvas.style.width = '100%';
         canvas.style.height = '100%';
       }
@@ -73,51 +68,115 @@
     });
 
     var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/Build.loader.js";
-      var config = {
-        dataUrl: buildUrl + "/Build.data.unityweb",
-        frameworkUrl: buildUrl + "/Build.framework.js.unityweb",
-        codeUrl: buildUrl + "/Build.wasm.unityweb",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "ML_SB",
-        productVersion: "1.0",
-      };
+    var loaderUrl = buildUrl + "/Build.loader.js";
+    var config = {
+      dataUrl: buildUrl + "/Build.data.unityweb",
+      frameworkUrl: buildUrl + "/Build.framework.js.unityweb",
+      codeUrl: buildUrl + "/Build.wasm.unityweb",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "DefaultCompany",
+      productName: "ML_SB",
+      productVersion: "1.0",
+    };
 
+    var script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = () => {
+      createUnityInstance(canvas, config, (progress) => {
+        // Optional: show loading progress
+      }).then((unityInstance) => {
         
-        var script = document.createElement("script");
-        script.src = loaderUrl;
-        script.onload = () => {
-createUnityInstance(canvas, config, (progress) => {
-  
-}).then((unityInstance) => {
-    // Store Unity instance globally - multiple ways for React Native compatibility
-    window.unityInstance = unityInstance;
-    window.gameInstance = unityInstance;
+        console.log('[Unity] ========================================');
+        console.log('[Unity] Instance created successfully!');
+        
+        // Store Unity instance globally in MULTIPLE ways for maximum compatibility
+        window.unityInstance = unityInstance;
+        window.gameInstance = unityInstance;
+        window.unityGame = unityInstance;
+        
+        // Also store in global scope (for React Native WebView and other environments)
+        if (typeof global !== 'undefined') {
+          global.unityInstance = unityInstance;
+          global.gameInstance = unityInstance;
+          global.unityGame = unityInstance;
+        }
+        
+        // Make SendMessage globally accessible (this is critical for fullscreen callbacks)
+        if (!window.SendMessage && unityInstance.SendMessage) {
+          window.SendMessage = function(gameObject, methodName, parameter) {
+            return unityInstance.SendMessage(gameObject, methodName, parameter);
+          };
+          console.log('[Unity] Global SendMessage function created');
+        }
+        
+        console.log('[Unity] Instance storage verification:');
+        console.log('[Unity]   - window.unityInstance:', typeof window.unityInstance);
+        console.log('[Unity]   - window.gameInstance:', typeof window.gameInstance);
+        console.log('[Unity]   - window.SendMessage:', typeof window.SendMessage);
+        console.log('[Unity]   - unityInstance.SendMessage:', typeof unityInstance.SendMessage);
+        console.log('[Unity] ========================================');
+        
+        // IMPORTANT: Set up a backup fullscreen listener from HTML side
+        // This ensures the listener works even if Unity's registration has timing issues
+        setupBackupFullscreenListener();
+        
+      }).catch((message) => {
+        alert(message);
+      });
+    };
     
-    // Also store in global scope (for React Native WebView)
-    if (typeof global !== 'undefined') {
-        global.unityInstance = unityInstance;
-        global.gameInstance = unityInstance;
+    // Backup fullscreen listener setup - this runs from HTML side
+    function setupBackupFullscreenListener() {
+      console.log('[HTML] Setting up backup fullscreen listener...');
+      
+      var backupFullscreenCallback = function() {
+        var isFS = !!(
+          document.fullscreenElement || 
+          document.webkitFullscreenElement || 
+          document.mozFullScreenElement || 
+          document.msFullscreenElement
+        );
+        
+        console.log('[HTML Backup] Fullscreen changed:', isFS ? 'FULLSCREEN' : 'NORMAL');
+        
+        // Try to notify Unity if instance is available
+        var unityInst = window.unityInstance || window.gameInstance;
+        if (unityInst && unityInst.SendMessage) {
+          try {
+            // Notify UIController GameObject (common name for UI management)
+            unityInst.SendMessage('UIController', 'OnFullscreenChanged', isFS ? '1' : '0');
+            console.log('[HTML Backup] ✓ Notified Unity successfully');
+          } catch (err) {
+            console.error('[HTML Backup] Failed to notify Unity:', err);
+          }
+        } else {
+          console.warn('[HTML Backup] Unity instance not available yet');
+        }
+      };
+      
+      // Add backup listeners (these won't conflict with Unity's listeners)
+      document.addEventListener('fullscreenchange', backupFullscreenCallback);
+      document.addEventListener('webkitfullscreenchange', backupFullscreenCallback);
+      document.addEventListener('mozfullscreenchange', backupFullscreenCallback);
+      document.addEventListener('MSFullscreenChange', backupFullscreenCallback);
+      
+      console.log('[HTML] ✓ Backup fullscreen listeners registered');
     }
     
-    // Debug log to confirm it's stored
-    console.log('[Unity] Instance stored successfully:', !!window.unityInstance);
-    
-}).catch((message) => {
-  alert(message);
-});
-        document.body.appendChild(script);
-        window.addEventListener('load', resizeCanvas());
+    document.body.appendChild(script);
+    window.addEventListener('load', resizeCanvas());
   </script>
-     <script type="text/javascript">
-        console.log = function() {};
-        console.warn = function() {};
-        console.error = function() {};
-    </script>
-    <script>
-      window.focus();
-    </script>
+  
+  <script type="text/javascript">
+    // Disable console logs for production (optional)
+    // console.log = function() {};
+    // console.warn = function() {};
+    // console.error = function() {};
+  </script>
+  
+  <script>
+    window.focus();
+  </script>
 
 </body>
 
