@@ -838,7 +838,7 @@ public class BetController : MonoBehaviour
         mainChipTween = MainChip_RectTransform.DOAnchorPos(targetPosition, MAIN_CHIP_ANIMATION_DURATION).SetEase(Ease.OutQuad);
     }
 
-   
+
     private void CloseChipSelector()
     {
         AudioManager.Instance?.PlayChipSelectionOpen();
@@ -1177,6 +1177,11 @@ public class BetController : MonoBehaviour
             if (isPlayerRichest || isPlayerWinner) chip.SetLeaderboardBadge(isPlayerRichest, isPlayerWinner);
             else chip.ClearLeaderboardBadge();
         }
+    }
+
+    internal void RefreshBadgesForContainer(Transform container)
+    {
+        ApplyBadgesToContainer(container);
     }
 
     private static bool IsUsernameInLeaderboardList(string username, List<LeaderboardEntry> entries)
