@@ -133,7 +133,6 @@ public class OpponentChipManager : MonoBehaviour
     internal void PlayCashoutAnimation()
     {
         if (isCashoutRunning || activeOpponentChips.Count == 0) return;
-        AudioManager.Instance?.PlayChipAdd();
 
         // Wait for leaderboard animation before starting cashout
         if (leaderboardController != null && leaderboardController.IsAnimating())
@@ -142,6 +141,8 @@ public class OpponentChipManager : MonoBehaviour
         }
         else
         {
+            // Play sound when starting cashout immediately
+            AudioManager.Instance?.PlayChipAdd();
             cashoutCoroutine = StartCoroutine(CR_Cashout());
         }
     }
@@ -151,6 +152,10 @@ public class OpponentChipManager : MonoBehaviour
         Debug.Log("[OpponentChip] Waiting for leaderboard animation to complete...");
         yield return leaderboardController.WaitForAnimationComplete();
         Debug.Log("[OpponentChip] Leaderboard animation complete, starting cashout");
+
+        // Play sound NOW, after leaderboard animation completes and right before chips move
+        AudioManager.Instance?.PlayChipAdd();
+
         cashoutCoroutine = StartCoroutine(CR_Cashout());
     }
 
@@ -223,20 +228,56 @@ public class OpponentChipManager : MonoBehaviour
         if (string.IsNullOrEmpty(username) || leaderboardController == null) return null;
         if (currentLeaderboards == null) return null;
 
-        // Check winners leaderboard first (only 3 players from backend)
+        // Check if player is in both leaderboards
         bool isInWinners = IsPlayerInLeaderboard(username, currentLeaderboards.winners);
-        if (isInWinners)
+        bool isInRichest = IsPlayerInLeaderboard(username, currentLeaderboards.richest);
+
+        // Determine priority based on badges (similar to cashout logic)
+        bool checkWinnersFirst = true; // Default: winners has priority
+
+        // Check TOP 3 badges to determine spawn priority
+        bool isTop3Richest = IsPlayerInTop3(username, currentLeaderboards.richest);
+        bool isTop3Winner = IsPlayerInTop3(username, currentLeaderboards.winners);
+
+        if (isTop3Richest && !isTop3Winner)
         {
-            RectTransform position = leaderboardController.GetPlayerPosition(username, checkWinners: true);
-            if (position != null) return position;
+            // Player has richest badge only, prioritize richest leaderboard
+            checkWinnersFirst = false;
+            Debug.Log($"[OpponentChip] {username} has RICHEST badge, spawning from richest leaderboard");
+        }
+        else if (isTop3Winner)
+        {
+            Debug.Log($"[OpponentChip] {username} has WINNER badge, spawning from winners leaderboard");
         }
 
-        // Check richest leaderboard (only 3 players from backend)
-        bool isInRichest = IsPlayerInLeaderboard(username, currentLeaderboards.richest);
-        if (isInRichest)
+        // Check leaderboards based on priority
+        if (checkWinnersFirst)
         {
-            RectTransform position = leaderboardController.GetPlayerPosition(username, checkWinners: false);
-            if (position != null) return position;
+            if (isInWinners)
+            {
+                RectTransform position = leaderboardController.GetPlayerPosition(username, checkWinners: true);
+                if (position != null) return position;
+            }
+
+            if (isInRichest)
+            {
+                RectTransform position = leaderboardController.GetPlayerPosition(username, checkWinners: false);
+                if (position != null) return position;
+            }
+        }
+        else
+        {
+            if (isInRichest)
+            {
+                RectTransform position = leaderboardController.GetPlayerPosition(username, checkWinners: false);
+                if (position != null) return position;
+            }
+
+            if (isInWinners)
+            {
+                RectTransform position = leaderboardController.GetPlayerPosition(username, checkWinners: true);
+                if (position != null) return position;
+            }
         }
 
         // Not in any leaderboard - use opponent dealer
@@ -539,7 +580,7 @@ public class OpponentChipManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(username) || entries == null || entries.Count == 0) return false;
 
-        // Backend only sends 3 entries per leaderboard, check all of them
+     
         foreach (var entry in entries)
         {
             if (entry != null && entry.username == username)
