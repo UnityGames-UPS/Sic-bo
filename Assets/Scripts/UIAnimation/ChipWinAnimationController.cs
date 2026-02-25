@@ -37,6 +37,11 @@ internal class ChipWinAnimationController : MonoBehaviour
     [Header("Win Animation Settings")]
     [SerializeField] private float animationStartPercent = 0.6f;
     [SerializeField] private bool enableWinAnimations = true;
+
+    [Header("Chip Count Settings")]
+    [SerializeField] private int minChipsPerWin = 1;
+    [SerializeField] private int maxChipsPerWin = 8;
+    [SerializeField] private double minWinForExtraChips = 1.0; // Only spawn extra chips if win ratio > 1
     #endregion
 
     #region Private Fields
@@ -63,11 +68,15 @@ internal class ChipWinAnimationController : MonoBehaviour
     #endregion
 
     #region Internal API
-    internal void PlayDiceResultAnimation(List<WinAreaData> winAreas)
+    internal void PlayDiceResultAnimation(List<WinAreaData> winAreas, DiceResultData diceResult)
     {
-        if (isAnimating || winAreas == null || winAreas.Count == 0) return;
+        if (isAnimating || winAreas == null || winAreas.Count == 0 || diceResult == null) return;
         if (winCoroutine != null) StopCoroutine(winCoroutine);
-        winCoroutine = StartCoroutine(CR_DealerToBetAreas(winAreas));
+
+        // Recalculate win amounts based on actual dice result
+        var recalculatedWinAreas = RecalculateWinAmounts(winAreas, diceResult);
+
+        winCoroutine = StartCoroutine(CR_DealerToBetAreas(recalculatedWinAreas));
     }
 
     internal void PlayCashoutAnimation()
@@ -96,6 +105,177 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         activeWinChips.Clear();
         isAnimating = false;
+    }
+    #endregion
+
+    #region Win Calculation
+    private List<WinAreaData> RecalculateWinAmounts(List<WinAreaData> winAreas, DiceResultData diceResult)
+    {
+        var recalculated = new List<WinAreaData>();
+
+        foreach (var area in winAreas)
+        {
+            if (area.betAmount <= 0) continue;
+
+            double actualWinAmount = CalculateActualWin(area.betOption, area.betAmount, diceResult);
+
+            if (actualWinAmount > 0)
+            {
+                recalculated.Add(new WinAreaData
+                {
+                    betOption = area.betOption,
+                    betAreaTarget = area.betAreaTarget,
+                    betAmount = area.betAmount,
+                    winAmount = actualWinAmount,
+                    winRatio = actualWinAmount / area.betAmount
+                });
+            }
+        }
+
+        return recalculated;
+    }
+
+    private double CalculateActualWin(string betOption, double betAmount, DiceResultData diceResult)
+    {
+        if (gameManager == null) return 0;
+
+        // Handle single dice matches (single_1 through single_6)
+        if (betOption.StartsWith("single_"))
+        {
+            int diceNumber = GetDiceNumberFromBetOption(betOption);
+            if (diceNumber == -1) return 0;
+
+            int matchCount = CountDiceMatches(diceNumber, diceResult);
+            return CalculateSingleDiceWin(betAmount, matchCount);
+        }
+
+        // Handle specific triple matches (specific_3_1 through specific_3_6)
+        if (betOption.StartsWith("specific_3_"))
+        {
+            int diceNumber = GetDiceNumberFromBetOption(betOption);
+            if (diceNumber == -1) return 0;
+
+            int matchCount = CountDiceMatches(diceNumber, diceResult);
+            return CalculateSpecificTripleWin(betAmount, matchCount);
+        }
+
+        // For other bet types, get win from wager data
+        var wager = GetWagerForBetOption(betOption);
+        if (wager != null)
+        {
+            return wager.CalculateWin(betAmount);
+        }
+
+        return 0;
+    }
+
+    private int GetDiceNumberFromBetOption(string betOption)
+    {
+        // Extract dice number from betOption like "single_1", "single_2", "specific_3_1", etc.
+        string[] parts = betOption.Split('_');
+        if (parts.Length > 0)
+        {
+            string lastPart = parts[parts.Length - 1];
+            if (int.TryParse(lastPart, out int diceNumber) && diceNumber >= 1 && diceNumber <= 6)
+            {
+                return diceNumber;
+            }
+        }
+        return -1;
+    }
+
+    private int CountDiceMatches(int targetDice, DiceResultData diceResult)
+    {
+        int count = 0;
+        if (diceResult.dice1 == targetDice) count++;
+        if (diceResult.dice2 == targetDice) count++;
+        if (diceResult.dice3 == targetDice) count++;
+        return count;
+    }
+
+    private double CalculateSingleDiceWin(double betAmount, int matchCount)
+    {
+        if (gameManager?.CurrentWagers?.side_bets == null) return 0;
+
+        switch (matchCount)
+        {
+            case 3:
+                // single_match_3 payout
+                if (gameManager.CurrentWagers.side_bets.single_match_3 != null)
+                    return gameManager.CurrentWagers.side_bets.single_match_3.CalculateWin(betAmount);
+                break;
+            case 2:
+                // single_match_2 payout
+                if (gameManager.CurrentWagers.side_bets.single_match_2 != null)
+                    return gameManager.CurrentWagers.side_bets.single_match_2.CalculateWin(betAmount);
+                break;
+            case 1:
+                // single_match_1 payout
+                if (gameManager.CurrentWagers.side_bets.single_match_1 != null)
+                    return gameManager.CurrentWagers.side_bets.single_match_1.CalculateWin(betAmount);
+                break;
+        }
+
+        return 0;
+    }
+
+    private double CalculateSpecificTripleWin(double betAmount, int matchCount)
+    {
+        if (gameManager?.CurrentWagers?.side_bets == null) return 0;
+
+        switch (matchCount)
+        {
+            case 3:
+                // specific_3 payout (all three dice match)
+                if (gameManager.CurrentWagers.side_bets.specific_3 != null)
+                    return gameManager.CurrentWagers.side_bets.specific_3.CalculateWin(betAmount);
+                break;
+            case 2:
+                // specific_2 payout (two dice match)
+                if (gameManager.CurrentWagers.side_bets.specific_2 != null)
+                    return gameManager.CurrentWagers.side_bets.specific_2.CalculateWin(betAmount);
+                break;
+        }
+
+        return 0;
+    }
+
+    private BetWager GetWagerForBetOption(string betOption)
+    {
+        if (gameManager?.CurrentWagers == null) return null;
+
+        // Check main bets
+        switch (betOption)
+        {
+            case "small": return gameManager.CurrentWagers.main_bets?.small;
+            case "big": return gameManager.CurrentWagers.main_bets?.big;
+            case "odd": return gameManager.CurrentWagers.main_bets?.odd;
+            case "even": return gameManager.CurrentWagers.main_bets?.even;
+        }
+
+        // Check sum bets
+        if (betOption.StartsWith("sum_"))
+        {
+            switch (betOption)
+            {
+                case "sum_4": return gameManager.CurrentWagers.op_bets?.sum_4;
+                case "sum_5": return gameManager.CurrentWagers.op_bets?.sum_5;
+                case "sum_6": return gameManager.CurrentWagers.op_bets?.sum_6;
+                case "sum_7": return gameManager.CurrentWagers.op_bets?.sum_7;
+                case "sum_8": return gameManager.CurrentWagers.op_bets?.sum_8;
+                case "sum_9": return gameManager.CurrentWagers.op_bets?.sum_9;
+                case "sum_10": return gameManager.CurrentWagers.op_bets?.sum_10;
+                case "sum_11": return gameManager.CurrentWagers.op_bets?.sum_11;
+                case "sum_12": return gameManager.CurrentWagers.op_bets?.sum_12;
+                case "sum_13": return gameManager.CurrentWagers.op_bets?.sum_13;
+                case "sum_14": return gameManager.CurrentWagers.op_bets?.sum_14;
+                case "sum_15": return gameManager.CurrentWagers.op_bets?.sum_15;
+                case "sum_16": return gameManager.CurrentWagers.op_bets?.sum_16;
+                case "sum_17": return gameManager.CurrentWagers.op_bets?.sum_17;
+            }
+        }
+
+        return null;
     }
     #endregion
 
@@ -129,36 +309,44 @@ internal class ChipWinAnimationController : MonoBehaviour
     {
         isAnimating = true;
 
-        Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : dealerSpawnPoint.parent;
-
         double totalWin = 0;
         foreach (var a in winAreas)
             totalWin += a.winAmount;
 
-        var assignments = new List<(RectTransform chip, Vector2 dest)>();
+        var assignments = new List<(RectTransform chip, Transform parent, Vector3 localPos)>();
         int poolIdx = 0;
 
         foreach (var area in winAreas)
         {
             if (area.betAreaTarget == null) continue;
 
-            RectTransform targetRT = area.betAreaTarget as RectTransform
-                                     ?? area.betAreaTarget.GetComponent<RectTransform>();
-            if (targetRT == null) continue;
+            // Get PlayerBetComponent to use as parent (so chips stay behind bet amount display)
+            PlayerBetComponent playerBetComp = betController?.GetPlayerBetComponent(area.betOption);
+            if (playerBetComp == null) continue;
 
+            Transform chipParent = playerBetComp.transform;
 
             AudioManager.Instance?.PlayChipAdd();
 
-            int count = totalWin > 0
-                ? Mathf.Clamp(Mathf.RoundToInt((float)(area.winAmount / totalWin) * 10f), 1, 6)
-                : 1;
+            // Calculate chip count based on win ratio
+            int chipCount = CalculateChipCount(area);
 
-            for (int i = 0; i < count && poolIdx < dealerPool.Count; i++, poolIdx++)
+            // Skip spawning extra chips if win ratio is too low (1:1 or less)
+            bool shouldSpawnChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
+
+            if (!shouldSpawnChips)
+            {
+                // For low wins, just trigger animation on existing chips in bet area
+                // Don't spawn new dealer chips
+                continue;
+            }
+
+            for (int i = 0; i < chipCount && poolIdx < dealerPool.Count; i++, poolIdx++)
             {
                 RectTransform chip = dealerPool[poolIdx];
                 if (chip == null) continue;
 
-                SetSprite(chip, SpriteIndex(area.winAmount));
+                SetSprite(chip, SpriteIndex(area.winAmount / chipCount));
 
                 chip.gameObject.SetActive(true);
                 chip.localPosition = new Vector3(
@@ -168,23 +356,40 @@ internal class ChipWinAnimationController : MonoBehaviour
                 chip.localScale = Vector3.zero;
                 chip.DOScale(chipWorkingScale, 0.18f).SetEase(Ease.OutBack);
 
-                Vector2 dest = GetCanvasPosition(targetRT) + new Vector2(
+                // Calculate local position in bet area (scatter slightly)
+                Vector3 localPos = new Vector3(
                     Random.Range(-betAreaScatterX, betAreaScatterX),
-                    Random.Range(-betAreaScatterY, betAreaScatterY));
+                    Random.Range(-betAreaScatterY, betAreaScatterY),
+                    0f);
 
-                assignments.Add((chip, dest));
+                assignments.Add((chip, chipParent, localPos));
                 activeWinChips.Add(chip);
             }
         }
 
         yield return new WaitForSeconds(0.20f);
 
-        foreach (var (chip, _) in assignments)
+        // Parent chips to PlayerBetComponent and get world position of target
+        var animData = new List<(RectTransform chip, Vector2 worldTarget)>();
+
+        foreach (var (chip, parent, localPos) in assignments)
         {
-            chip.SetParent(canvasRoot, worldPositionStays: true);
-            //chip.SetAsFirstSibling();
+            if (chip == null || parent == null) continue;
+
+            // Get world position of target before reparenting
+            RectTransform parentRT = parent as RectTransform;
+            if (parentRT == null) continue;
+
+            Vector3 worldTarget = parentRT.TransformPoint(localPos);
+
+            // Parent to PlayerBetComponent (so it stays behind bet amount)
+            chip.SetParent(parent, worldPositionStays: true);
+            chip.SetAsFirstSibling(); // Put behind other UI elements
+
+            animData.Add((chip, worldTarget));
         }
 
+        // Trigger win counting animations at the right time
         if (enableWinAnimations && assignments.Count > 0)
         {
             DOVirtual.DelayedCall(
@@ -192,10 +397,21 @@ internal class ChipWinAnimationController : MonoBehaviour
                 () => TriggerAllWinCountingAnimations(winAreas));
         }
 
-        foreach (var (chip, dest) in assignments)
+        // Animate chips to their targets
+        foreach (var (chip, worldTarget) in animData)
         {
-            chip.DOAnchorPos(dest, dealerToBetDuration)
-                .SetEase(Ease.OutQuad);
+            if (chip == null) continue;
+
+            chip.DOMove(worldTarget, dealerToBetDuration)
+                .SetEase(Ease.OutQuad)
+                .OnComplete(() =>
+                {
+                    if (chip != null)
+                    {
+                        // Convert to local position in parent
+                        chip.localPosition = chip.parent.InverseTransformPoint(worldTarget);
+                    }
+                });
 
             yield return new WaitForSeconds(chipStaggerDelay);
         }
@@ -205,6 +421,32 @@ internal class ChipWinAnimationController : MonoBehaviour
         isAnimating = false;
         winCoroutine = null;
     }
+
+    private int CalculateChipCount(WinAreaData area)
+    {
+        // Calculate chip count based on win amount
+        // More chips for bigger wins, but cap at max
+
+        if (area.winAmount <= 0) return 0;
+
+        // Base calculation on win ratio
+        double ratio = area.winRatio;
+
+        if (ratio <= minWinForExtraChips) return 0; // No extra chips for small wins
+
+        int count;
+
+        if (ratio >= 50) count = maxChipsPerWin;
+        else if (ratio >= 30) count = Mathf.Min(7, maxChipsPerWin);
+        else if (ratio >= 15) count = Mathf.Min(6, maxChipsPerWin);
+        else if (ratio >= 10) count = Mathf.Min(5, maxChipsPerWin);
+        else if (ratio >= 5) count = Mathf.Min(4, maxChipsPerWin);
+        else if (ratio >= 3) count = Mathf.Min(3, maxChipsPerWin);
+        else count = Mathf.Min(2, maxChipsPerWin);
+
+        return Mathf.Max(minChipsPerWin, count);
+    }
+
     private void TriggerAllWinCountingAnimations(List<WinAreaData> winAreas)
     {
         if (betController == null) return;
@@ -228,6 +470,7 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         var toSweep = new List<RectTransform>(activeWinChips);
 
+        // Add a few extra decorative chips from dealer
         int extraNeeded = Mathf.Min(3, dealerPool.Count);
         var extraChips = new List<RectTransform>();
         foreach (var chip in dealerPool)
@@ -243,34 +486,58 @@ internal class ChipWinAnimationController : MonoBehaviour
             chip.DOScale(chipWorkingScale * 0.70f, 0.14f).SetEase(Ease.OutBack);
 
             extraChips.Add(chip);
+            toSweep.Add(chip);
             extraNeeded--;
         }
 
         yield return new WaitForSeconds(0.18f);
 
-       /* foreach (var chip in extraChips)
+        // First, get canvas positions while chips are still in PlayerBetComponent
+        var chipCanvasPositions = new Dictionary<RectTransform, Vector2>();
+        foreach (var chip in toSweep)
         {
-            chip.SetParent(canvasRoot, worldPositionStays: true);
-            chip.SetSiblingIndex(0); 
-            toSweep.Add(chip);
-        }*/
+            if (chip == null) continue;
+            // Get canvas position BEFORE reparenting
+            chipCanvasPositions[chip] = GetCanvasPosition(chip);
+        }
 
-        Vector2 playerPos = GetCanvasPosition(playerNameTarget);
-
+        // Now reparent chips to canvas
         foreach (var chip in toSweep)
         {
             if (chip == null) continue;
 
-            Vector2 start = chip.anchoredPosition;
-            Vector2 mid = Vector2.Lerp(start, playerPos, 0.5f)
-                          + new Vector2(Random.Range(-18f, 18f), arcHeight);
+            if (chip.parent != targetCanvas.transform)
+            {
+                chip.SetParent(targetCanvas.transform, worldPositionStays: false);
+                chip.SetAsLastSibling(); // Render on top
+
+                // Set anchored position to the stored canvas position
+                if (chipCanvasPositions.ContainsKey(chip))
+                {
+                    chip.anchoredPosition = chipCanvasPositions[chip];
+                }
+            }
+        }
+
+        // Get player canvas position
+        Vector2 playerCanvasPos = GetCanvasPosition(playerNameTarget);
+
+        // Animate each chip from its current position to player
+        foreach (var chip in toSweep)
+        {
+            if (chip == null) continue;
+
+            // Use chip's current canvas position
+            Vector2 startPos = chip.anchoredPosition;
+            Vector2 midPos = Vector2.Lerp(startPos, playerCanvasPos, 0.5f)
+                           + new Vector2(Random.Range(-18f, 18f), arcHeight);
 
             float halfDur = betToPlayerDuration * 0.45f;
             float landDur = betToPlayerDuration * 0.55f;
 
             DOTween.Sequence()
-                .Append(chip.DOAnchorPos(mid, halfDur).SetEase(Ease.OutQuad))
-                .Append(chip.DOAnchorPos(playerPos, landDur).SetEase(Ease.InQuad))
+                .Append(chip.DOAnchorPos(midPos, halfDur).SetEase(Ease.OutQuad))
+                .Append(chip.DOAnchorPos(playerCanvasPos, landDur).SetEase(Ease.InQuad))
                 .Join(chip.DOScale(Vector3.zero, landDur).SetDelay(halfDur).SetEase(Ease.InBack))
                 .OnComplete(() =>
                 {
@@ -328,4 +595,5 @@ internal class WinAreaData
     internal Transform betAreaTarget;
     internal double betAmount;
     internal double winAmount;
+    internal double winRatio; // winAmount / betAmount
 }

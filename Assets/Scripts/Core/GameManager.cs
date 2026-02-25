@@ -207,7 +207,7 @@ public class GameManager : MonoBehaviour
         {
             List<WinAreaData> winAreas = betController.GetWinningAreasData();
             if (winAreas != null && winAreas.Count > 0)
-                chipWinAnimationController.PlayDiceResultAnimation(winAreas);
+                chipWinAnimationController.PlayDiceResultAnimation(winAreas, data);
         }
     }
     private List<string> GetAllWinningAreasFromDice(DiceResultData data)
