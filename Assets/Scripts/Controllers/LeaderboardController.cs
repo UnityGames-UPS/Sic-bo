@@ -16,13 +16,18 @@ public class LeaderboardController : MonoBehaviour
     [Header("Avatar Images (Random Selection)")]
     [SerializeField] private Sprite[] playerAvatars;
 
+    [Header("Position Badges")]
+    [SerializeField] private Sprite[] richestPositionBadges = new Sprite[3]; // 1st, 2nd, 3rd
+    [SerializeField] private Sprite[] winnersPositionBadges = new Sprite[3]; // 1st, 2nd, 3rd
+
     [Header("Animation Settings")]
     [SerializeField] private float nameDuration = 2f;
     [SerializeField] private float balanceDuration = 2f;
     [SerializeField] private float fadeSpeed = 0.3f;
     [SerializeField] private float loopInterval = 0f;
     [SerializeField] private float slideDistance = 300f;
-    [SerializeField] private float slideDuration = 0.5f;
+    [SerializeField] private float slideDuration = 0.3f; // Faster from 0.5f
+    [SerializeField] private float interchangeDuration = 0.4f; // For position swaps
     [SerializeField] private float minRandomOffset = 0f;
     [SerializeField] private float maxRandomOffset = 2f;
 
@@ -48,6 +53,28 @@ public class LeaderboardController : MonoBehaviour
     {
         localPlayerUsername = username;
         localPlayerAvatar = avatar;
+    }
+
+    /// <summary>
+    /// Gets the RectTransform of a player in the leaderboard by username.
+    /// Returns null if player not found.
+    /// </summary>
+    internal RectTransform GetPlayerPosition(string username, bool checkWinners)
+    {
+        if (string.IsNullOrEmpty(username)) return null;
+
+        var blocks = checkWinners ? winnersBlocks : richestBlocks;
+        var currentData = checkWinners ? currentWinners : currentRichest;
+
+        for (int i = 0; i < blocks.Count; i++)
+        {
+            if (currentData.ContainsKey(i) && currentData[i].username == username)
+            {
+                return blocks[i]?.GetComponent<RectTransform>();
+            }
+        }
+
+        return null;
     }
     #endregion
 
@@ -76,11 +103,32 @@ public class LeaderboardController : MonoBehaviour
         if (leaderboardParent != null && !leaderboardParent.activeSelf)
             leaderboardParent.SetActive(true);
 
-        for (int i = 0; i < 3; i++)
-            UpdatePlayerBlock(richestBlocks, currentRichest, i, richestData[i], -1f, false);
+        // Check for cascade scenarios (multiple position changes)
+        bool richestCascade = DetectCascade(currentRichest, richestData);
+        bool winnersCascade = DetectCascade(currentWinners, winnersData);
 
         for (int i = 0; i < 3; i++)
-            UpdatePlayerBlock(winnersBlocks, currentWinners, i, winnersData[i], 1f, true);
+            UpdatePlayerBlock(richestBlocks, currentRichest, i, richestData[i], -1f, false, richestCascade);
+
+        for (int i = 0; i < 3; i++)
+            UpdatePlayerBlock(winnersBlocks, currentWinners, i, winnersData[i], 1f, true, winnersCascade);
+    }
+
+    private bool DetectCascade(Dictionary<int, LeaderboardEntry> currentData, List<LeaderboardEntry> newData)
+    {
+        if (currentData.Count == 0) return false;
+
+        int positionChanges = 0;
+        for (int i = 0; i < newData.Count; i++)
+        {
+            if (currentData.ContainsKey(i) && currentData[i].username != newData[i].username)
+            {
+                positionChanges++;
+            }
+        }
+
+        // If more than one position is changing, it's a cascade
+        return positionChanges > 1;
     }
 
     internal void Hide()
@@ -120,7 +168,8 @@ public class LeaderboardController : MonoBehaviour
         int index,
         LeaderboardEntry newEntry,
         float slideDir,
-        bool isWinners)
+        bool isWinners,
+        bool isCascade)
     {
         if (index >= blocks.Count || blocks[index] == null) return;
 
@@ -129,18 +178,41 @@ public class LeaderboardController : MonoBehaviour
         bool playerChanged = !isFirstTime && currentData[index].username != newEntry.username;
         double displayValue = isWinners ? newEntry.totalWins : newEntry.balance;
 
+        // Check if this is a position interchange (player moved from another position)
+        int oldPosition = FindPlayerPosition(currentData, newEntry.username);
+        bool isPositionSwap = oldPosition != -1 && oldPosition != index;
+
         if (isFirstTime)
         {
             currentData[index] = newEntry;
             block.SetPlayerData(newEntry.username, displayValue, PickAvatar(newEntry.username));
+            SetPositionBadge(block, index, isWinners);
             float offset = Random.Range(minRandomOffset, maxRandomOffset);
             AddBlockCoroutine(block, StartCoroutine(DelayedAlternateStart(block, offset)));
         }
+        else if (isPositionSwap && !isCascade)
+        {
+            // Only use interchange for simple 1:1 swaps (not cascade scenarios)
+            LeaderboardPlayerBlock oldBlock = blocks[oldPosition];
+            LeaderboardEntry oldBlockEntry = currentData[index];
+
+            currentData[oldPosition] = oldBlockEntry;
+            currentData[index] = newEntry;
+
+            StopBlockAnimation(block);
+            StopBlockAnimation(oldBlock);
+
+            AddBlockCoroutine(block, StartCoroutine(InterchangePositions(
+                block, oldBlock, newEntry, oldBlockEntry, displayValue,
+                isWinners ? currentWinners[oldPosition].totalWins : currentRichest[oldPosition].balance,
+                isWinners)));
+        }
         else if (playerChanged)
         {
+            // Use fast slide for cascade scenarios or new players
             currentData[index] = newEntry;
             StopBlockAnimation(block);
-            AddBlockCoroutine(block, StartCoroutine(SlideOutAndUpdate(block, newEntry, slideDir, displayValue)));
+            AddBlockCoroutine(block, StartCoroutine(SlideOutAndUpdate(block, newEntry, slideDir, displayValue, index, isWinners)));
         }
         else
         {
@@ -153,6 +225,30 @@ public class LeaderboardController : MonoBehaviour
         }
     }
 
+    private int FindPlayerPosition(Dictionary<int, LeaderboardEntry> currentData, string username)
+    {
+        if (string.IsNullOrEmpty(username)) return -1;
+
+        foreach (var kvp in currentData)
+        {
+            if (kvp.Value.username == username)
+                return kvp.Key;
+        }
+
+        return -1;
+    }
+
+    private void SetPositionBadge(LeaderboardPlayerBlock block, int index, bool isWinners)
+    {
+        if (block == null) return;
+
+        Sprite[] badges = isWinners ? winnersPositionBadges : richestPositionBadges;
+        if (badges != null && index >= 0 && index < badges.Length)
+        {
+            block.SetPositionBadge(badges[index]);
+        }
+    }
+
     private IEnumerator DelayedAlternateStart(LeaderboardPlayerBlock block, float delay)
     {
         if (delay > 0f) yield return new WaitForSeconds(delay);
@@ -161,11 +257,80 @@ public class LeaderboardController : MonoBehaviour
     #endregion
 
     #region Animations
+    private IEnumerator InterchangePositions(
+        LeaderboardPlayerBlock block1,
+        LeaderboardPlayerBlock block2,
+        LeaderboardEntry entry1,
+        LeaderboardEntry entry2,
+        double displayValue1,
+        double displayValue2,
+        bool isWinners)
+    {
+        RectTransform rect1 = block1.GetComponent<RectTransform>();
+        RectTransform rect2 = block2.GetComponent<RectTransform>();
+
+        if (rect1 == null || rect2 == null) yield break;
+
+        rect1.DOKill(complete: true);
+        rect2.DOKill(complete: true);
+
+        Vector2 pos1 = rect1.anchoredPosition;
+        Vector2 pos2 = rect2.anchoredPosition;
+
+        // Animate position swap
+        rect1.DOAnchorPos(pos2, interchangeDuration).SetEase(Ease.InOutQuad);
+        rect2.DOAnchorPos(pos1, interchangeDuration).SetEase(Ease.InOutQuad);
+
+        yield return new WaitForSeconds(interchangeDuration);
+
+        // Swap the actual positions in hierarchy
+        int siblingIndex1 = rect1.GetSiblingIndex();
+        int siblingIndex2 = rect2.GetSiblingIndex();
+        rect1.SetSiblingIndex(siblingIndex2);
+        rect2.SetSiblingIndex(siblingIndex1);
+
+        // Reset positions after hierarchy swap
+        rect1.anchoredPosition = pos1;
+        rect2.anchoredPosition = pos2;
+
+        // Update data
+        ResetTextState(block1.NameText);
+        ResetTextState(block1.BalanceText);
+        ResetTextState(block2.NameText);
+        ResetTextState(block2.BalanceText);
+
+        block1.SetPlayerData(entry1.username, displayValue1, PickAvatar(entry1.username));
+        block2.SetPlayerData(entry2.username, displayValue2, PickAvatar(entry2.username));
+
+        // Update position badges
+        int index1 = -1, index2 = -1;
+        var blocks = isWinners ? winnersBlocks : richestBlocks;
+        for (int i = 0; i < blocks.Count; i++)
+        {
+            if (blocks[i] == block1) index1 = i;
+            if (blocks[i] == block2) index2 = i;
+        }
+
+        if (index1 != -1) SetPositionBadge(block1, index1, isWinners);
+        if (index2 != -1) SetPositionBadge(block2, index2, isWinners);
+
+        // Restart animations
+        float randomOffset1 = Random.Range(minRandomOffset, maxRandomOffset);
+        float randomOffset2 = Random.Range(minRandomOffset, maxRandomOffset);
+
+        yield return new WaitForSeconds(Mathf.Max(randomOffset1, randomOffset2));
+
+        AddBlockCoroutine(block1, StartCoroutine(AlternateNameBalance(block1)));
+        AddBlockCoroutine(block2, StartCoroutine(AlternateNameBalance(block2)));
+    }
+
     private IEnumerator SlideOutAndUpdate(
         LeaderboardPlayerBlock block,
         LeaderboardEntry entry,
         float slideDir,
-        double displayValue)
+        double displayValue,
+        int index,
+        bool isWinners)
     {
         RectTransform blockRect = block.GetComponent<RectTransform>();
 
@@ -180,6 +345,7 @@ public class LeaderboardController : MonoBehaviour
             ResetTextState(block.NameText);
             ResetTextState(block.BalanceText);
             block.SetPlayerData(entry.username, displayValue, PickAvatar(entry.username));
+            SetPositionBadge(block, index, isWinners);
 
             yield return blockRect.DOAnchorPos(restPos, slideDuration).SetEase(Ease.OutQuad).WaitForCompletion();
         }
@@ -188,6 +354,7 @@ public class LeaderboardController : MonoBehaviour
             ResetTextState(block.NameText);
             ResetTextState(block.BalanceText);
             block.SetPlayerData(entry.username, displayValue, PickAvatar(entry.username));
+            SetPositionBadge(block, index, isWinners);
         }
 
         float randomOffset = Random.Range(minRandomOffset, maxRandomOffset);

@@ -12324,6 +12324,7 @@ MonoBehaviour:
   NameText: {fileID: 671272951}
   BalanceText: {fileID: 1923544895}
   Container: {fileID: 225656028}
+  PositionImage: {fileID: 2109306684}
 --- !u!1 &226065969
 GameObject:
   m_ObjectHideFlags: 0
@@ -13147,6 +13148,7 @@ MonoBehaviour:
   NameText: {fileID: 1293376164}
   BalanceText: {fileID: 856070317}
   Container: {fileID: 238500245}
+  PositionImage: {fileID: 350213022}
 --- !u!1 &239315914
 GameObject:
   m_ObjectHideFlags: 0
@@ -22244,6 +22246,7 @@ MonoBehaviour:
   NameText: {fileID: 1194173447}
   BalanceText: {fileID: 55954852}
   Container: {fileID: 364786258}
+  PositionImage: {fileID: 295490542}
 --- !u!1 &364894706
 GameObject:
   m_ObjectHideFlags: 0
@@ -30962,6 +30965,7 @@ MonoBehaviour:
   NameText: {fileID: 1460914908}
   BalanceText: {fileID: 1453128219}
   Container: {fileID: 559578858}
+  PositionImage: {fileID: 791181679}
 --- !u!1 &560797707
 GameObject:
   m_ObjectHideFlags: 0
@@ -44150,6 +44154,7 @@ MonoBehaviour:
   NameText: {fileID: 2051177626}
   BalanceText: {fileID: 1549115467}
   Container: {fileID: 764446429}
+  PositionImage: {fileID: 631592700}
 --- !u!1 &770531624
 GameObject:
   m_ObjectHideFlags: 0
@@ -78820,12 +78825,21 @@ MonoBehaviour:
   - {fileID: -5278362820384136009, guid: 59d18ca497516004abf11d25e2b4d8ca, type: 3}
   - {fileID: 2075687964101422281, guid: 5f6b4409b6753d446b3064b0bde81184, type: 3}
   - {fileID: 5557049258011234729, guid: 6b5f52361fa7deb49ae982dae830896f, type: 3}
+  richestPositionBadges:
+  - {fileID: -851866159, guid: 33558cbcba49d73448a2bc06ed7045c3, type: 3}
+  - {fileID: 1836763095, guid: 33558cbcba49d73448a2bc06ed7045c3, type: 3}
+  - {fileID: -1878985695, guid: 33558cbcba49d73448a2bc06ed7045c3, type: 3}
+  winnersPositionBadges:
+  - {fileID: 877667713, guid: 00d50de13a99b8b46856f3f1db1df25b, type: 3}
+  - {fileID: 1204690001, guid: 00d50de13a99b8b46856f3f1db1df25b, type: 3}
+  - {fileID: -2050991759, guid: 00d50de13a99b8b46856f3f1db1df25b, type: 3}
   nameDuration: 2
   balanceDuration: 3.5
   fadeSpeed: 0.5
   loopInterval: 5
   slideDistance: 300
-  slideDuration: 3
+  slideDuration: 0.8
+  interchangeDuration: 0.4
   minRandomOffset: 0
   maxRandomOffset: 2
   dummyUsername: ---
@@ -84300,6 +84314,7 @@ MonoBehaviour:
   NameText: {fileID: 413140321}
   BalanceText: {fileID: 1993567853}
   Container: {fileID: 1491225200}
+  PositionImage: {fileID: 290913766}
 --- !u!1 &1491368109
 GameObject:
   m_ObjectHideFlags: 0
@@ -90335,6 +90350,7 @@ MonoBehaviour:
   betAreaScatterY: 10
   chipScale: 0.8
   targetCanvas: {fileID: 674617748}
+  leaderboardController: {fileID: 1373798843}
 --- !u!4 &1594718134
 Transform:
   m_ObjectHideFlags: 0
@@ -98546,7 +98562,7 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   menuController: {fileID: 226403981}
   betTimerController: {fileID: 1713741160}
-  leaderboardController: {fileID: 0}
+  leaderboardController: {fileID: 1373798843}
   jsFunctCalls: {fileID: 285508710}
   StatsRoundCount_Text: {fileID: 456553621}
   StatsDice1_Text: {fileID: 1013433085}

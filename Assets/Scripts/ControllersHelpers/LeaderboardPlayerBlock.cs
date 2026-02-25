@@ -9,6 +9,7 @@ public class LeaderboardPlayerBlock : MonoBehaviour
     public TMP_Text NameText;
     public TMP_Text BalanceText;
     public GameObject Container;
+    public Image PositionImage;
 
     internal void SetPlayerData(string username, double balance, Sprite avatar)
     {
@@ -17,6 +18,15 @@ public class LeaderboardPlayerBlock : MonoBehaviour
         if (AvatarImage != null && avatar != null) AvatarImage.sprite = avatar;
         if (Container != null) Container.SetActive(true);
         ShowName();
+    }
+
+    internal void SetPositionBadge(Sprite positionSprite)
+    {
+        if (PositionImage != null)
+        {
+            PositionImage.sprite = positionSprite;
+            PositionImage.gameObject.SetActive(positionSprite != null);
+        }
     }
 
     internal void UpdateBalance(double balance)
