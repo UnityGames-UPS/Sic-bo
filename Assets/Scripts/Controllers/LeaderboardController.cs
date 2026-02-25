@@ -46,6 +46,8 @@ public class LeaderboardController : MonoBehaviour
     private Dictionary<int, List<Coroutine>> blockCoroutines = new Dictionary<int, List<Coroutine>>();
     private string localPlayerUsername = null;
     private Sprite localPlayerAvatar = null;
+    private bool isAnimating = false;
+    private Dictionary<RectTransform, Vector2> originalPositions = new Dictionary<RectTransform, Vector2>();
     #endregion
 
     #region Internal API — Local Player
@@ -76,6 +78,16 @@ public class LeaderboardController : MonoBehaviour
 
         return null;
     }
+
+    internal bool IsAnimating() => isAnimating;
+
+    internal IEnumerator WaitForAnimationComplete()
+    {
+        while (isAnimating)
+        {
+            yield return null;
+        }
+    }
     #endregion
 
     #region Unity Lifecycle
@@ -92,11 +104,38 @@ public class LeaderboardController : MonoBehaviour
         currentWinners.Clear();
         StopAllAnimations();
 
+        // Store original positions
+        originalPositions.Clear();
+        foreach (var block in richestBlocks)
+        {
+            if (block != null)
+            {
+                RectTransform rt = block.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    originalPositions[rt] = rt.anchoredPosition;
+                }
+            }
+        }
+        foreach (var block in winnersBlocks)
+        {
+            if (block != null)
+            {
+                RectTransform rt = block.GetComponent<RectTransform>();
+                if (rt != null)
+                {
+                    originalPositions[rt] = rt.anchoredPosition;
+                }
+            }
+        }
+
         if (leaderboardParent != null) leaderboardParent.SetActive(false);
     }
 
     internal void UpdateLeaderboard(Leaderboards leaderboards)
     {
+        isAnimating = true;
+
         var richestData = PadToThree(leaderboards?.richest);
         var winnersData = PadToThree(leaderboards?.winners);
 
@@ -112,6 +151,17 @@ public class LeaderboardController : MonoBehaviour
 
         for (int i = 0; i < 3; i++)
             UpdatePlayerBlock(winnersBlocks, currentWinners, i, winnersData[i], 1f, true, winnersCascade);
+
+        // Animation will complete after all blocks finish
+        StartCoroutine(MarkAnimationComplete());
+    }
+
+    private IEnumerator MarkAnimationComplete()
+    {
+        // Wait for longest possible animation duration
+        float maxDuration = Mathf.Max(interchangeDuration, slideDuration * 2) + 0.5f;
+        yield return new WaitForSeconds(maxDuration);
+        isAnimating = false;
     }
 
     private bool DetectCascade(Dictionary<int, LeaderboardEntry> currentData, List<LeaderboardEntry> newData)
@@ -337,7 +387,12 @@ public class LeaderboardController : MonoBehaviour
         if (blockRect != null)
         {
             blockRect.DOKill(complete: true);
-            Vector2 restPos = blockRect.anchoredPosition;
+
+            // Use stored original position to ensure card returns correctly
+            Vector2 restPos = originalPositions.ContainsKey(blockRect)
+                ? originalPositions[blockRect]
+                : blockRect.anchoredPosition;
+
             Vector2 offScreenPos = restPos + new Vector2(slideDir * slideDistance, 0f);
 
             yield return blockRect.DOAnchorPos(offScreenPos, slideDuration).SetEase(Ease.InQuad).WaitForCompletion();
@@ -348,6 +403,9 @@ public class LeaderboardController : MonoBehaviour
             SetPositionBadge(block, index, isWinners);
 
             yield return blockRect.DOAnchorPos(restPos, slideDuration).SetEase(Ease.OutQuad).WaitForCompletion();
+
+            // Force position to original (prevent drift)
+            blockRect.anchoredPosition = restPos;
         }
         else
         {

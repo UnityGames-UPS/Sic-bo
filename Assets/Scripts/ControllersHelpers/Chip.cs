@@ -62,6 +62,16 @@ public class Chip : MonoBehaviour
     }
 
     internal void ClearLeaderboardBadge() => HideBadgesInternal();
+
+    internal bool HasRichestBadge()
+    {
+        return richestBadgeObject != null && richestBadgeObject.activeSelf;
+    }
+
+    internal bool HasWinnerBadge()
+    {
+        return winnersBadgeObject != null && winnersBadgeObject.activeSelf;
+    }
     #endregion
 
     #region Private Helpers

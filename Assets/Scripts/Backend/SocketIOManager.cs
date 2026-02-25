@@ -104,6 +104,11 @@ public class SocketIOManager : MonoBehaviour
 
         gameSocket = null;
     }
+    void CloseGame()
+    {
+        Debug.Log("Unity: Closing Game");
+        StartCoroutine(CloseSocket());
+    }
 
     private void OnApplicationFocus(bool focus)
     {

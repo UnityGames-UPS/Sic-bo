@@ -258,8 +258,11 @@ public class GameManager : MonoBehaviour
         if (data.stats != null && data.stats.Count > 0)
             uiController.UpdateStats(GameUtilities.CalculateStats(data.stats));
 
+        // Set payout data for opponent chip routing BEFORE playing animation
         if (data.payouts != null)
         {
+            betController.SetCashoutData(data.payouts);
+
             foreach (var payout in data.payouts)
             {
                 if (payout.username == PlayerUsername)
@@ -459,7 +462,7 @@ public class GameManager : MonoBehaviour
     internal void ExitGame()
     {
         uiController.ShowLoadingScreen("Exiting Game...");
-      
+
 
         betController?.DisableBetting();
         betController?.ClearAllBets(true);

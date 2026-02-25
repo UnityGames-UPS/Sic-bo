@@ -1150,6 +1150,11 @@ public class BetController : MonoBehaviour
         RefreshAllPlayerChipBadges();
     }
 
+    internal void SetCashoutData(List<Payout> payouts)
+    {
+        opponentChipManager?.SetCashoutData(payouts);
+    }
+
     private void RefreshPlayerLeaderboardStatus()
     {
         isPlayerRichest = IsUsernameInLeaderboardList(currentPlayerUsername, currentLeaderboards?.richest);
