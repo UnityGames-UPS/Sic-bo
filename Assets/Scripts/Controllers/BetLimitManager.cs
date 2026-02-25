@@ -167,7 +167,7 @@ public class BetLimitManager : MonoBehaviour
     #endregion
 
     #region Public API
-    public void Initialize(Wagers wagers, Bets bets, string currentRoom, List<string> receivedBetOptions)
+    internal void Initialize(Wagers wagers, Bets bets, string currentRoom, List<string> receivedBetOptions)
     {
         wagersData = wagers;
         betsData = bets;
@@ -178,7 +178,7 @@ public class BetLimitManager : MonoBehaviour
         UpdateRoomButtonMinMaxValues();
     }
 
-    public void UpdatePlayerCurrentRoom(string newRoom)
+    /*public void UpdatePlayerCurrentRoom(string newRoom)
     {
         playerCurrentRoom = newRoom;
     }
@@ -195,11 +195,11 @@ public class BetLimitManager : MonoBehaviour
         {
             UpdateBetLimitDisplays();
         }
-    }
+    }*/
     #endregion
 
     #region Panel Control
-    public void OpenPanel()
+    internal void OpenPanel()
     {
         if (wagersData == null || betsData == null)
         {
@@ -219,7 +219,7 @@ public class BetLimitManager : MonoBehaviour
         popupCoroutine = StartCoroutine(PlayPopupAnimation(true));
     }
 
-    public void ClosePanel()
+    internal void ClosePanel()
     {
         if (popupCoroutine != null)
             StopCoroutine(popupCoroutine);
