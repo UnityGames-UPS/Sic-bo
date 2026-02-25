@@ -47,6 +47,7 @@ internal class ChipWinAnimationController : MonoBehaviour
     #region Private Fields
     private readonly List<RectTransform> dealerPool = new List<RectTransform>();
     private readonly List<RectTransform> activeWinChips = new List<RectTransform>();
+    private readonly List<RectTransform> stakeReturnChips = new List<RectTransform>();
     private bool isAnimating;
     private Coroutine winCoroutine;
     private Coroutine cashoutCoroutine;
@@ -104,6 +105,7 @@ internal class ChipWinAnimationController : MonoBehaviour
         }
 
         activeWinChips.Clear();
+        stakeReturnChips.Clear();
         isAnimating = false;
     }
     #endregion
@@ -328,42 +330,60 @@ internal class ChipWinAnimationController : MonoBehaviour
 
             AudioManager.Instance?.PlayChipAdd();
 
-            // Calculate chip count based on win ratio
-            int chipCount = CalculateChipCount(area);
-
-            // Skip spawning extra chips if win ratio is too low (1:1 or less)
-            bool shouldSpawnChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
-
-            if (!shouldSpawnChips)
+            // --- WIN PROFIT CHIPS (dealer → bet area, only when ratio > 1) ---
+            bool shouldSpawnWinChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
+            if (shouldSpawnWinChips)
             {
-                // For low wins, just trigger animation on existing chips in bet area
-                // Don't spawn new dealer chips
-                continue;
+                int chipCount = CalculateChipCount(area);
+                for (int i = 0; i < chipCount && poolIdx < dealerPool.Count; i++, poolIdx++)
+                {
+                    RectTransform chip = dealerPool[poolIdx];
+                    if (chip == null) continue;
+
+                    SetSprite(chip, SpriteIndex(area.winAmount / chipCount));
+                    chip.gameObject.SetActive(true);
+                    chip.localPosition = new Vector3(
+                        Random.Range(-dealerScatterX, dealerScatterX),
+                        Random.Range(-dealerScatterY, dealerScatterY), 0f);
+                    chip.localScale = Vector3.zero;
+                    chip.DOScale(chipWorkingScale, 0.18f).SetEase(Ease.OutBack);
+
+                    Vector3 localPos = new Vector3(
+                        Random.Range(-betAreaScatterX, betAreaScatterX),
+                        Random.Range(-betAreaScatterY, betAreaScatterY), 0f);
+
+                    assignments.Add((chip, chipParent, localPos));
+                    activeWinChips.Add(chip);
+                }
             }
 
-            for (int i = 0; i < chipCount && poolIdx < dealerPool.Count; i++, poolIdx++)
+            // --- STAKE RETURN CHIPS (silent placement — no dealer→bet animation) ---
+            // These chips represent the player's stake return (winRatio * betAmount).
+            // They are placed invisibly at the bet area right now and only become
+            // visible during cashout, creating the illusion that the player's own
+            // placed chips are flying back to them.
+            int stakeChipCount = CalculateStakeReturnChipCount(area.winRatio, area.betAmount);
+            for (int i = 0; i < stakeChipCount && poolIdx < dealerPool.Count; i++, poolIdx++)
             {
                 RectTransform chip = dealerPool[poolIdx];
                 if (chip == null) continue;
 
-                SetSprite(chip, SpriteIndex(area.winAmount / chipCount));
+                double stakeReturnValue = area.winRatio * area.betAmount;
+                SetSprite(chip, SpriteIndex(stakeReturnValue / Mathf.Max(1, stakeChipCount)));
 
-                chip.gameObject.SetActive(true);
+                // Parent silently to bet area at a scattered local position — no activation yet
+                RectTransform parentRT = chipParent as RectTransform;
+                if (parentRT == null) continue;
+
+                chip.SetParent(chipParent, worldPositionStays: false);
+                chip.SetAsFirstSibling();
                 chip.localPosition = new Vector3(
-                    Random.Range(-dealerScatterX, dealerScatterX),
-                    Random.Range(-dealerScatterY, dealerScatterY), 0f);
-
-                chip.localScale = Vector3.zero;
-                chip.DOScale(chipWorkingScale, 0.18f).SetEase(Ease.OutBack);
-
-                // Calculate local position in bet area (scatter slightly)
-                Vector3 localPos = new Vector3(
                     Random.Range(-betAreaScatterX, betAreaScatterX),
-                    Random.Range(-betAreaScatterY, betAreaScatterY),
-                    0f);
+                    Random.Range(-betAreaScatterY, betAreaScatterY), 0f);
+                chip.localScale = Vector3.zero;
+                chip.gameObject.SetActive(false); // invisible until cashout
 
-                assignments.Add((chip, chipParent, localPos));
-                activeWinChips.Add(chip);
+                stakeReturnChips.Add(chip);
             }
         }
 
@@ -376,15 +396,13 @@ internal class ChipWinAnimationController : MonoBehaviour
         {
             if (chip == null || parent == null) continue;
 
-            // Get world position of target before reparenting
             RectTransform parentRT = parent as RectTransform;
             if (parentRT == null) continue;
 
             Vector3 worldTarget = parentRT.TransformPoint(localPos);
 
-            // Parent to PlayerBetComponent (so it stays behind bet amount)
             chip.SetParent(parent, worldPositionStays: true);
-            chip.SetAsFirstSibling(); // Put behind other UI elements
+            chip.SetAsFirstSibling();
 
             animData.Add((chip, worldTarget));
         }
@@ -407,10 +425,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                 .OnComplete(() =>
                 {
                     if (chip != null)
-                    {
-                        // Convert to local position in parent
                         chip.localPosition = chip.parent.InverseTransformPoint(worldTarget);
-                    }
                 });
 
             yield return new WaitForSeconds(chipStaggerDelay);
@@ -447,6 +462,24 @@ internal class ChipWinAnimationController : MonoBehaviour
         return Mathf.Max(minChipsPerWin, count);
     }
 
+    /// <summary>
+    /// Calculates how many "stake return" chips to spawn in the bet area so they
+    /// can visually fly to the player during cashout.
+    /// The stake return value = winRatio * betAmount (e.g. payout 1:0.95 → 0.95x bet).
+    /// We scale chip count by bet size so bigger bets get more chips, capped at 3.
+    /// </summary>
+    private int CalculateStakeReturnChipCount(double winRatio, double betAmount)
+    {
+        if (winRatio <= 0) return 0;
+
+        double stakeReturnValue = winRatio * betAmount;
+
+        // 1 chip for small returns, up to 3 for larger bets
+        if (stakeReturnValue >= 20) return 3;
+        if (stakeReturnValue >= 5) return 2;
+        return 1;
+    }
+
     private void TriggerAllWinCountingAnimations(List<WinAreaData> winAreas)
     {
         if (betController == null) return;
@@ -469,6 +502,17 @@ internal class ChipWinAnimationController : MonoBehaviour
         if (playerNameTarget == null) yield break;
 
         var toSweep = new List<RectTransform>(activeWinChips);
+
+        // Activate stake return chips — they were placed invisibly at bet areas
+        // and now appear as if the player's own chips are being collected back.
+        foreach (var chip in stakeReturnChips)
+        {
+            if (chip == null) continue;
+            chip.gameObject.SetActive(true);
+            chip.DOScale(chipWorkingScale, 0.12f).SetEase(Ease.OutBack);
+            toSweep.Add(chip);
+        }
+        stakeReturnChips.Clear();
 
         // Add a few extra decorative chips from dealer
         int extraNeeded = Mathf.Min(3, dealerPool.Count);
@@ -554,6 +598,7 @@ internal class ChipWinAnimationController : MonoBehaviour
         yield return new WaitForSeconds(betToPlayerDuration + 0.25f);
 
         activeWinChips.Clear();
+        stakeReturnChips.Clear();
         cashoutCoroutine = null;
     }
     #endregion
