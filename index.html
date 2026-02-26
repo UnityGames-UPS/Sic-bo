@@ -90,6 +90,8 @@
         script.onload = () => {
           createUnityInstance(canvas, config, (progress) => {
           }).then((unityInstance) => {
+            window.unityInstance = unityInstance;
+            console.log('[Unity] Instance ready and stored globally');
           }).catch((message) => {
             alert(message);
           });
