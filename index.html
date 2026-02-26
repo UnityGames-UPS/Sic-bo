@@ -84,26 +84,12 @@
         productVersion: "1.0",
       };
 
-        // ✅ FIX: Initialize window.unityInstance EARLY so JavaScript listeners can access it
-        window.unityInstance = null;
         
         var script = document.createElement("script");
         script.src = loaderUrl;
         script.onload = () => {
           createUnityInstance(canvas, config, (progress) => {
           }).then((unityInstance) => {
-            // ✅ FIX: Assign the real Unity instance once it's ready
-            window.unityInstance = unityInstance;
-            console.log('[Unity] Instance ready and stored globally');
-            console.log('[Unity] window.unityInstance type:', typeof window.unityInstance);
-            console.log('[Unity] SendMessage available:', typeof window.unityInstance.SendMessage === 'function');
-            
-            // ✅ FIX: Trigger any pending fullscreen callbacks now that Unity is ready
-            if (window._unityFullscreenCallback && typeof window._pendingFullscreenCheck === 'boolean') {
-              console.log('[Unity] Running pending fullscreen check...');
-              window._unityFullscreenCallback();
-              delete window._pendingFullscreenCheck;
-            }
           }).catch((message) => {
             alert(message);
           });
