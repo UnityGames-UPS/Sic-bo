@@ -166,6 +166,7 @@ public class UIController : MonoBehaviour
     private Wagers gameWagers;
     private Bets gameBets;
     private bool isAnotherDeviceError = false;
+    private bool hasPendingDisconnect = false;
     private RectTransform[] menuButtonRects;
     private Vector2[] menuButtonOriginalPositions;
     private RectTransform menuPanelContainerRect;
@@ -655,8 +656,20 @@ public class UIController : MonoBehaviour
     #endregion
 
     #region Error Popup
-    internal void ShowErrorPopup(string message, string title = "Error")
+    internal void ShowErrorPopup(string message, string title = "Error", bool showDisconnectAfter = false)
     {
+        // Always close disconnect popup if it's showing - error takes priority
+        if (DisconnectPopupParent && DisconnectPopupParent.activeSelf)
+        {
+            HidePopupImmediate(DisconnectPopupParent, DisconnectPopup);
+        }
+
+        // Set flag if disconnect should show after error is dismissed
+        if (showDisconnectAfter)
+        {
+            hasPendingDisconnect = true;
+        }
+
         if (ErrorTitle_Text) ErrorTitle_Text.text = title;
         if (ErrorMessage_Text) ErrorMessage_Text.text = message;
         AudioManager.Instance?.PlayPopupOpen();
@@ -668,7 +681,19 @@ public class UIController : MonoBehaviour
     private void OnErrorOK()
     {
         CloseErrorPopup();
-        if (isAnotherDeviceError) { isAnotherDeviceError = false; gameManager.ExitGame(); }
+
+        // Handle different error scenarios after user dismisses error
+        if (isAnotherDeviceError)
+        {
+            isAnotherDeviceError = false;
+            gameManager.ExitGame();
+        }
+        else if (hasPendingDisconnect)
+        {
+            // Show disconnect popup after error is dismissed
+            hasPendingDisconnect = false;
+            ShowDisconnectPopup();
+        }
     }
     #endregion
 
@@ -703,8 +728,17 @@ public class UIController : MonoBehaviour
     #region Disconnect Popup
     internal void ShowDisconnectPopup()
     {
+        // If error popup is showing, queue disconnect to show after error is dismissed
+        if (ErrorPopupParent && ErrorPopupParent.activeSelf)
+        {
+            hasPendingDisconnect = true;
+            return; // Don't show disconnect yet, wait for error to be dismissed
+        }
+
+        // Close reconnect popup if it's showing
         if (ReconnectPopupParent && ReconnectPopupParent.activeSelf)
             SlideOutPopup(ReconnectPopupParent, ReconnectPopup);
+
         AudioManager.Instance?.PlayPopupOpen();
         SlideInPopup(DisconnectPopupParent, DisconnectPopup);
     }

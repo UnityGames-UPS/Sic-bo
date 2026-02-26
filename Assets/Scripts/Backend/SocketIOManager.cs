@@ -480,7 +480,7 @@ public class SocketIOManager : MonoBehaviour
         if (isGameLogicError)
             uiController?.ShowInGamePopup(message);
         else
-            ShowErrorAndBlock(string.IsNullOrEmpty(message) ? "An error occurred. Please refresh." : message);
+            ShowErrorAndBlock(string.IsNullOrEmpty(message) ? "An error occurred. Please refresh." : message, showDisconnectAfter: true);
     }
 
     private string TryParseErrorMessage(string json)
@@ -705,7 +705,7 @@ public class SocketIOManager : MonoBehaviour
         if (!isConnected && !isExiting)
         {
             Debug.LogError("[SOCKET] Connection timeout");
-            ShowErrorAndBlock("Connection failed. Please check your network.");
+            ShowErrorAndBlock("Connection failed. Please check your network.", showDisconnectAfter: true);
         }
 
         initTimeoutRoutine = null;
@@ -727,7 +727,7 @@ public class SocketIOManager : MonoBehaviour
         if (isWaitingForInitData && !isExiting)
         {
             Debug.LogError("[SOCKET] Init data timeout");
-            ShowErrorAndBlock("Failed to receive game data. Please refresh.");
+            ShowErrorAndBlock("Failed to receive game data. Please refresh.", showDisconnectAfter: true);
         }
 
         initTimeoutRoutine = null;
@@ -779,7 +779,7 @@ public class SocketIOManager : MonoBehaviour
         if (!isConnected && !isExiting)
         {
             Debug.LogError("[SOCKET] Disconnect timeout - forcing exit");
-            ShowErrorAndBlock("You have been disconnected. Please refresh.");
+            ShowErrorAndBlock("You have been disconnected. Please refresh.", showDisconnectAfter: true);
         }
 
         disconnectTimerCoroutine = null;
@@ -801,7 +801,7 @@ public class SocketIOManager : MonoBehaviour
                     catch (Exception e) { Debug.LogWarning($"[SOCKET] Focus close error: {e.Message}"); }
                 }
 
-                ShowErrorAndBlock("Game timed out due to inactivity. Please refresh.");
+                ShowErrorAndBlock("Game timed out due to inactivity. Please refresh.", showDisconnectAfter: true);
                 focusCheckRoutine = null;
                 yield break;
             }
@@ -843,11 +843,11 @@ public class SocketIOManager : MonoBehaviour
         gameSocket.Emit(eventName);
     }
 
-    private void ShowErrorAndBlock(string message)
+    private void ShowErrorAndBlock(string message, bool showDisconnectAfter = false)
     {
         if (isBeingDestroyed) return;
-        uiController?.ShowErrorPopup(message);
-       //RaycastBlocker?.SetActive(true);
+        uiController?.ShowErrorPopup(message, "Error", showDisconnectAfter);
+        //RaycastBlocker?.SetActive(true);
     }
 
     private void StartPingPongChecks()
