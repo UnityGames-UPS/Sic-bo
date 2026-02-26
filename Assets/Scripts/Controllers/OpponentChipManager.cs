@@ -35,6 +35,7 @@ public class OpponentChipManager : MonoBehaviour
     private List<RectTransform> activeOpponentChips = new List<RectTransform>();
     private Dictionary<string, List<RectTransform>> chipsByBetArea = new Dictionary<string, List<RectTransform>>();
     private Dictionary<RectTransform, string> chipToUsername = new Dictionary<RectTransform, string>(); // Track which chip belongs to which player
+    private Dictionary<RectTransform, RectTransform> chipToSpawnPosition = new Dictionary<RectTransform, RectTransform>(); // Track where each chip spawned from
     private bool isCashoutRunning = false;
     private Coroutine cashoutCoroutine = null;
     private Leaderboards currentLeaderboards = null;
@@ -120,6 +121,7 @@ public class OpponentChipManager : MonoBehaviour
 
         activeOpponentChips.Clear();
         chipToUsername.Clear();
+        chipToSpawnPosition.Clear(); // Clear spawn position tracking
 
         foreach (var container in opponentContainers.Values)
             if (container != null) container.gameObject.SetActive(false);
@@ -170,8 +172,10 @@ public class OpponentChipManager : MonoBehaviour
         if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
 
-        // Determine spawn position - ANY player in leaderboard spawns from their position
-        RectTransform spawnPosition = GetSpawnPositionForPlayer(username);
+        // Determine spawn position and track which leaderboard it came from
+        bool spawnedFromWinners = false;
+        bool spawnedFromRichest = false;
+        RectTransform spawnPosition = GetSpawnPositionForPlayer(username, out spawnedFromWinners, out spawnedFromRichest);
         if (spawnPosition == null) spawnPosition = opponentDealerArea;
 
         GameObject chipObj = Instantiate(chipPrefab, spawnPosition);
@@ -184,10 +188,25 @@ public class OpponentChipManager : MonoBehaviour
         chip.SetAmount(GameUtilities.FormatCurrency(amount));
         chip.SetActive(true);
 
-        // Set badges only for TOP 3 leaderboard players
-        bool isRichest = IsPlayerInTop3(username, currentLeaderboards?.richest);
-        bool isWinner = IsPlayerInTop3(username, currentLeaderboards?.winners);
-        chip.SetLeaderboardBadge(isRichest, isWinner);
+        // CRITICAL: Set badge to match the ACTUAL spawn position
+        // If spawned from Winners → show winner badge ONLY
+        // If spawned from Richest → show richest badge ONLY
+        // This ensures badge ALWAYS matches the spawn location
+        // GUARANTEE: Only ONE badge can be true (mutually exclusive)
+        bool showRichestBadge = spawnedFromRichest && IsPlayerInTop3(username, currentLeaderboards?.richest);
+        bool showWinnerBadge = spawnedFromWinners && IsPlayerInTop3(username, currentLeaderboards?.winners);
+
+        // SAFETY CHECK: Ensure no conflict when player is in both leaderboards
+        // This should never happen due to the spawn logic, but we verify here for safety
+        if (showRichestBadge && showWinnerBadge)
+        {
+            Debug.LogError($"[OpponentChip] CONFLICT: {username} chip has BOTH badges! This should never happen. Defaulting to Winner badge.");
+            showRichestBadge = false; // Winner badge takes priority
+        }
+
+        chip.SetLeaderboardBadge(showRichestBadge, showWinnerBadge);
+
+        Debug.Log($"[OpponentChip] {username} chip badge set: Richest={showRichestBadge}, Winner={showWinnerBadge}, SpawnPos={spawnPosition.name}");
 
         float scatterX = spawnPosition == opponentDealerArea ? dealerScatterX : 15f;
         float scatterY = spawnPosition == opponentDealerArea ? dealerScatterY : 10f;
@@ -221,10 +240,16 @@ public class OpponentChipManager : MonoBehaviour
         {
             chipToUsername[chipRT] = username;
         }
+
+        // IMPORTANT: Store the original spawn position so chip returns to where it came from
+        chipToSpawnPosition[chipRT] = spawnPosition;
     }
 
-    private RectTransform GetSpawnPositionForPlayer(string username)
+    private RectTransform GetSpawnPositionForPlayer(string username, out bool spawnedFromWinners, out bool spawnedFromRichest)
     {
+        spawnedFromWinners = false;
+        spawnedFromRichest = false;
+
         if (string.IsNullOrEmpty(username) || leaderboardController == null) return null;
         if (currentLeaderboards == null) return null;
 
@@ -243,26 +268,38 @@ public class OpponentChipManager : MonoBehaviour
         {
             // Player has richest badge only, prioritize richest leaderboard
             checkWinnersFirst = false;
-            Debug.Log($"[OpponentChip] {username} has RICHEST badge, spawning from richest leaderboard");
+            Debug.Log($"[OpponentChip] {username} has RICHEST badge only, prioritizing richest leaderboard");
         }
         else if (isTop3Winner)
         {
-            Debug.Log($"[OpponentChip] {username} has WINNER badge, spawning from winners leaderboard");
+            // Player has winner badge (may also have richest), prioritize winner
+            Debug.Log($"[OpponentChip] {username} has WINNER badge, prioritizing winners leaderboard");
         }
 
-        // Check leaderboards based on priority
+        // Check leaderboards based on priority and track which one we spawn from
+        // IMPORTANT: We return immediately after finding a position, ensuring only ONE flag is set
         if (checkWinnersFirst)
         {
             if (isInWinners)
             {
                 RectTransform position = leaderboardController.GetPlayerPosition(username, checkWinners: true);
-                if (position != null) return position;
+                if (position != null)
+                {
+                    spawnedFromWinners = true;
+                    Debug.Log($"[OpponentChip] {username} spawning from WINNERS leaderboard position");
+                    return position; // ← RETURN: Only Winners flag is true
+                }
             }
 
             if (isInRichest)
             {
                 RectTransform position = leaderboardController.GetPlayerPosition(username, checkWinners: false);
-                if (position != null) return position;
+                if (position != null)
+                {
+                    spawnedFromRichest = true;
+                    Debug.Log($"[OpponentChip] {username} spawning from RICHEST leaderboard position (fallback)");
+                    return position; // ← RETURN: Only Richest flag is true
+                }
             }
         }
         else
@@ -270,17 +307,28 @@ public class OpponentChipManager : MonoBehaviour
             if (isInRichest)
             {
                 RectTransform position = leaderboardController.GetPlayerPosition(username, checkWinners: false);
-                if (position != null) return position;
+                if (position != null)
+                {
+                    spawnedFromRichest = true;
+                    Debug.Log($"[OpponentChip] {username} spawning from RICHEST leaderboard position");
+                    return position; // ← RETURN: Only Richest flag is true
+                }
             }
 
             if (isInWinners)
             {
                 RectTransform position = leaderboardController.GetPlayerPosition(username, checkWinners: true);
-                if (position != null) return position;
+                if (position != null)
+                {
+                    spawnedFromWinners = true;
+                    Debug.Log($"[OpponentChip] {username} spawning from WINNERS leaderboard position (fallback)");
+                    return position; // ← RETURN: Only Winners flag is true
+                }
             }
         }
 
-        // Not in any leaderboard - use opponent dealer
+        // Not in any leaderboard - use opponent dealer (both flags remain false)
+        Debug.Log($"[OpponentChip] {username} not in any leaderboard, will spawn from opponent dealer");
         return null;
     }
 
@@ -325,42 +373,56 @@ public class OpponentChipManager : MonoBehaviour
 
             if (totalWinAmount > 0 && chipsToAnimate.Count > 0)
             {
-                int chipIndex = 0;
-
-                // Distribute chips proportionally based on win amount
+                // Create a set of winner usernames for quick lookup
+                HashSet<string> winners = new HashSet<string>();
                 foreach (var payout in currentPayouts)
                 {
                     if (payout.win > 0 && !string.IsNullOrEmpty(payout.username))
                     {
-                        // Calculate how many chips this winner should get
-                        double winRatio = payout.win / totalWinAmount;
-                        int chipsForWinner = Mathf.RoundToInt((float)(winRatio * chipsToAnimate.Count));
-                        chipsForWinner = Mathf.Max(1, chipsForWinner); // At least 1 chip
-
-                        if (!chipsByDestination.ContainsKey(payout.username))
-                            chipsByDestination[payout.username] = new List<RectTransform>();
-
-                        // Assign chips to this winner
-                        int assigned = 0;
-                        while (assigned < chipsForWinner && chipIndex < chipsToAnimate.Count)
-                        {
-                            chipsByDestination[payout.username].Add(chipsToAnimate[chipIndex]);
-                            chipIndex++;
-                            assigned++;
-                        }
-
-                        Debug.Log($"[OpponentChip] Assigned {assigned} chips to {payout.username}");
+                        winners.Add(payout.username);
+                        Debug.Log($"[OpponentChip] Winner: {payout.username}, Win: {payout.win}");
                     }
                 }
 
-                // Any remaining chips go randomly to dealers (losing chips)
-                while (chipIndex < chipsToAnimate.Count)
+                // Route each chip based on whether its owner won
+                foreach (var chip in chipsToAnimate)
                 {
-                    string dealerKey = Random.value > 0.5f ? "player_dealer" : "opponent_dealer";
-                    if (!chipsByDestination.ContainsKey(dealerKey))
-                        chipsByDestination[dealerKey] = new List<RectTransform>();
-                    chipsByDestination[dealerKey].Add(chipsToAnimate[chipIndex]);
-                    chipIndex++;
+                    string chipOwner = chipToUsername.ContainsKey(chip) ? chipToUsername[chip] : "";
+
+                    if (!string.IsNullOrEmpty(chipOwner) && winners.Contains(chipOwner))
+                    {
+                        // This chip belongs to a winner
+                        // Check if it spawned from a leaderboard position
+                        bool spawnedFromLeaderboard = chipToSpawnPosition.ContainsKey(chip) &&
+                                                      chipToSpawnPosition[chip] != null &&
+                                                      chipToSpawnPosition[chip] != opponentDealerArea &&
+                                                      chipToSpawnPosition[chip] != playerDealerArea;
+
+                        if (spawnedFromLeaderboard)
+                        {
+                            // Winner's chip from leaderboard → return to their leaderboard position
+                            if (!chipsByDestination.ContainsKey(chipOwner))
+                                chipsByDestination[chipOwner] = new List<RectTransform>();
+                            chipsByDestination[chipOwner].Add(chip);
+                            Debug.Log($"[OpponentChip] Winner {chipOwner}'s chip → returning to leaderboard position");
+                        }
+                        else
+                        {
+                            // Winner's chip but spawned from dealer → go to player dealer
+                            if (!chipsByDestination.ContainsKey("player_dealer"))
+                                chipsByDestination["player_dealer"] = new List<RectTransform>();
+                            chipsByDestination["player_dealer"].Add(chip);
+                            Debug.Log($"[OpponentChip] Winner {chipOwner}'s chip spawned from dealer → player dealer");
+                        }
+                    }
+                    else
+                    {
+                        // This chip belongs to a non-winner OR has no owner → opponent dealer
+                        if (!chipsByDestination.ContainsKey("opponent_dealer"))
+                            chipsByDestination["opponent_dealer"] = new List<RectTransform>();
+                        chipsByDestination["opponent_dealer"].Add(chip);
+                        Debug.Log($"[OpponentChip] Loser chip (owner: {chipOwner}) → opponent dealer");
+                    }
                 }
             }
             else
@@ -430,6 +492,7 @@ public class OpponentChipManager : MonoBehaviour
         yield return new WaitForSeconds(cashoutDuration);
 
         activeOpponentChips.Clear();
+        chipToSpawnPosition.Clear(); // Clear spawn position tracking after cashout
         currentPayouts = null;
 
         foreach (var list in chipsByBetArea.Values) list.Clear();
@@ -459,94 +522,29 @@ public class OpponentChipManager : MonoBehaviour
             return playerDealerArea;
         }
 
-        // Check chip badge to determine routing priority (if chip reference provided)
-        bool checkWinnersFirst = true; // Default: winners has priority
-
-        if (chipRT != null)
+        // CRITICAL FIX: Return chip to its ORIGINAL spawn position
+        // This prevents chips from switching leaderboards mid-animation when badges change
+        if (chipRT != null && chipToSpawnPosition.ContainsKey(chipRT))
         {
-            Chip chip = chipRT.GetComponent<Chip>();
-            if (chip != null)
-            {
-                bool hasRichestBadge = chip.HasRichestBadge();
-                bool hasWinnerBadge = chip.HasWinnerBadge();
+            RectTransform originalSpawnPosition = chipToSpawnPosition[chipRT];
 
-                if (hasRichestBadge && !hasWinnerBadge)
-                {
-                    // Chip has richest badge, check richest first
-                    checkWinnersFirst = false;
-                    Debug.Log($"[OpponentChip] {destination} chip has RICHEST badge, prioritizing richest leaderboard");
-                }
-                else if (hasWinnerBadge)
-                {
-                    Debug.Log($"[OpponentChip] {destination} chip has WINNER badge, prioritizing winners leaderboard");
-                }
+            // If it spawned from opponent dealer, return there
+            if (originalSpawnPosition == opponentDealerArea)
+            {
+                Debug.Log($"[OpponentChip] Chip spawned from opponent dealer, returning to opponent dealer");
+                return opponentDealerArea;
+            }
+
+            // If it spawned from a leaderboard position, return to the SAME position
+            if (originalSpawnPosition != null && originalSpawnPosition != opponentDealerArea && originalSpawnPosition != playerDealerArea)
+            {
+                Debug.Log($"[OpponentChip] Chip returning to original spawn leaderboard position");
+                return originalSpawnPosition;
             }
         }
 
-        // Check if player is in leaderboards (only 3 in each list from backend)
-        if (currentLeaderboards != null)
-        {
-            if (checkWinnersFirst)
-            {
-                // Check winners leaderboard first
-                bool isInWinners = IsPlayerInLeaderboard(destination, currentLeaderboards.winners);
-                if (isInWinners)
-                {
-                    RectTransform winnerPos = leaderboardController?.GetPlayerPosition(destination, checkWinners: true);
-                    if (winnerPos != null)
-                    {
-                        Debug.Log($"[OpponentChip] {destination} found in WINNERS leaderboard, routing to leaderboard position");
-                        return winnerPos;
-                    }
-                }
-
-                // Check richest leaderboard as fallback
-                bool isInRichest = IsPlayerInLeaderboard(destination, currentLeaderboards.richest);
-                if (isInRichest)
-                {
-                    RectTransform richestPos = leaderboardController?.GetPlayerPosition(destination, checkWinners: false);
-                    if (richestPos != null)
-                    {
-                        Debug.Log($"[OpponentChip] {destination} found in RICHEST leaderboard (fallback), routing to leaderboard position");
-                        return richestPos;
-                    }
-                }
-            }
-            else
-            {
-                // Check richest leaderboard first (due to richest badge)
-                bool isInRichest = IsPlayerInLeaderboard(destination, currentLeaderboards.richest);
-                if (isInRichest)
-                {
-                    RectTransform richestPos = leaderboardController?.GetPlayerPosition(destination, checkWinners: false);
-                    if (richestPos != null)
-                    {
-                        Debug.Log($"[OpponentChip] {destination} found in RICHEST leaderboard, routing to leaderboard position");
-                        return richestPos;
-                    }
-                }
-
-                // Check winners leaderboard as fallback
-                bool isInWinners = IsPlayerInLeaderboard(destination, currentLeaderboards.winners);
-                if (isInWinners)
-                {
-                    RectTransform winnerPos = leaderboardController?.GetPlayerPosition(destination, checkWinners: true);
-                    if (winnerPos != null)
-                    {
-                        Debug.Log($"[OpponentChip] {destination} found in WINNERS leaderboard (fallback), routing to leaderboard position");
-                        return winnerPos;
-                    }
-                }
-            }
-
-            Debug.Log($"[OpponentChip] {destination} NOT in any leaderboard, routing to opponent dealer");
-        }
-        else
-        {
-            Debug.Log($"[OpponentChip] No leaderboard data available, routing to opponent dealer");
-        }
-
-        // Not in any leaderboard or position not found - default to opponent dealer
+        // Fallback: No spawn position tracked, use opponent dealer
+        Debug.Log($"[OpponentChip] No spawn position tracked for chip, defaulting to opponent dealer");
         return opponentDealerArea;
     }
     #endregion
@@ -580,7 +578,7 @@ public class OpponentChipManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(username) || entries == null || entries.Count == 0) return false;
 
-     
+        // Backend only sends 3 entries per leaderboard, check all of them
         foreach (var entry in entries)
         {
             if (entry != null && entry.username == username)
