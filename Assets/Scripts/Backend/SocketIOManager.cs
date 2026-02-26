@@ -847,7 +847,7 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
         uiController?.ShowErrorPopup(message);
-        RaycastBlocker?.SetActive(true);
+       //RaycastBlocker?.SetActive(true);
     }
 
     private void StartPingPongChecks()

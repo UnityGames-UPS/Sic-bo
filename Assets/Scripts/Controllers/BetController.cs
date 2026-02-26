@@ -1145,7 +1145,24 @@ public class BetController : MonoBehaviour
     internal void SetLeaderboardData(Leaderboards leaderboards)
     {
         currentLeaderboards = leaderboards;
-        opponentChipManager?.SetLeaderboardData(leaderboards);
+
+        // CRITICAL: Only update opponent leaderboards if chips are not active
+        // This prevents badge flickering during active rounds
+        if (opponentChipManager != null)
+        {
+            bool hasActiveChips = opponentChipManager.IsCashoutRunning() || opponentChipManager.HasActiveChips();
+
+            if (!hasActiveChips)
+            {
+                opponentChipManager.SetLeaderboardData(leaderboards);
+                Debug.Log("[BetController] Leaderboards updated for opponent chips (no active chips)");
+            }
+            else
+            {
+                Debug.Log("[BetController] Leaderboards NOT updated for opponent chips (chips active - preventing flicker)");
+            }
+        }
+
         RefreshPlayerLeaderboardStatus();
         RefreshAllPlayerChipBadges();
     }

@@ -169,6 +169,10 @@ public class GameManager : MonoBehaviour
 
         chipWinAnimationController?.ResetAll();
         bonusIndicatorController?.ClearAllIndicators();
+
+        // Lock leaderboards for this round to prevent badge flickering
+        opponentChipManager?.LockLeaderboardsForRound();
+        opponentChipManager?.SetWinningBetAreas(new List<string>());
     }
 
     internal void OnBettingTimer(TimerData data)
@@ -200,15 +204,23 @@ public class GameManager : MonoBehaviour
         betController.HighlightWinningAreas(data.matchSide, data.sum);
         betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
 
-        List<string> winningBetOptions = betController.GetWinningBetOptions(); // keep for chip animation
-        bonusIndicatorController?.HandleDiceResult(GetAllWinningAreasFromDice(data)); // use dice-based list
+        List<string> winningBetOptions = betController.GetWinningBetOptions();
 
+        List<string> allWinningAreas = GetAllWinningAreasFromDice(data);
+        opponentChipManager?.SetWinningBetAreas(allWinningAreas);
+
+        bonusIndicatorController?.HandleDiceResult(allWinningAreas);
+
+        // Play player win animation
         if (chipWinAnimationController != null)
         {
             List<WinAreaData> winAreas = betController.GetWinningAreasData();
             if (winAreas != null && winAreas.Count > 0)
                 chipWinAnimationController.PlayDiceResultAnimation(winAreas, data);
         }
+
+        // Play opponent win animations (chips from dealer to their winning bet areas)
+        opponentChipManager?.PlayOpponentWinAnimations();
     }
     private List<string> GetAllWinningAreasFromDice(DiceResultData data)
     {
@@ -257,8 +269,6 @@ public class GameManager : MonoBehaviour
 
         if (data.stats != null && data.stats.Count > 0)
             uiController.UpdateStats(GameUtilities.CalculateStats(data.stats));
-
-        // Set payout data for opponent chip routing BEFORE playing animation
         if (data.payouts != null)
         {
             betController.SetCashoutData(data.payouts);
@@ -390,11 +400,7 @@ public class GameManager : MonoBehaviour
         uiController.ClearRoundId();
     }
 
-    /// <summary>
-    /// Switches to a different room without going back to the home screen.
-    /// Cleans up the current room, emits HOME to the server, then waits for
-    /// OnLeaveAcknowledged (fired from OnHomeAck) before joining the new room.
-    /// </summary>
+
     internal void SwitchRoom(string targetRoom)
     {
         if (targetRoom == CurrentRoom) return;
@@ -415,15 +421,11 @@ public class GameManager : MonoBehaviour
         CurrentRoundId = null;
         uiController.ClearRoundId();
 
-        // Emit HOME — OnLeaveAcknowledged is called when server confirms leave
+
         socketManager.ReturnHome();
     }
 
-    /// <summary>
-    /// Called by SocketIOManager.OnHomeAck when the server confirms the player has left.
-    /// If a room switch is pending, joins that room; otherwise hides the loading screen
-    /// (normal leave flow — home screen was already shown by LeaveRoom).
-    /// </summary>
+
     internal void OnLeaveAcknowledged()
     {
         if (!string.IsNullOrEmpty(pendingRoomSwitch))
@@ -434,7 +436,6 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            // Normal leave — home screen is already visible, just hide loading
             uiController.HideLoadingScreen();
         }
     }

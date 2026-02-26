@@ -34,13 +34,30 @@ public class OpponentChipManager : MonoBehaviour
     private Dictionary<string, RectTransform> opponentContainers = new Dictionary<string, RectTransform>();
     private List<RectTransform> activeOpponentChips = new List<RectTransform>();
     private Dictionary<string, List<RectTransform>> chipsByBetArea = new Dictionary<string, List<RectTransform>>();
-    private Dictionary<RectTransform, string> chipToUsername = new Dictionary<RectTransform, string>(); // Track which chip belongs to which player
-    private Dictionary<RectTransform, RectTransform> chipToSpawnPosition = new Dictionary<RectTransform, RectTransform>(); // Track where each chip spawned from
+    private Dictionary<RectTransform, string> chipToUsername = new Dictionary<RectTransform, string>();
+    private Dictionary<RectTransform, RectTransform> chipToSpawnPosition = new Dictionary<RectTransform, RectTransform>();
+    private Dictionary<RectTransform, BadgeState> chipToOriginalBadge = new Dictionary<RectTransform, BadgeState>();
+
     private bool isCashoutRunning = false;
     private Coroutine cashoutCoroutine = null;
     private Leaderboards currentLeaderboards = null;
+    private Leaderboards lockedLeaderboards = null; // Locked at betting start to prevent flickering
     private List<Payout> currentPayouts = null;
     private string localPlayerUsername = null;
+
+    private HashSet<string> winningBetAreas = new HashSet<string>();
+
+    // Win chip animation
+    private List<RectTransform> activeWinChips = new List<RectTransform>();
+    private Coroutine winAnimationCoroutine = null;
+    #endregion
+
+    #region Helper Structs
+    private struct BadgeState
+    {
+        public bool isRichest;
+        public bool isWinner;
+    }
     #endregion
 
     #region Unity Lifecycle
@@ -81,6 +98,7 @@ public class OpponentChipManager : MonoBehaviour
             container.offsetMin = Vector2.zero;
             container.offsetMax = Vector2.zero;
             container.localScale = Vector3.one;
+            container.pivot = new Vector2(0.5f, 0.5f);
             containerObj.SetActive(false);
 
             opponentContainers[betOption] = container;
@@ -88,11 +106,46 @@ public class OpponentChipManager : MonoBehaviour
         }
     }
 
-    internal void SetLeaderboardData(Leaderboards leaderboards) => currentLeaderboards = leaderboards;
+    internal void SetLeaderboardData(Leaderboards leaderboards)
+    {
+        currentLeaderboards = leaderboards;
+
+        // CRITICAL: Do NOT update locked leaderboards if chips are active (prevents flickering)
+        // Only lock on first set OR when no chips are active
+        if (activeOpponentChips.Count == 0 && activeWinChips.Count == 0)
+        {
+            lockedLeaderboards = leaderboards;
+            Debug.Log("[OpponentChip] Leaderboards updated and LOCKED (no active chips)");
+        }
+        else
+        {
+            Debug.Log("[OpponentChip] Leaderboards updated but NOT locked (chips active - preventing flicker)");
+        }
+    }
+
+    internal void LockLeaderboardsForRound()
+    {
+        // Called at round start to lock current leaderboard state
+        lockedLeaderboards = currentLeaderboards;
+        Debug.Log("[OpponentChip] Leaderboards LOCKED for this round - badges won't change until cashout");
+    }
 
     internal void SetCashoutData(List<Payout> payouts) => currentPayouts = payouts;
 
     internal void SetLocalPlayerUsername(string username) => localPlayerUsername = username;
+
+    internal void SetWinningBetAreas(List<string> winningAreas)
+    {
+        winningBetAreas.Clear();
+        if (winningAreas != null)
+        {
+            foreach (string area in winningAreas)
+            {
+                winningBetAreas.Add(area);
+            }
+        }
+        Debug.Log($"[OpponentChip] Set {winningBetAreas.Count} winning bet areas: {string.Join(", ", winningBetAreas)}");
+    }
 
     internal void AddOpponentBet(string betOption, double amount, string username = "")
     {
@@ -112,6 +165,12 @@ public class OpponentChipManager : MonoBehaviour
             isCashoutRunning = false;
         }
 
+        if (winAnimationCoroutine != null)
+        {
+            StopCoroutine(winAnimationCoroutine);
+            winAnimationCoroutine = null;
+        }
+
         StopAllCoroutines();
 
         foreach (var chip in activeOpponentChips)
@@ -119,9 +178,18 @@ public class OpponentChipManager : MonoBehaviour
             if (chip != null) { chip.DOKill(); Destroy(chip.gameObject); }
         }
 
+        foreach (var chip in activeWinChips)
+        {
+            if (chip != null) { chip.DOKill(); Destroy(chip.gameObject); }
+        }
+
         activeOpponentChips.Clear();
+        activeWinChips.Clear();
         chipToUsername.Clear();
-        chipToSpawnPosition.Clear(); // Clear spawn position tracking
+        chipToSpawnPosition.Clear();
+        chipToOriginalBadge.Clear();
+        winningBetAreas.Clear();
+        lockedLeaderboards = null; // Unlock leaderboards
 
         foreach (var container in opponentContainers.Values)
             if (container != null) container.gameObject.SetActive(false);
@@ -130,38 +198,261 @@ public class OpponentChipManager : MonoBehaviour
             list.Clear();
 
         isCashoutRunning = false;
+
+        Debug.Log("[OpponentChip] All opponent bets cleared - leaderboards UNLOCKED");
     }
 
     internal void PlayCashoutAnimation()
     {
         if (isCashoutRunning || activeOpponentChips.Count == 0) return;
 
-        // Wait for leaderboard animation before starting cashout
         if (leaderboardController != null && leaderboardController.IsAnimating())
         {
             StartCoroutine(WaitForLeaderboardThenCashout());
         }
+        else if (winAnimationCoroutine != null)
+        {
+            // Wait for win animation to complete before starting cashout
+            StartCoroutine(WaitForWinAnimationThenCashout());
+        }
         else
         {
-            // Play sound when starting cashout immediately
             AudioManager.Instance?.PlayChipAdd();
             cashoutCoroutine = StartCoroutine(CR_Cashout());
         }
     }
 
+    internal void PlayOpponentWinAnimations()
+    {
+        if (winAnimationCoroutine != null) StopCoroutine(winAnimationCoroutine);
+        winAnimationCoroutine = StartCoroutine(CR_OpponentWinAnimation());
+    }
+
     private IEnumerator WaitForLeaderboardThenCashout()
     {
-        Debug.Log("[OpponentChip] Waiting for leaderboard animation to complete...");
         yield return leaderboardController.WaitForAnimationComplete();
-        Debug.Log("[OpponentChip] Leaderboard animation complete, starting cashout");
 
-        // Play sound NOW, after leaderboard animation completes and right before chips move
+        // Also wait for win animation if it's running
+        if (winAnimationCoroutine != null)
+        {
+            yield return winAnimationCoroutine;
+        }
+
         AudioManager.Instance?.PlayChipAdd();
+        cashoutCoroutine = StartCoroutine(CR_Cashout());
+    }
 
+    private IEnumerator WaitForWinAnimationThenCashout()
+    {
+        yield return winAnimationCoroutine;
+        AudioManager.Instance?.PlayChipAdd();
         cashoutCoroutine = StartCoroutine(CR_Cashout());
     }
 
     internal bool IsCashoutRunning() => isCashoutRunning;
+
+    internal bool HasActiveChips()
+    {
+        return activeOpponentChips.Count > 0 || activeWinChips.Count > 0;
+    }
+    #endregion
+
+    #region Opponent Win Animation
+    private IEnumerator CR_OpponentWinAnimation()
+    {
+        if (winningBetAreas.Count == 0)
+        {
+            Debug.Log("[OpponentChip] No winning areas for opponent win animation");
+            winAnimationCoroutine = null;
+            yield break;
+        }
+
+        Debug.Log($"[OpponentChip] Starting WIN ANIMATION for {winningBetAreas.Count} winning bet areas");
+
+        if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
+        Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
+
+        // Build a map of username + betArea -> bet amount (from existing chips)
+        Dictionary<string, double> betAmountsByPlayerAndArea = new Dictionary<string, double>();
+
+        foreach (string betArea in winningBetAreas)
+        {
+            if (!chipsByBetArea.ContainsKey(betArea)) continue;
+
+            foreach (var chip in chipsByBetArea[betArea])
+            {
+                if (chip == null) continue;
+
+                string chipOwner = chipToUsername.ContainsKey(chip) ? chipToUsername[chip] : "";
+                if (string.IsNullOrEmpty(chipOwner)) continue;
+
+                // Try to get bet amount from chip
+                Chip chipComponent = chip.GetComponent<Chip>();
+                if (chipComponent != null && chipComponent.chipText != null)
+                {
+                    string chipAmountText = chipComponent.chipText.text;
+
+                    // Parse the formatted amount back to double
+                    double betAmount = ParseFormattedCurrency(chipAmountText);
+
+                    if (betAmount > 0)
+                    {
+                        string key = $"{chipOwner}_{betArea}";
+                        if (!betAmountsByPlayerAndArea.ContainsKey(key))
+                        {
+                            betAmountsByPlayerAndArea[key] = 0;
+                        }
+                        betAmountsByPlayerAndArea[key] += betAmount;
+                        Debug.Log($"[OpponentChip] Found bet: {chipOwner} bet {betAmount} on {betArea}");
+                    }
+                }
+            }
+        }
+
+        // Spawn win chips for ALL opponents in winning areas
+        foreach (string betArea in winningBetAreas)
+        {
+            if (!opponentContainers.ContainsKey(betArea)) continue;
+            if (!chipsByBetArea.ContainsKey(betArea)) continue;
+
+            RectTransform targetContainer = opponentContainers[betArea];
+
+            // Check if there are any opponent chips in this winning area
+            if (chipsByBetArea[betArea].Count == 0) continue;
+
+            // Track which players we've already spawned win chips for in this area
+            HashSet<string> processedPlayers = new HashSet<string>();
+
+            // For each chip in winning area, spawn win chips
+            foreach (var chip in chipsByBetArea[betArea])
+            {
+                if (chip == null) continue;
+
+                string chipOwner = chipToUsername.ContainsKey(chip) ? chipToUsername[chip] : "";
+
+                // Skip local player (they have their own win animation)
+                if (chipOwner == localPlayerUsername) continue;
+
+                // Skip if we already processed this player in this area
+                if (processedPlayers.Contains(chipOwner)) continue;
+                processedPlayers.Add(chipOwner);
+
+                // Get bet amount for this player in this area
+                string key = $"{chipOwner}_{betArea}";
+                double totalBetAmount = betAmountsByPlayerAndArea.ContainsKey(key) ? betAmountsByPlayerAndArea[key] : 0;
+
+                // Spawn 2-4 win chips per bet (visual effect showing winnings)
+                int winChipCount = UnityEngine.Random.Range(2, 4);
+
+                // For now, show generic win chips without specific amounts
+                // (We'll calculate exact amounts when cashout data arrives, but show visual feedback now)
+                double estimatedWinPerChip = totalBetAmount > 0 ? totalBetAmount * 2.0 / winChipCount : 0;
+
+                for (int i = 0; i < winChipCount; i++)
+                {
+                    GameObject winChipObj = Instantiate(chipPrefab, opponentDealerArea);
+                    RectTransform winChipRT = winChipObj.GetComponent<RectTransform>();
+                    Chip winChip = winChipObj.GetComponent<Chip>();
+
+                    if (winChip == null || winChipRT == null)
+                    {
+                        Destroy(winChipObj);
+                        continue;
+                    }
+
+                    winChip.SetSprite(grayChipSprite);
+                    winChip.SetActive(true);
+
+                    // Copy badge from original chip (if any) - SET BADGES FIRST
+                    if (chipToOriginalBadge.ContainsKey(chip))
+                    {
+                        BadgeState badge = chipToOriginalBadge[chip];
+                        winChip.SetLeaderboardBadge(badge.isRichest, badge.isWinner);
+                        Debug.Log($"[OpponentChip] Win chip spawned with badge: Richest={badge.isRichest}, Winner={badge.isWinner}");
+                    }
+
+                    // Show estimated win amount (will be updated when cashout data arrives)
+                    if (estimatedWinPerChip > 0)
+                    {
+                        string formattedAmount = GameUtilities.FormatCurrency(estimatedWinPerChip);
+                        winChip.SetAmount(formattedAmount);
+                        Debug.Log($"[OpponentChip] Win chip for {chipOwner}: {formattedAmount} (estimated from bet: {totalBetAmount})");
+
+                        // Verify the text was actually set
+                        if (winChip.chipText != null)
+                        {
+                            Debug.Log($"[OpponentChip] Chip text component value: '{winChip.chipText.text}'");
+                        }
+                        else
+                        {
+                            Debug.LogError($"[OpponentChip] Chip text component is NULL! Cannot display amount.");
+                        }
+                    }
+                    else
+                    {
+                        // Fallback: show empty if no bet data
+                        winChip.SetAmount("");
+                        Debug.LogWarning($"[OpponentChip] No bet amount data for {chipOwner}, showing empty chip");
+                    }
+
+                    // Random scatter at dealer
+                    winChipRT.localPosition = new Vector3(
+                        Random.Range(-dealerScatterX, dealerScatterX),
+                        Random.Range(-dealerScatterY, dealerScatterY), 0f);
+                    winChipRT.localScale = Vector3.zero;
+
+                    // Pop in animation
+                    winChipRT.DOScale(chipScale * 0.9f, 0.18f).SetEase(Ease.OutBack);
+                    yield return new WaitForSeconds(0.04f);
+
+                    // Move to canvas and animate to bet area
+                    winChipRT.SetParent(canvasRoot, worldPositionStays: true);
+
+                    Vector2 containerWorldPos = GetCanvasPosition(targetContainer);
+                    Vector2 destination = containerWorldPos + new Vector2(
+                        Random.Range(-betAreaScatterX, betAreaScatterX),
+                        Random.Range(-betAreaScatterY, betAreaScatterY));
+
+                    winChipRT.DOAnchorPos(destination, dealerToBetDuration * 0.8f).SetEase(Ease.OutQuad);
+
+                    activeWinChips.Add(winChipRT);
+
+                    yield return new WaitForSeconds(chipStaggerDelay);
+                }
+            }
+        }
+
+        yield return new WaitForSeconds(dealerToBetDuration * 0.8f);
+
+        Debug.Log($"[OpponentChip] WIN ANIMATION complete - spawned {activeWinChips.Count} win chips");
+        winAnimationCoroutine = null;
+    }
+
+    // Helper method to parse formatted currency back to double
+    private double ParseFormattedCurrency(string formatted)
+    {
+        if (string.IsNullOrEmpty(formatted)) return 0;
+
+        formatted = formatted.Trim();
+
+        // Handle "K" suffix (thousands)
+        if (formatted.EndsWith("K", System.StringComparison.OrdinalIgnoreCase))
+        {
+            string numberPart = formatted.Substring(0, formatted.Length - 1);
+            if (double.TryParse(numberPart, out double value))
+            {
+                return value * 1000;
+            }
+        }
+
+        // Try to parse as-is
+        if (double.TryParse(formatted, out double result))
+        {
+            return result;
+        }
+
+        return 0;
+    }
     #endregion
 
     #region Chip Animation
@@ -172,7 +463,6 @@ public class OpponentChipManager : MonoBehaviour
         if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
 
-        // Determine spawn position and track which leaderboard it came from
         bool spawnedFromWinners = false;
         bool spawnedFromRichest = false;
         RectTransform spawnPosition = GetSpawnPositionForPlayer(username, out spawnedFromWinners, out spawnedFromRichest);
@@ -188,25 +478,33 @@ public class OpponentChipManager : MonoBehaviour
         chip.SetAmount(GameUtilities.FormatCurrency(amount));
         chip.SetActive(true);
 
-        // CRITICAL: Set badge to match the ACTUAL spawn position
-        // If spawned from Winners → show winner badge ONLY
-        // If spawned from Richest → show richest badge ONLY
-        // This ensures badge ALWAYS matches the spawn location
-        // GUARANTEE: Only ONE badge can be true (mutually exclusive)
-        bool showRichestBadge = spawnedFromRichest && IsPlayerInTop3(username, currentLeaderboards?.richest);
-        bool showWinnerBadge = spawnedFromWinners && IsPlayerInTop3(username, currentLeaderboards?.winners);
+        // Use LOCKED leaderboards to prevent badge flickering during round
+        Leaderboards leaderboardsToUse = lockedLeaderboards ?? currentLeaderboards;
+        bool showRichestBadge = spawnedFromRichest && IsPlayerInTop3(username, leaderboardsToUse?.richest);
+        bool showWinnerBadge = spawnedFromWinners && IsPlayerInTop3(username, leaderboardsToUse?.winners);
 
-        // SAFETY CHECK: Ensure no conflict when player is in both leaderboards
-        // This should never happen due to the spawn logic, but we verify here for safety
         if (showRichestBadge && showWinnerBadge)
         {
-            Debug.LogError($"[OpponentChip] CONFLICT: {username} chip has BOTH badges! This should never happen. Defaulting to Winner badge.");
-            showRichestBadge = false; // Winner badge takes priority
+            Debug.LogWarning($"[OpponentChip] {username} has BOTH badges at spawn! Prioritizing Winner badge.");
+            showRichestBadge = false;
         }
 
         chip.SetLeaderboardBadge(showRichestBadge, showWinnerBadge);
 
-        Debug.Log($"[OpponentChip] {username} chip badge set: Richest={showRichestBadge}, Winner={showWinnerBadge}, SpawnPos={spawnPosition.name}");
+        chipToOriginalBadge[chipRT] = new BadgeState
+        {
+            isRichest = showRichestBadge,
+            isWinner = showWinnerBadge
+        };
+
+        if (spawnPosition == opponentDealerArea)
+        {
+            Debug.Log($"[OpponentChip] {username} NOT in leaderboard → spawn from dealer, NO badges");
+        }
+        else
+        {
+            Debug.Log($"[OpponentChip] {username} IN leaderboard → badge LOCKED: Richest={showRichestBadge}, Winner={showWinnerBadge}");
+        }
 
         float scatterX = spawnPosition == opponentDealerArea ? dealerScatterX : 15f;
         float scatterY = spawnPosition == opponentDealerArea ? dealerScatterY : 10f;
@@ -223,6 +521,7 @@ public class OpponentChipManager : MonoBehaviour
         chipRT.SetParent(canvasRoot, worldPositionStays: true);
 
         Vector2 containerWorldPos = GetCanvasPosition(container);
+
         Vector2 destination = containerWorldPos + new Vector2(
             Random.Range(-betAreaScatterX, betAreaScatterX),
             Random.Range(-betAreaScatterY, betAreaScatterY));
@@ -235,13 +534,11 @@ public class OpponentChipManager : MonoBehaviour
         activeOpponentChips.Add(chipRT);
         chipsByBetArea[betOption].Add(chipRT);
 
-        // Store username for this chip so we can check badges during cashout
         if (!string.IsNullOrEmpty(username))
         {
             chipToUsername[chipRT] = username;
         }
 
-        // IMPORTANT: Store the original spawn position so chip returns to where it came from
         chipToSpawnPosition[chipRT] = spawnPosition;
     }
 
@@ -251,33 +548,23 @@ public class OpponentChipManager : MonoBehaviour
         spawnedFromRichest = false;
 
         if (string.IsNullOrEmpty(username) || leaderboardController == null) return null;
-        if (currentLeaderboards == null) return null;
 
-        // Check if player is in both leaderboards
-        bool isInWinners = IsPlayerInLeaderboard(username, currentLeaderboards.winners);
-        bool isInRichest = IsPlayerInLeaderboard(username, currentLeaderboards.richest);
+        // Use LOCKED leaderboards to prevent badge flickering
+        Leaderboards leaderboardsToUse = lockedLeaderboards ?? currentLeaderboards;
+        if (leaderboardsToUse == null) return null;
 
-        // Determine priority based on badges (similar to cashout logic)
-        bool checkWinnersFirst = true; // Default: winners has priority
+        bool isInWinners = IsPlayerInLeaderboard(username, leaderboardsToUse.winners);
+        bool isInRichest = IsPlayerInLeaderboard(username, leaderboardsToUse.richest);
 
-        // Check TOP 3 badges to determine spawn priority
-        bool isTop3Richest = IsPlayerInTop3(username, currentLeaderboards.richest);
-        bool isTop3Winner = IsPlayerInTop3(username, currentLeaderboards.winners);
+        bool checkWinnersFirst = true;
+
+        bool isTop3Richest = IsPlayerInTop3(username, leaderboardsToUse.richest);
+        bool isTop3Winner = IsPlayerInTop3(username, leaderboardsToUse.winners);
 
         if (isTop3Richest && !isTop3Winner)
         {
-            // Player has richest badge only, prioritize richest leaderboard
             checkWinnersFirst = false;
-            Debug.Log($"[OpponentChip] {username} has RICHEST badge only, prioritizing richest leaderboard");
         }
-        else if (isTop3Winner)
-        {
-            // Player has winner badge (may also have richest), prioritize winner
-            Debug.Log($"[OpponentChip] {username} has WINNER badge, prioritizing winners leaderboard");
-        }
-
-        // Check leaderboards based on priority and track which one we spawn from
-        // IMPORTANT: We return immediately after finding a position, ensuring only ONE flag is set
         if (checkWinnersFirst)
         {
             if (isInWinners)
@@ -286,8 +573,7 @@ public class OpponentChipManager : MonoBehaviour
                 if (position != null)
                 {
                     spawnedFromWinners = true;
-                    Debug.Log($"[OpponentChip] {username} spawning from WINNERS leaderboard position");
-                    return position; // ← RETURN: Only Winners flag is true
+                    return position;
                 }
             }
 
@@ -297,8 +583,7 @@ public class OpponentChipManager : MonoBehaviour
                 if (position != null)
                 {
                     spawnedFromRichest = true;
-                    Debug.Log($"[OpponentChip] {username} spawning from RICHEST leaderboard position (fallback)");
-                    return position; // ← RETURN: Only Richest flag is true
+                    return position;
                 }
             }
         }
@@ -310,8 +595,7 @@ public class OpponentChipManager : MonoBehaviour
                 if (position != null)
                 {
                     spawnedFromRichest = true;
-                    Debug.Log($"[OpponentChip] {username} spawning from RICHEST leaderboard position");
-                    return position; // ← RETURN: Only Richest flag is true
+                    return position;
                 }
             }
 
@@ -321,14 +605,10 @@ public class OpponentChipManager : MonoBehaviour
                 if (position != null)
                 {
                     spawnedFromWinners = true;
-                    Debug.Log($"[OpponentChip] {username} spawning from WINNERS leaderboard position (fallback)");
-                    return position; // ← RETURN: Only Winners flag is true
+                    return position;
                 }
             }
         }
-
-        // Not in any leaderboard - use opponent dealer (both flags remain false)
-        Debug.Log($"[OpponentChip] {username} not in any leaderboard, will spawn from opponent dealer");
         return null;
     }
 
@@ -339,161 +619,180 @@ public class OpponentChipManager : MonoBehaviour
         if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
 
-        var chipsToAnimate = new List<RectTransform>(activeOpponentChips);
+        // Collect ALL chips (bet chips + win chips)
+        List<RectTransform> allChipsToProcess = new List<RectTransform>(activeOpponentChips);
+        allChipsToProcess.AddRange(activeWinChips);
 
-        foreach (var chip in chipsToAnimate)
-            if (chip != null) chip.SetParent(canvasRoot, worldPositionStays: true);
-
-        // Shuffle chips
-        for (int i = chipsToAnimate.Count - 1; i > 0; i--)
-        {
-            int j = Random.Range(0, i + 1);
-            var temp = chipsToAnimate[i];
-            chipsToAnimate[i] = chipsToAnimate[j];
-            chipsToAnimate[j] = temp;
-        }
-
-        // Group chips by destination based on payouts
-        Dictionary<string, List<RectTransform>> chipsByDestination = new Dictionary<string, List<RectTransform>>();
+        Dictionary<string, HashSet<string>> winnersByBetArea = new Dictionary<string, HashSet<string>>();
 
         if (currentPayouts != null && currentPayouts.Count > 0)
         {
-            Debug.Log($"[OpponentChip] Processing {currentPayouts.Count} payouts for cashout");
 
-            // Calculate total win amount to distribute chips proportionally
-            double totalWinAmount = 0;
             foreach (var payout in currentPayouts)
             {
-                if (payout.win > 0)
+                if (payout.win > 0 && !string.IsNullOrEmpty(payout.username))
                 {
-                    totalWinAmount += payout.win;
-                    Debug.Log($"[OpponentChip] Winner: {payout.username}, Win: {payout.win}");
-                }
-            }
-
-            if (totalWinAmount > 0 && chipsToAnimate.Count > 0)
-            {
-                // Create a set of winner usernames for quick lookup
-                HashSet<string> winners = new HashSet<string>();
-                foreach (var payout in currentPayouts)
-                {
-                    if (payout.win > 0 && !string.IsNullOrEmpty(payout.username))
+                    foreach (var kvp in chipsByBetArea)
                     {
-                        winners.Add(payout.username);
-                        Debug.Log($"[OpponentChip] Winner: {payout.username}, Win: {payout.win}");
-                    }
-                }
+                        string betArea = kvp.Key;
 
-                // Route each chip based on whether its owner won
-                foreach (var chip in chipsToAnimate)
-                {
-                    string chipOwner = chipToUsername.ContainsKey(chip) ? chipToUsername[chip] : "";
+                        if (!winningBetAreas.Contains(betArea)) continue;
 
-                    if (!string.IsNullOrEmpty(chipOwner) && winners.Contains(chipOwner))
-                    {
-                        // This chip belongs to a winner
-                        // Check if it spawned from a leaderboard position
-                        bool spawnedFromLeaderboard = chipToSpawnPosition.ContainsKey(chip) &&
-                                                      chipToSpawnPosition[chip] != null &&
-                                                      chipToSpawnPosition[chip] != opponentDealerArea &&
-                                                      chipToSpawnPosition[chip] != playerDealerArea;
-
-                        if (spawnedFromLeaderboard)
+                        foreach (var chip in kvp.Value)
                         {
-                            // Winner's chip from leaderboard → return to their leaderboard position
-                            if (!chipsByDestination.ContainsKey(chipOwner))
-                                chipsByDestination[chipOwner] = new List<RectTransform>();
-                            chipsByDestination[chipOwner].Add(chip);
-                            Debug.Log($"[OpponentChip] Winner {chipOwner}'s chip → returning to leaderboard position");
-                        }
-                        else
-                        {
-                            // Winner's chip but spawned from dealer → go to player dealer
-                            if (!chipsByDestination.ContainsKey("player_dealer"))
-                                chipsByDestination["player_dealer"] = new List<RectTransform>();
-                            chipsByDestination["player_dealer"].Add(chip);
-                            Debug.Log($"[OpponentChip] Winner {chipOwner}'s chip spawned from dealer → player dealer");
+                            if (chipToUsername.ContainsKey(chip) && chipToUsername[chip] == payout.username)
+                            {
+                                if (!winnersByBetArea.ContainsKey(betArea))
+                                    winnersByBetArea[betArea] = new HashSet<string>();
+
+                                winnersByBetArea[betArea].Add(payout.username);
+                                break;
+                            }
                         }
                     }
-                    else
-                    {
-                        // This chip belongs to a non-winner OR has no owner → opponent dealer
-                        if (!chipsByDestination.ContainsKey("opponent_dealer"))
-                            chipsByDestination["opponent_dealer"] = new List<RectTransform>();
-                        chipsByDestination["opponent_dealer"].Add(chip);
-                        Debug.Log($"[OpponentChip] Loser chip (owner: {chipOwner}) → opponent dealer");
-                    }
-                }
-            }
-            else
-            {
-                // No wins - all chips go randomly to dealers
-                foreach (var chip in chipsToAnimate)
-                {
-                    string dealerKey = Random.value > 0.5f ? "player_dealer" : "opponent_dealer";
-                    if (!chipsByDestination.ContainsKey(dealerKey))
-                        chipsByDestination[dealerKey] = new List<RectTransform>();
-                    chipsByDestination[dealerKey].Add(chip);
                 }
             }
         }
-        else
+
+        // Process BET chips - Start all animations together (no staggering inside loops)
+        int chipAnimationCount = 0;
+
+        foreach (var kvp in chipsByBetArea)
         {
-            // No payout data - split randomly between dealers
-            Debug.Log("[OpponentChip] No payout data, splitting chips randomly");
-            foreach (var chip in chipsToAnimate)
-            {
-                string dealerKey = Random.value > 0.5f ? "player_dealer" : "opponent_dealer";
-                if (!chipsByDestination.ContainsKey(dealerKey))
-                    chipsByDestination[dealerKey] = new List<RectTransform>();
-                chipsByDestination[dealerKey].Add(chip);
-            }
-        }
+            string betArea = kvp.Key;
+            List<RectTransform> chipsInArea = kvp.Value;
 
-        // Animate chips to their destinations
-        foreach (var kvp in chipsByDestination)
-        {
-            string destination = kvp.Key;
-            List<RectTransform> chips = kvp.Value;
+            bool isWinningArea = winningBetAreas.Contains(betArea);
 
-            Debug.Log($"[OpponentChip] Routing {chips.Count} chips to destination: {destination}");
-
-            foreach (var chip in chips)
+            foreach (var chip in chipsInArea)
             {
                 if (chip == null) continue;
 
-                RectTransform targetPosition = GetCashoutDestination(destination, chip);
-                Debug.Log($"[OpponentChip] Chip destination for '{destination}' resolved to: {(targetPosition == playerDealerArea ? "PlayerDealer" : targetPosition == opponentDealerArea ? "OpponentDealer" : "Leaderboard")}");
+                chip.SetParent(canvasRoot, worldPositionStays: true);
 
-                float scatterX = dealerScatterX;
-                float scatterY = dealerScatterY;
+                string chipOwner = chipToUsername.ContainsKey(chip) ? chipToUsername[chip] : "";
+                bool chipOwnerWon = !string.IsNullOrEmpty(chipOwner) &&
+                                   winnersByBetArea.ContainsKey(betArea) &&
+                                   winnersByBetArea[betArea].Contains(chipOwner);
 
-                // Smaller scatter for leaderboard positions
-                if (targetPosition != playerDealerArea && targetPosition != opponentDealerArea)
+                bool isLosingChip = !isWinningArea || !chipOwnerWon;
+
+                if (isLosingChip)
                 {
-                    scatterX = 15f;
-                    scatterY = 10f;
+                    Chip chipComponent = chip.GetComponent<Chip>();
+                    if (chipComponent != null)
+                    {
+                        chipComponent.ClearLeaderboardBadge();
+                    }
+
+                    RectTransform targetDealer = Random.value > 0.5f ? playerDealerArea : opponentDealerArea;
+
+                    Debug.Log($"[OpponentChip] LOSING chip: owner={chipOwner}, area={betArea}, won={chipOwnerWon} → dealer (badges cleared)");
+
+                    Vector2 targetPos = GetCanvasPosition(targetDealer) + new Vector2(
+                        Random.Range(-dealerScatterX, dealerScatterX),
+                        Random.Range(-dealerScatterY, dealerScatterY));
+
+                    // Add tiny stagger for visual variety
+                    float staggerDelay = chipAnimationCount * cashoutStagger * 0.1f;
+
+                    chip.DOAnchorPos(targetPos, cashoutDuration).SetEase(Ease.InQuad).SetDelay(staggerDelay);
+                    chip.DOScale(0f, cashoutDuration * 0.6f)
+                        .SetDelay(cashoutDuration * 0.4f + staggerDelay)
+                        .SetEase(Ease.InBack)
+                        .OnComplete(() => { if (chip != null) Destroy(chip.gameObject); });
+
+                    chipAnimationCount++;
                 }
+                else
+                {
 
-                Vector2 targetPos = GetCanvasPosition(targetPosition) + new Vector2(
-                    Random.Range(-scatterX, scatterX),
-                    Random.Range(-scatterY, scatterY));
+                    Chip chipComponent = chip.GetComponent<Chip>();
+                    if (chipToOriginalBadge.ContainsKey(chip))
+                    {
+                        BadgeState originalBadge = chipToOriginalBadge[chip];
 
-                chip.DOAnchorPos(targetPos, cashoutDuration).SetEase(Ease.InQuad);
-                chip.DOScale(0f, cashoutDuration * 0.6f)
-                    .SetDelay(cashoutDuration * 0.4f)
-                    .SetEase(Ease.InBack)
-                    .OnComplete(() => { if (chip != null) Destroy(chip.gameObject); });
+                        if (chipComponent != null)
+                        {
+                            chipComponent.SetLeaderboardBadge(originalBadge.isRichest, originalBadge.isWinner);
+                        }
+                        if (!originalBadge.isRichest && !originalBadge.isWinner)
+                        {
+                            Debug.Log($"[OpponentChip] WINNING chip (NON-LEADERBOARD): owner={chipOwner}, area={betArea} → dealer (no badges)");
+                        }
+                        else
+                        {
+                            string badgeType = originalBadge.isWinner ? "WINNER" : "RICHEST";
+                            Debug.Log($"[OpponentChip] WINNING chip (LEADERBOARD): owner={chipOwner}, badge={badgeType}, area={betArea} → leaderboard");
+                        }
+                    }
 
-                yield return new WaitForSeconds(cashoutStagger);
+                    RectTransform targetPosition = GetCashoutDestinationForWinner(chip);
+
+                    float scatterX = 15f;
+                    float scatterY = 10f;
+
+                    if (targetPosition == playerDealerArea || targetPosition == opponentDealerArea)
+                    {
+                        scatterX = dealerScatterX;
+                        scatterY = dealerScatterY;
+                    }
+
+                    Vector2 targetPos = GetCanvasPosition(targetPosition) + new Vector2(
+                        Random.Range(-scatterX, scatterX),
+                        Random.Range(-scatterY, scatterY));
+
+                    // Add tiny stagger for visual variety
+                    float staggerDelay = chipAnimationCount * cashoutStagger * 0.1f;
+
+                    chip.DOAnchorPos(targetPos, cashoutDuration).SetEase(Ease.InQuad).SetDelay(staggerDelay);
+                    chip.DOScale(0f, cashoutDuration * 0.6f)
+                        .SetDelay(cashoutDuration * 0.4f + staggerDelay)
+                        .SetEase(Ease.InBack)
+                        .OnComplete(() => { if (chip != null) Destroy(chip.gameObject); });
+
+                    chipAnimationCount++;
+                }
             }
+        }
+
+        // Process WIN chips - split randomly between dealers (animate together)
+        int winChipIndex = 0;
+        foreach (var winChip in activeWinChips)
+        {
+            if (winChip == null) continue;
+
+            winChip.SetParent(canvasRoot, worldPositionStays: true);
+
+            // Win chips go randomly to either dealer (50/50)
+            RectTransform targetDealer = Random.value > 0.5f ? playerDealerArea : opponentDealerArea;
+
+            Vector2 targetPos = GetCanvasPosition(targetDealer) + new Vector2(
+                Random.Range(-dealerScatterX, dealerScatterX),
+                Random.Range(-dealerScatterY, dealerScatterY));
+
+            // Add tiny stagger for visual variety
+            float staggerDelay = winChipIndex * cashoutStagger * 0.1f;
+
+            winChip.DOAnchorPos(targetPos, cashoutDuration * 0.7f).SetEase(Ease.InQuad).SetDelay(staggerDelay);
+            winChip.DOScale(0f, cashoutDuration * 0.5f)
+                .SetDelay(cashoutDuration * 0.3f + staggerDelay)
+                .SetEase(Ease.InBack)
+                .OnComplete(() => { if (winChip != null) Destroy(winChip.gameObject); });
+
+            winChipIndex++;
         }
 
         yield return new WaitForSeconds(cashoutDuration);
 
         activeOpponentChips.Clear();
-        chipToSpawnPosition.Clear(); // Clear spawn position tracking after cashout
+        activeWinChips.Clear();
+        chipToSpawnPosition.Clear();
+        chipToOriginalBadge.Clear();
+        chipToUsername.Clear();
+        winningBetAreas.Clear();
         currentPayouts = null;
+        lockedLeaderboards = null; // Unlock leaderboards after cashout
 
         foreach (var list in chipsByBetArea.Values) list.Clear();
         foreach (var container in opponentContainers.Values)
@@ -501,50 +800,42 @@ public class OpponentChipManager : MonoBehaviour
 
         isCashoutRunning = false;
         cashoutCoroutine = null;
+
+        Debug.Log("[OpponentChip] Cashout complete - leaderboards UNLOCKED for next round");
     }
 
-    private RectTransform GetCashoutDestination(string destination, RectTransform chipRT = null)
+    private RectTransform GetCashoutDestinationForWinner(RectTransform chipRT)
     {
-        // Handle dealer destinations
-        if (destination == "player_dealer" || destination == "player")
-        {
-            return playerDealerArea;
-        }
-        else if (destination == "opponent_dealer" || destination == "opponent")
-        {
-            return opponentDealerArea;
-        }
+        if (chipRT == null) return opponentDealerArea;
 
-        // Check if player is local player
-        if (destination == localPlayerUsername)
+        string chipOwner = chipToUsername.ContainsKey(chipRT) ? chipToUsername[chipRT] : "";
+
+        if (chipOwner == localPlayerUsername)
         {
-            Debug.Log($"[OpponentChip] {destination} is local player, routing to player dealer");
+            Debug.Log($"[OpponentChip] Winner chip from local player → player dealer");
             return playerDealerArea;
         }
 
-        // CRITICAL FIX: Return chip to its ORIGINAL spawn position
-        // This prevents chips from switching leaderboards mid-animation when badges change
-        if (chipRT != null && chipToSpawnPosition.ContainsKey(chipRT))
+        if (chipToSpawnPosition.ContainsKey(chipRT))
         {
             RectTransform originalSpawnPosition = chipToSpawnPosition[chipRT];
 
-            // If it spawned from opponent dealer, return there
-            if (originalSpawnPosition == opponentDealerArea)
+            if (originalSpawnPosition != null &&
+                originalSpawnPosition != opponentDealerArea &&
+                originalSpawnPosition != playerDealerArea)
             {
-                Debug.Log($"[OpponentChip] Chip spawned from opponent dealer, returning to opponent dealer");
-                return opponentDealerArea;
+                Debug.Log($"[OpponentChip] Winner chip returning to original leaderboard spawn position");
+                return originalSpawnPosition;
             }
 
-            // If it spawned from a leaderboard position, return to the SAME position
-            if (originalSpawnPosition != null && originalSpawnPosition != opponentDealerArea && originalSpawnPosition != playerDealerArea)
+            if (originalSpawnPosition == opponentDealerArea)
             {
-                Debug.Log($"[OpponentChip] Chip returning to original spawn leaderboard position");
-                return originalSpawnPosition;
+                Debug.Log($"[OpponentChip] Winner chip spawned from dealer, returning to opponent dealer");
+                return opponentDealerArea;
             }
         }
 
-        // Fallback: No spawn position tracked, use opponent dealer
-        Debug.Log($"[OpponentChip] No spawn position tracked for chip, defaulting to opponent dealer");
+        Debug.Log($"[OpponentChip] Winner chip fallback → opponent dealer");
         return opponentDealerArea;
     }
     #endregion
@@ -578,7 +869,6 @@ public class OpponentChipManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(username) || entries == null || entries.Count == 0) return false;
 
-        // Backend only sends 3 entries per leaderboard, check all of them
         foreach (var entry in entries)
         {
             if (entry != null && entry.username == username)

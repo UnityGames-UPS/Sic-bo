@@ -99162,8 +99162,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 'Min Bet :'
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 952d9196bb4a10040be1ecd9cd789d9a, type: 2}
-  m_sharedMaterial: {fileID: 5940935547364425812, guid: 952d9196bb4a10040be1ecd9cd789d9a, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
+  m_sharedMaterial: {fileID: 2870210248413001566, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
