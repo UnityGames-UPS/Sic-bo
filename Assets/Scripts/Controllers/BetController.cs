@@ -1281,6 +1281,12 @@ public class BetController : MonoBehaviour
     internal PlayerBetComponent GetPlayerBetComponent(string betOption) =>
         activeComponents.TryGetValue(betOption, out var c) ? c : GetBetAreaByOption(betOption)?.playerBetComponent;
 
+    /// <summary>Returns the current chip denomination values (index matches chipSprites index).</summary>
+    internal List<double> GetChipValues() => new List<double>(currentChipValues);
+
+    /// <summary>Returns the chip sprites array (index matches chip value index).</summary>
+    internal Sprite[] GetChipSprites() => chipSprites;
+
     private Dictionary<string, Transform> GetOpponentBetAreaContainerMap()
     {
         Dictionary<string, Transform> map = new Dictionary<string, Transform>();

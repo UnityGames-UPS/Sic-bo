@@ -427,18 +427,30 @@ public class LeaderboardController : MonoBehaviour
 
     private IEnumerator AlternateNameBalance(LeaderboardPlayerBlock block)
     {
+        // SetPlayerData already shows name and hides balance, so we skip
+        // the name-reveal on the very first pass — prevents double-name display.
+        bool firstIteration = true;
+
         while (true)
         {
-            block.ShowName();
+            if (!firstIteration)
+            {
+                // Balance is currently visible — fade it out, fade name in.
+                StartCoroutine(FadeOutUp(block.BalanceText));
+                yield return StartCoroutine(FadeInAtPosition(block.NameText));
+            }
+
+            // Name is now visible — hold.
             yield return new WaitForSeconds(nameDuration);
 
+            // Fade name out, fade balance in.
             StartCoroutine(FadeOutUp(block.NameText));
             yield return StartCoroutine(FadeInAtPosition(block.BalanceText));
 
+            // Balance is now visible — hold.
             yield return new WaitForSeconds(balanceDuration);
 
-            StartCoroutine(FadeOutUp(block.BalanceText));
-            yield return StartCoroutine(FadeInAtPosition(block.NameText));
+            firstIteration = false;
 
             if (loopInterval > 0f) yield return new WaitForSeconds(loopInterval);
         }
@@ -490,8 +502,10 @@ public class LeaderboardController : MonoBehaviour
     private void ResetTextState(TMP_Text textComponent)
     {
         if (textComponent == null) return;
+        // Ensure CanvasGroup exists and is fully visible
         var cg = textComponent.GetComponent<CanvasGroup>();
-        if (cg != null) cg.alpha = 1f;
+        if (cg == null) cg = textComponent.gameObject.AddComponent<CanvasGroup>();
+        cg.alpha = 1f;
         textComponent.GetComponent<RectTransform>()?.DOKill(complete: false);
     }
 

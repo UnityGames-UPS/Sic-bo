@@ -9,7 +9,8 @@ internal class ChipWinAnimationController : MonoBehaviour
     [Header("References")]
     [SerializeField] private RectTransform dealerSpawnPoint;
     [SerializeField] private GameObject chipPrefab;
-    [SerializeField] private Sprite[] chipSprites;
+    // NOTE: chipSprites field removed — sprites are fetched live from BetController
+    // so they always match the current level's chip denominations.
     [SerializeField] private Canvas targetCanvas;
     [SerializeField] private RectTransform playerNameTarget;
     [SerializeField] private BetController betController;
@@ -33,6 +34,7 @@ internal class ChipWinAnimationController : MonoBehaviour
 
     [Header("Chip Visual")]
     [SerializeField] private float chipWorkingScale = 1.0f;
+
     [Header("Win Animation Settings")]
     [SerializeField] private float animationStartPercent = 0.6f;
     [SerializeField] private bool enableWinAnimations = true;
@@ -44,14 +46,15 @@ internal class ChipWinAnimationController : MonoBehaviour
     #endregion
 
     #region Private Fields
-    private readonly List<RectTransform> dealerPool = new List<RectTransform>();
+    // Pool stores RectTransform + Chip component together — no repeated GetComponent calls
+    private readonly List<(RectTransform rt, Chip chip)> dealerPool = new List<(RectTransform, Chip)>();
     private readonly List<RectTransform> activeWinChips = new List<RectTransform>();
     private readonly List<RectTransform> stakeReturnChips = new List<RectTransform>();
     private bool isAnimating;
     private Coroutine winCoroutine;
     private Coroutine cashoutCoroutine;
 
-    // GC optimisation: reuse list for RecalculateWinAmounts (called each dice result)
+    // GC optimisation: reuse list for RecalculateWinAmounts
     private readonly List<WinAreaData> _recalcCache = new List<WinAreaData>();
     #endregion
 
@@ -65,8 +68,8 @@ internal class ChipWinAnimationController : MonoBehaviour
     private void OnDestroy()
     {
         StopAllCoroutines();
-        foreach (var c in dealerPool) { if (c) c.DOKill(); }
-        foreach (var c in activeWinChips) { if (c) c.DOKill(); }
+        foreach (var (rt, _) in dealerPool) { if (rt) rt.DOKill(); }
+        foreach (var rt in activeWinChips) { if (rt) rt.DOKill(); }
     }
     #endregion
 
@@ -75,8 +78,8 @@ internal class ChipWinAnimationController : MonoBehaviour
     {
         if (isAnimating || winAreas == null || winAreas.Count == 0 || diceResult == null) return;
         if (winCoroutine != null) StopCoroutine(winCoroutine);
-        var recalculatedWinAreas = RecalculateWinAmounts(winAreas, diceResult);
-        winCoroutine = StartCoroutine(CR_DealerToBetAreas(recalculatedWinAreas));
+        var recalculated = RecalculateWinAmounts(winAreas, diceResult);
+        winCoroutine = StartCoroutine(CR_DealerToBetAreas(recalculated));
     }
 
     internal void PlayCashoutAnimation()
@@ -91,16 +94,16 @@ internal class ChipWinAnimationController : MonoBehaviour
         if (cashoutCoroutine != null) StopCoroutine(cashoutCoroutine);
         winCoroutine = cashoutCoroutine = null;
 
-        foreach (var chip in dealerPool)
+        foreach (var (rt, _) in dealerPool)
         {
-            if (chip == null) continue;
-            chip.DOKill();
-            if (chip.parent != dealerSpawnPoint) chip.SetParent(dealerSpawnPoint, worldPositionStays: false);
-            chip.localPosition = new Vector3(
+            if (rt == null) continue;
+            rt.DOKill();
+            if (rt.parent != dealerSpawnPoint) rt.SetParent(dealerSpawnPoint, worldPositionStays: false);
+            rt.localPosition = new Vector3(
                 Random.Range(-dealerScatterX, dealerScatterX),
                 Random.Range(-dealerScatterY, dealerScatterY), 0f);
-            chip.localScale = Vector3.zero;
-            chip.gameObject.SetActive(false);
+            rt.localScale = Vector3.zero;
+            rt.gameObject.SetActive(false);
         }
 
         activeWinChips.Clear();
@@ -112,28 +115,23 @@ internal class ChipWinAnimationController : MonoBehaviour
     #region Win Calculation
     private List<WinAreaData> RecalculateWinAmounts(List<WinAreaData> winAreas, DiceResultData diceResult)
     {
-        // Reuse cached list — avoids one allocation per dice result
         _recalcCache.Clear();
-
         foreach (var area in winAreas)
         {
             if (area.betAmount <= 0) continue;
-
-            double actualWinAmount = CalculateActualWin(area.betOption, area.betAmount, diceResult);
-
-            if (actualWinAmount > 0)
+            double actualWin = CalculateActualWin(area.betOption, area.betAmount, diceResult);
+            if (actualWin > 0)
             {
                 _recalcCache.Add(new WinAreaData
                 {
                     betOption = area.betOption,
                     betAreaTarget = area.betAreaTarget,
                     betAmount = area.betAmount,
-                    winAmount = actualWinAmount,
-                    winRatio = actualWinAmount / area.betAmount
+                    winAmount = actualWin,
+                    winRatio = actualWin / area.betAmount
                 });
             }
         }
-
         return _recalcCache;
     }
 
@@ -143,105 +141,64 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         if (betOption.StartsWith("single_"))
         {
-            int diceNumber = GetDiceNumberFromBetOption(betOption);
-            if (diceNumber == -1) return 0;
-
-            int matchCount = CountDiceMatches(diceNumber, diceResult);
-            return CalculateSingleDiceWin(betAmount, matchCount);
+            int num = GetDiceNumberFromBetOption(betOption);
+            if (num == -1) return 0;
+            return CalculateSingleDiceWin(betAmount, CountDiceMatches(num, diceResult));
         }
-
         if (betOption.StartsWith("specific_3_"))
         {
-            int diceNumber = GetDiceNumberFromBetOption(betOption);
-            if (diceNumber == -1) return 0;
-
-            int matchCount = CountDiceMatches(diceNumber, diceResult);
-            return CalculateSpecificTripleWin(betAmount, matchCount);
+            int num = GetDiceNumberFromBetOption(betOption);
+            if (num == -1) return 0;
+            return CalculateSpecificTripleWin(betAmount, CountDiceMatches(num, diceResult));
         }
-
-        var wager = GetWagerForBetOption(betOption);
-        if (wager != null)
-        {
-            return wager.CalculateWin(betAmount);
-        }
-
-        return 0;
+        return GetWagerForBetOption(betOption)?.CalculateWin(betAmount) ?? 0;
     }
 
     private int GetDiceNumberFromBetOption(string betOption)
     {
         string[] parts = betOption.Split('_');
-        if (parts.Length > 0)
-        {
-            string lastPart = parts[parts.Length - 1];
-            if (int.TryParse(lastPart, out int diceNumber) && diceNumber >= 1 && diceNumber <= 6)
-            {
-                return diceNumber;
-            }
-        }
+        if (parts.Length > 0 && int.TryParse(parts[parts.Length - 1], out int n) && n >= 1 && n <= 6)
+            return n;
         return -1;
     }
 
-    private int CountDiceMatches(int targetDice, DiceResultData diceResult)
+    private int CountDiceMatches(int target, DiceResultData d)
     {
-        int count = 0;
-        if (diceResult.dice1 == targetDice) count++;
-        if (diceResult.dice2 == targetDice) count++;
-        if (diceResult.dice3 == targetDice) count++;
-        return count;
+        int c = 0;
+        if (d.dice1 == target) c++;
+        if (d.dice2 == target) c++;
+        if (d.dice3 == target) c++;
+        return c;
     }
 
     private double CalculateSingleDiceWin(double betAmount, int matchCount)
     {
-        if (gameManager?.CurrentWagers?.side_bets == null) return 0;
-
+        var sb = gameManager?.CurrentWagers?.side_bets;
+        if (sb == null) return 0;
         switch (matchCount)
         {
-            case 3:
-
-                if (gameManager.CurrentWagers.side_bets.single_match_3 != null)
-                    return gameManager.CurrentWagers.side_bets.single_match_3.CalculateWin(betAmount);
-                break;
-            case 2:
-
-                if (gameManager.CurrentWagers.side_bets.single_match_2 != null)
-                    return gameManager.CurrentWagers.side_bets.single_match_2.CalculateWin(betAmount);
-                break;
-            case 1:
-
-                if (gameManager.CurrentWagers.side_bets.single_match_1 != null)
-                    return gameManager.CurrentWagers.side_bets.single_match_1.CalculateWin(betAmount);
-                break;
+            case 3: return sb.single_match_3?.CalculateWin(betAmount) ?? 0;
+            case 2: return sb.single_match_2?.CalculateWin(betAmount) ?? 0;
+            case 1: return sb.single_match_1?.CalculateWin(betAmount) ?? 0;
         }
-
         return 0;
     }
 
     private double CalculateSpecificTripleWin(double betAmount, int matchCount)
     {
-        if (gameManager?.CurrentWagers?.side_bets == null) return 0;
-
+        var sb = gameManager?.CurrentWagers?.side_bets;
+        if (sb == null) return 0;
         switch (matchCount)
         {
-            case 3:
-
-                if (gameManager.CurrentWagers.side_bets.specific_3 != null)
-                    return gameManager.CurrentWagers.side_bets.specific_3.CalculateWin(betAmount);
-                break;
-            case 2:
-
-                if (gameManager.CurrentWagers.side_bets.specific_2 != null)
-                    return gameManager.CurrentWagers.side_bets.specific_2.CalculateWin(betAmount);
-                break;
+            case 3: return sb.specific_3?.CalculateWin(betAmount) ?? 0;
+            case 2: return sb.specific_2?.CalculateWin(betAmount) ?? 0;
         }
-
         return 0;
     }
 
     private BetWager GetWagerForBetOption(string betOption)
     {
         if (gameManager?.CurrentWagers == null) return null;
-
         switch (betOption)
         {
             case "small": return gameManager.CurrentWagers.main_bets?.small;
@@ -249,7 +206,6 @@ internal class ChipWinAnimationController : MonoBehaviour
             case "odd": return gameManager.CurrentWagers.main_bets?.odd;
             case "even": return gameManager.CurrentWagers.main_bets?.even;
         }
-
         if (betOption.StartsWith("sum_"))
         {
             switch (betOption)
@@ -270,7 +226,6 @@ internal class ChipWinAnimationController : MonoBehaviour
                 case "sum_17": return gameManager.CurrentWagers.op_bets?.sum_17;
             }
         }
-
         return null;
     }
     #endregion
@@ -286,16 +241,17 @@ internal class ChipWinAnimationController : MonoBehaviour
             RectTransform rt = go.GetComponent<RectTransform>();
             if (rt == null) { Destroy(go); continue; }
 
+            Chip chipComp = go.GetComponent<Chip>();
+            if (chipComp == null)
+                Debug.LogWarning("[ChipWinAnimationController] chipPrefab has no Chip component — sprites won't update.");
+
             rt.localPosition = new Vector3(
                 Random.Range(-dealerScatterX, dealerScatterX),
                 Random.Range(-dealerScatterY, dealerScatterY), 0f);
             rt.localScale = Vector3.zero;
-
-            if (chipSprites != null && chipSprites.Length > 0)
-                SetSprite(rt, Random.Range(2, chipSprites.Length));
-
             go.SetActive(false);
-            dealerPool.Add(rt);
+
+            dealerPool.Add((rt, chipComp));
         }
     }
     #endregion
@@ -305,98 +261,98 @@ internal class ChipWinAnimationController : MonoBehaviour
     {
         isAnimating = true;
 
-        double totalWin = 0;
-        foreach (var a in winAreas)
-            totalWin += a.winAmount;
+        // Pull chip values + sprites live from BetController — always current for the active level
+        List<double> chipValues = betController != null ? betController.GetChipValues() : new List<double>();
+        Sprite[] chipSprites = betController != null ? betController.GetChipSprites() : null;
 
-        var assignments = new List<(RectTransform chip, Transform parent, Vector3 localPos)>();
+        var assignments = new List<(RectTransform rt, Transform parent, Vector3 localPos)>();
         int poolIdx = 0;
 
         foreach (var area in winAreas)
         {
             if (area.betAreaTarget == null) continue;
 
-
             PlayerBetComponent playerBetComp = betController?.GetPlayerBetComponent(area.betOption);
             if (playerBetComp == null) continue;
 
             Transform chipParent = playerBetComp.transform;
-
             AudioManager.Instance?.PlayChipAdd();
 
-
-            bool shouldSpawnWinChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
-            if (shouldSpawnWinChips)
+            // ── Win / profit chips ──────────────────────────────────────────
+            bool spawnWinChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
+            if (spawnWinChips)
             {
-                int chipCount = CalculateChipCount(area);
-                for (int i = 0; i < chipCount && poolIdx < dealerPool.Count; i++, poolIdx++)
-                {
-                    RectTransform chip = dealerPool[poolIdx];
-                    if (chip == null) continue;
+                // Get denomination breakdown for the win amount
+                // e.g. winAmount=2 with chipValues=[0.5,1,5] → [{0.5,0},{0.5,0},{1,1}]
+                var combination = BuildCombination(area.winAmount, chipValues, chipSprites);
+                int count = Mathf.Clamp(combination.Count, minChipsPerWin, maxChipsPerWin);
 
-                    SetSprite(chip, SpriteIndex(area.winAmount / chipCount));
-                    chip.gameObject.SetActive(true);
-                    chip.localPosition = new Vector3(
+                for (int i = 0; i < count && poolIdx < dealerPool.Count; i++, poolIdx++)
+                {
+                    var (rt, chip) = dealerPool[poolIdx];
+                    if (rt == null) continue;
+
+                    ApplyChipVisual(chip, combination, i, chipSprites);
+
+                    rt.gameObject.SetActive(true);
+                    rt.localPosition = new Vector3(
                         Random.Range(-dealerScatterX, dealerScatterX),
                         Random.Range(-dealerScatterY, dealerScatterY), 0f);
-                    chip.localScale = Vector3.zero;
-                    chip.DOScale(chipWorkingScale, 0.18f).SetEase(Ease.OutBack);
+                    rt.localScale = Vector3.zero;
+                    rt.DOScale(chipWorkingScale, 0.18f).SetEase(Ease.OutBack);
 
                     Vector3 localPos = new Vector3(
                         Random.Range(-betAreaScatterX, betAreaScatterX),
                         Random.Range(-betAreaScatterY, betAreaScatterY), 0f);
 
-                    assignments.Add((chip, chipParent, localPos));
-                    activeWinChips.Add(chip);
+                    assignments.Add((rt, chipParent, localPos));
+                    activeWinChips.Add(rt);
                 }
             }
 
+            // ── Stake-return chips ──────────────────────────────────────────
+            int stakeCount = CalculateStakeReturnChipCount(area.winRatio, area.betAmount);
+            var stakeCombination = BuildCombination(area.betAmount, chipValues, chipSprites);
+            // Respect the stakeCount ceiling but never show more chips than we have denominations
+            int actualStakeCount = Mathf.Min(stakeCount, Mathf.Max(1, stakeCombination.Count));
 
-            int stakeChipCount = CalculateStakeReturnChipCount(area.winRatio, area.betAmount);
-            for (int i = 0; i < stakeChipCount && poolIdx < dealerPool.Count; i++, poolIdx++)
+            for (int i = 0; i < actualStakeCount && poolIdx < dealerPool.Count; i++, poolIdx++)
             {
-                RectTransform chip = dealerPool[poolIdx];
-                if (chip == null) continue;
+                var (rt, chip) = dealerPool[poolIdx];
+                if (rt == null) continue;
 
-                double stakeReturnValue = area.winRatio * area.betAmount;
-                SetSprite(chip, SpriteIndex(stakeReturnValue / Mathf.Max(1, stakeChipCount)));
-
+                ApplyChipVisual(chip, stakeCombination, i, chipSprites);
 
                 RectTransform parentRT = chipParent as RectTransform;
                 if (parentRT == null) continue;
 
-                chip.SetParent(chipParent, worldPositionStays: false);
-                chip.SetAsFirstSibling();
-                chip.localPosition = new Vector3(
+                rt.SetParent(chipParent, worldPositionStays: false);
+                rt.SetAsFirstSibling();
+                rt.localPosition = new Vector3(
                     Random.Range(-betAreaScatterX, betAreaScatterX),
                     Random.Range(-betAreaScatterY, betAreaScatterY), 0f);
-                chip.localScale = Vector3.zero;
-                chip.gameObject.SetActive(false);
+                rt.localScale = Vector3.zero;
+                rt.gameObject.SetActive(false);
 
-                stakeReturnChips.Add(chip);
+                stakeReturnChips.Add(rt);
             }
         }
 
         yield return new WaitForSeconds(0.20f);
 
-
-        var animData = new List<(RectTransform chip, Vector2 worldTarget)>();
-
-        foreach (var (chip, parent, localPos) in assignments)
+        // Reparent to chipParent and collect world targets
+        var animData = new List<(RectTransform rt, Vector3 worldTarget)>();
+        foreach (var (rt, parent, localPos) in assignments)
         {
-            if (chip == null || parent == null) continue;
-
+            if (rt == null || parent == null) continue;
             RectTransform parentRT = parent as RectTransform;
             if (parentRT == null) continue;
 
             Vector3 worldTarget = parentRT.TransformPoint(localPos);
-
-            chip.SetParent(parent, worldPositionStays: true);
-            chip.SetAsFirstSibling();
-
-            animData.Add((chip, worldTarget));
+            rt.SetParent(parent, worldPositionStays: true);
+            rt.SetAsFirstSibling();
+            animData.Add((rt, worldTarget));
         }
-
 
         if (enableWinAnimations && assignments.Count > 0)
         {
@@ -405,18 +361,16 @@ internal class ChipWinAnimationController : MonoBehaviour
                 () => TriggerAllWinCountingAnimations(winAreas));
         }
 
-
-        foreach (var (chip, worldTarget) in animData)
+        foreach (var (rt, worldTarget) in animData)
         {
-            if (chip == null) continue;
-
-            chip.DOMove(worldTarget, dealerToBetDuration)
-                .SetEase(Ease.OutQuad)
-                .OnComplete(() =>
-                {
-                    if (chip != null)
-                        chip.localPosition = chip.parent.InverseTransformPoint(worldTarget);
-                });
+            if (rt == null) continue;
+            rt.DOMove(worldTarget, dealerToBetDuration)
+              .SetEase(Ease.OutQuad)
+              .OnComplete(() =>
+              {
+                  if (rt != null)
+                      rt.localPosition = rt.parent.InverseTransformPoint(worldTarget);
+              });
 
             yield return new WaitForSeconds(chipStaggerDelay);
         }
@@ -430,13 +384,9 @@ internal class ChipWinAnimationController : MonoBehaviour
     private int CalculateChipCount(WinAreaData area)
     {
         if (area.winAmount <= 0) return 0;
-
         double ratio = area.winRatio;
-
-        if (ratio <= minWinForExtraChips) return 0; // No extra chips for small wins
-
+        if (ratio <= minWinForExtraChips) return 0;
         int count;
-
         if (ratio >= 50) count = maxChipsPerWin;
         else if (ratio >= 30) count = Mathf.Min(7, maxChipsPerWin);
         else if (ratio >= 15) count = Mathf.Min(6, maxChipsPerWin);
@@ -444,33 +394,26 @@ internal class ChipWinAnimationController : MonoBehaviour
         else if (ratio >= 5) count = Mathf.Min(4, maxChipsPerWin);
         else if (ratio >= 3) count = Mathf.Min(3, maxChipsPerWin);
         else count = Mathf.Min(2, maxChipsPerWin);
-
         return Mathf.Max(minChipsPerWin, count);
     }
 
     private int CalculateStakeReturnChipCount(double winRatio, double betAmount)
     {
         if (winRatio <= 0) return 0;
-
-        double stakeReturnValue = winRatio * betAmount;
-
-        if (stakeReturnValue >= 20) return 3;
-        if (stakeReturnValue >= 5) return 2;
+        double val = winRatio * betAmount;
+        if (val >= 20) return 3;
+        if (val >= 5) return 2;
         return 1;
     }
 
     private void TriggerAllWinCountingAnimations(List<WinAreaData> winAreas)
     {
         if (betController == null) return;
-
         foreach (var winArea in winAreas)
         {
-            PlayerBetComponent playerBetComp = betController.GetPlayerBetComponent(winArea.betOption);
-            if (playerBetComp == null) continue;
-            if (winArea.betAmount <= 0) continue;
-
-            double ratio = winArea.winAmount / winArea.betAmount;
-            playerBetComp.AnimateWinWithRatio(ratio);
+            PlayerBetComponent comp = betController.GetPlayerBetComponent(winArea.betOption);
+            if (comp == null || winArea.betAmount <= 0) continue;
+            comp.AnimateWinWithRatio(winArea.winAmount / winArea.betAmount);
         }
     }
     #endregion
@@ -482,87 +425,80 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         var toSweep = new List<RectTransform>(activeWinChips);
 
-        foreach (var chip in stakeReturnChips)
+        foreach (var rt in stakeReturnChips)
         {
-            if (chip == null) continue;
-            chip.gameObject.SetActive(true);
-            chip.DOScale(chipWorkingScale, 0.12f).SetEase(Ease.OutBack);
-            betController?.RefreshBadgesForContainer(chip.parent);
-
-            toSweep.Add(chip);
+            if (rt == null) continue;
+            rt.gameObject.SetActive(true);
+            rt.DOScale(chipWorkingScale, 0.12f).SetEase(Ease.OutBack);
+            betController?.RefreshBadgesForContainer(rt.parent);
+            toSweep.Add(rt);
         }
         stakeReturnChips.Clear();
 
-
+        // Spawn a few extra "flair" chips from the pool
         int extraNeeded = Mathf.Min(3, dealerPool.Count);
-        var extraChips = new List<RectTransform>();
-        foreach (var chip in dealerPool)
+        foreach (var (rt, _) in dealerPool)
         {
             if (extraNeeded <= 0) break;
-            if (activeWinChips.Contains(chip)) continue;
+            if (activeWinChips.Contains(rt)) continue;
 
-            chip.gameObject.SetActive(true);
-            chip.localPosition = new Vector3(
+            rt.gameObject.SetActive(true);
+            rt.localPosition = new Vector3(
                 Random.Range(-dealerScatterX, dealerScatterX),
                 Random.Range(-dealerScatterY, dealerScatterY), 0f);
-            chip.localScale = Vector3.zero;
-            chip.DOScale(chipWorkingScale * 0.70f, 0.14f).SetEase(Ease.OutBack);
+            rt.localScale = Vector3.zero;
+            rt.DOScale(chipWorkingScale * 0.70f, 0.14f).SetEase(Ease.OutBack);
 
-            extraChips.Add(chip);
-            toSweep.Add(chip);
+            toSweep.Add(rt);
             extraNeeded--;
         }
 
         yield return new WaitForSeconds(0.18f);
 
-
+        // Snapshot canvas positions before reparenting
         var chipCanvasPositions = new Dictionary<RectTransform, Vector2>();
-        foreach (var chip in toSweep)
+        foreach (var rt in toSweep)
         {
-            if (chip == null) continue;
-
-            chipCanvasPositions[chip] = GetCanvasPosition(chip);
+            if (rt == null) continue;
+            chipCanvasPositions[rt] = GetCanvasPosition(rt);
         }
 
-        foreach (var chip in toSweep)
+        foreach (var rt in toSweep)
         {
-            if (chip == null) continue;
-
-            if (chip.parent != targetCanvas.transform)
+            if (rt == null) continue;
+            if (rt.parent != targetCanvas.transform)
             {
-                chip.SetParent(targetCanvas.transform, worldPositionStays: false);
-                chip.SetAsLastSibling();
-                if (chipCanvasPositions.ContainsKey(chip))
-                {
-                    chip.anchoredPosition = chipCanvasPositions[chip];
-                }
+                rt.SetParent(targetCanvas.transform, worldPositionStays: false);
+                rt.SetAsLastSibling();
+                if (chipCanvasPositions.ContainsKey(rt))
+                    rt.anchoredPosition = chipCanvasPositions[rt];
             }
         }
 
         Vector2 playerCanvasPos = GetCanvasPosition(playerNameTarget);
 
-        foreach (var chip in toSweep)
+        foreach (var rt in toSweep)
         {
-            if (chip == null) continue;
+            if (rt == null) continue;
 
-            Vector2 startPos = chip.anchoredPosition;
+            Vector2 startPos = rt.anchoredPosition;
             Vector2 midPos = Vector2.Lerp(startPos, playerCanvasPos, 0.5f)
-                           + new Vector2(Random.Range(-18f, 18f), arcHeight);
+                             + new Vector2(Random.Range(-18f, 18f), arcHeight);
 
             float halfDur = betToPlayerDuration * 0.45f;
             float landDur = betToPlayerDuration * 0.55f;
 
             DOTween.Sequence()
-                .Append(chip.DOAnchorPos(midPos, halfDur).SetEase(Ease.OutQuad))
-                .Append(chip.DOAnchorPos(playerCanvasPos, landDur).SetEase(Ease.InQuad))
-                .Join(chip.DOScale(Vector3.zero, landDur).SetDelay(halfDur).SetEase(Ease.InBack))
+                .Append(rt.DOAnchorPos(midPos, halfDur).SetEase(Ease.OutQuad))
+                .Append(rt.DOAnchorPos(playerCanvasPos, landDur).SetEase(Ease.InQuad))
+                .Join(rt.DOScale(Vector3.zero, landDur).SetDelay(halfDur).SetEase(Ease.InBack))
                 .OnComplete(() =>
                 {
-                    if (chip == null) return;
+                    if (rt == null) return;
                     AudioManager.Instance?.PlayChipAdd();
-                    chip.gameObject.SetActive(false);
-                    chip.SetParent(dealerSpawnPoint, worldPositionStays: false);
-                    chip.localPosition = Vector3.zero;
+                    rt.gameObject.SetActive(false);
+                    rt.SetParent(dealerSpawnPoint, worldPositionStays: false);
+                    rt.localPosition = Vector3.zero;
                 });
 
             yield return new WaitForSeconds(cashoutStagger);
@@ -577,31 +513,63 @@ internal class ChipWinAnimationController : MonoBehaviour
     #endregion
 
     #region Helpers
+
+    /// <summary>
+    /// Returns a chip denomination list for <paramref name="amount"/> via GameUtilities.FindChipCombination.
+    /// Falls back to a single chip entry if no values are available.
+    /// </summary>
+    private List<ChipCombinationItem> BuildCombination(double amount, List<double> chipValues, Sprite[] sprites)
+    {
+        if (chipValues != null && chipValues.Count > 0)
+        {
+            var combo = GameUtilities.FindChipCombination(amount, chipValues);
+            if (combo != null && combo.Count > 0)
+                return combo;
+        }
+
+        // Fallback: single chip, closest sprite by threshold
+        return new List<ChipCombinationItem>
+        {
+            new ChipCombinationItem { amount = amount, chipIndex = FallbackSpriteIndex(amount, sprites) }
+        };
+    }
+
+    /// <summary>
+    /// Calls Chip.SetData with the correct sprite and label from the combination.
+    /// Index cycles when there are more visual chips than combination entries.
+    /// </summary>
+    private static void ApplyChipVisual(Chip chip, List<ChipCombinationItem> combination, int i, Sprite[] sprites)
+    {
+        if (chip == null || sprites == null || sprites.Length == 0 || combination.Count == 0) return;
+
+        // Cycle through the combination list if we need to show more chips than entries
+        ChipCombinationItem item = combination[i % combination.Count];
+        int safeIdx = Mathf.Clamp(item.chipIndex, 0, sprites.Length - 1);
+
+        chip.SetData(
+            sprites[safeIdx],
+            GameUtilities.FormatCurrency(item.amount),
+            safeIdx);
+    }
+
+    private static int FallbackSpriteIndex(double amount, Sprite[] sprites)
+    {
+        if (sprites == null || sprites.Length == 0) return 0;
+        if (amount >= 500) return 0;
+        if (amount >= 100) return Mathf.Min(1, sprites.Length - 1);
+        if (amount >= 50) return Mathf.Min(2, sprites.Length - 1);
+        if (amount >= 10) return Mathf.Min(3, sprites.Length - 1);
+        if (amount >= 5) return Mathf.Min(4, sprites.Length - 1);
+        return Mathf.Min(5, sprites.Length - 1);
+    }
+
     private Vector2 GetCanvasPosition(RectTransform rt)
     {
         if (rt == null || targetCanvas == null) return Vector2.zero;
-
         Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(targetCanvas.worldCamera, rt.position);
         RectTransformUtility.ScreenPointToLocalPointInRectangle(
             targetCanvas.GetComponent<RectTransform>(), screenPoint, targetCanvas.worldCamera, out Vector2 localPoint);
         return localPoint;
-    }
-
-    private void SetSprite(RectTransform rt, int index)
-    {
-        if (chipSprites == null || chipSprites.Length == 0) return;
-        var img = rt.GetComponent<UnityEngine.UI.Image>();
-        if (img != null) img.sprite = chipSprites[Mathf.Clamp(index, 0, chipSprites.Length - 1)];
-    }
-
-    private int SpriteIndex(double winAmount)
-    {
-        if (winAmount >= 500) return 0;
-        if (winAmount >= 100) return 1;
-        if (winAmount >= 50) return 2;
-        if (winAmount >= 10) return 3;
-        if (winAmount >= 5) return 4;
-        return chipSprites != null ? Mathf.Min(5, chipSprites.Length - 1) : 0;
     }
     #endregion
 }

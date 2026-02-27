@@ -239,7 +239,9 @@ public class SocketIOManager : MonoBehaviour
         gameSocket.On<string>("game:cashout", OnCashout);
         gameSocket.On<string>("game:round_end", OnRoundEnd);
         gameSocket.On<string>("game:lobby_count", OnLobbyCount);
+        gameSocket.On<string>("game:leaderboard_update", OnLeaderboardUpdate);
         gameSocket.On<string>("room:joined", OnRoomJoined);
+        gameSocket.On<string>("room:left", OnRoomLeft);
         gameSocket.On<string>("pong", OnPongReceived);
         gameSocket.On<string>("error", OnInternalError);
         gameSocket.On<string>("force-disconnect", OnForceDisconnect);
@@ -321,6 +323,37 @@ public class SocketIOManager : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"[RESPONSE] room:joined parse error: {e.Message}");
+        }
+    }
+
+    private void OnRoomLeft(string json)
+    {
+        if (isBeingDestroyed) return;
+
+        Debug.Log($"[RESPONSE] room:left {json}");
+
+        try
+        {
+            RoomPayload payload = JsonConvert.DeserializeObject<RoomPayload>(json);
+
+            if (payload == null) return;
+
+            // Only update player count if this event is for our current room
+            if (!string.IsNullOrEmpty(payload.roomId) &&
+                !string.IsNullOrEmpty(CurrentRoomId) &&
+                payload.roomId != CurrentRoomId)
+            {
+                Debug.Log($"[RESPONSE] room:left ignored — different room ({payload.roomId} vs {CurrentRoomId})");
+                return;
+            }
+
+            // Update in-room player count display
+            uiController?.UpdatePlayerCountInLevel(payload.playerCount);
+            Debug.Log($"[RESPONSE] room:left — player count updated to {payload.playerCount}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[RESPONSE] room:left parse error: {e.Message}");
         }
     }
     #endregion
@@ -424,6 +457,13 @@ public class SocketIOManager : MonoBehaviour
         if (isBeingDestroyed) return;
         if (showDebugLogs) Debug.Log($"[RESPONSE] game:lobby_count {json}");
         TryDeserializeAndForward<LobbyCountData>(json, gameManager.OnLobbyCount, "lobby_count");
+    }
+
+    private void OnLeaderboardUpdate(string json)
+    {
+        if (isBeingDestroyed) return;
+        if (showDebugLogs) Debug.Log($"[RESPONSE] game:leaderboard_update {json}");
+        TryDeserializeAndForward<CashoutData>(json, gameManager.OnLeaderboardUpdate, "leaderboard_update");
     }
 
     private void TryDeserializeAndForward<T>(string json, Action<T> handler, string label)

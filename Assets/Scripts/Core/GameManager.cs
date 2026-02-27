@@ -320,6 +320,14 @@ public class GameManager : MonoBehaviour
         uiController.UpdateTotalPlayerCount(total);
     }
 
+    internal void OnLeaderboardUpdate(CashoutData data)
+    {
+        if (data?.leaderboards == null) return;
+
+        uiController.UpdateLeaderboards(data.leaderboards);
+        betController.SetLeaderboardData(data.leaderboards);
+    }
+
     internal void OnHistoryReceived(List<HistoryEntry> history, HistoryMeta meta)
     {
         historyController?.UpdateHistoryData(history, meta);
@@ -408,7 +416,7 @@ public class GameManager : MonoBehaviour
 
 
     internal void SwitchRoom(string targetRoom)
-    {   
+    {
         if (targetRoom == CurrentRoom) return;
 
         pendingRoomSwitch = targetRoom;
