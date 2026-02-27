@@ -1156,8 +1156,6 @@ public class BetController : MonoBehaviour
     {
         currentLeaderboards = leaderboards;
 
-        // CRITICAL: Only update opponent leaderboards if chips are not active
-        // This prevents badge flickering during active rounds
         if (opponentChipManager != null)
         {
             bool hasActiveChips = opponentChipManager.IsCashoutRunning() || opponentChipManager.HasActiveChips();
@@ -1280,11 +1278,7 @@ public class BetController : MonoBehaviour
 
     internal PlayerBetComponent GetPlayerBetComponent(string betOption) =>
         activeComponents.TryGetValue(betOption, out var c) ? c : GetBetAreaByOption(betOption)?.playerBetComponent;
-
-    /// <summary>Returns the current chip denomination values (index matches chipSprites index).</summary>
     internal List<double> GetChipValues() => new List<double>(currentChipValues);
-
-    /// <summary>Returns the chip sprites array (index matches chip value index).</summary>
     internal Sprite[] GetChipSprites() => chipSprites;
 
     private Dictionary<string, Transform> GetOpponentBetAreaContainerMap()

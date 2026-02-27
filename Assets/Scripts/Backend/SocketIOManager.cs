@@ -337,8 +337,6 @@ public class SocketIOManager : MonoBehaviour
             RoomPayload payload = JsonConvert.DeserializeObject<RoomPayload>(json);
 
             if (payload == null) return;
-
-            // Only update player count if this event is for our current room
             if (!string.IsNullOrEmpty(payload.roomId) &&
                 !string.IsNullOrEmpty(CurrentRoomId) &&
                 payload.roomId != CurrentRoomId)
@@ -347,7 +345,6 @@ public class SocketIOManager : MonoBehaviour
                 return;
             }
 
-            // Update in-room player count display
             uiController?.UpdatePlayerCountInLevel(payload.playerCount);
             Debug.Log($"[RESPONSE] room:left — player count updated to {payload.playerCount}");
         }

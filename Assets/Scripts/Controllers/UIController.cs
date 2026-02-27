@@ -175,8 +175,6 @@ public class UIController : MonoBehaviour
     private bool isExpanded = false;
     private Vector2 expandSideMenuOriginalPosition;
     private Vector2 shrinkSideMenuOriginalPosition;
-
-    // GC optimisation: reuse lists for side menu button animations (called every menu open/close)
     private readonly List<RectTransform> _animatingRects = new List<RectTransform>();
     private readonly List<Vector2> _animatingOrigPos = new List<Vector2>();
     private readonly List<RectTransform> _visibleRects = new List<RectTransform>();
@@ -200,8 +198,6 @@ public class UIController : MonoBehaviour
         }
 
         leaderboardController?.Initialize();
-
-        // Register fullscreen change listener for browser fullscreen events
         RegisterFullscreenListener();
     }
 
@@ -355,14 +351,11 @@ public class UIController : MonoBehaviour
         if (Sound_button) tempRects.Add(Sound_button.GetComponent<RectTransform>());
         if (Music_button) tempRects.Add(Music_button.GetComponent<RectTransform>());
         if (ExitGame_Button) tempRects.Add(ExitGame_Button.GetComponent<RectTransform>());
-        // Note: Expand/Shrink buttons handled separately in OpenSideMenu based on state
 
         menuButtonRects = tempRects.ToArray();
         menuButtonOriginalPositions = new Vector2[menuButtonRects.Length];
         for (int i = 0; i < menuButtonRects.Length; i++)
             menuButtonOriginalPositions[i] = menuButtonRects[i].anchoredPosition;
-
-        // Store original positions for expand/shrink buttons
         if (ExpandSideMenu_Button)
         {
             RectTransform rect = ExpandSideMenu_Button.GetComponent<RectTransform>();
@@ -399,12 +392,9 @@ public class UIController : MonoBehaviour
             RectTransform r = SideMenuClose_Button.GetComponent<RectTransform>();
             if (r != null) closeButtonPos = r.anchoredPosition;
         }
-
-        // FIX ISSUE 1: Only show and animate the appropriate expand/shrink button based on current state
         Button activeExpandShrinkButton = isExpanded ? ShrinkSideMenu_Button : ExpandSideMenu_Button;
         Button inactiveExpandShrinkButton = isExpanded ? ExpandSideMenu_Button : ShrinkSideMenu_Button;
 
-        // Disable the inactive button and reset to original position
         if (inactiveExpandShrinkButton != null)
         {
             RectTransform inactiveRect = inactiveExpandShrinkButton.GetComponent<RectTransform>();
@@ -417,36 +407,29 @@ public class UIController : MonoBehaviour
             }
             inactiveExpandShrinkButton.gameObject.SetActive(false);
         }
-
-        // Enable the active button
         if (activeExpandShrinkButton != null)
         {
             activeExpandShrinkButton.gameObject.SetActive(true);
             activeExpandShrinkButton.interactable = true;
         }
 
-        // Build list of buttons to animate — reuse cached lists
         _animatingRects.Clear();
         _animatingOrigPos.Clear();
-
-        // Reactivate and add all regular menu buttons (they were deactivated in CloseSideMenu)
         for (int i = 0; i < menuButtonRects.Length; i++)
         {
             if (menuButtonRects[i] != null)
             {
-                menuButtonRects[i].gameObject.SetActive(true); // Reactivate for animation
+                menuButtonRects[i].gameObject.SetActive(true);
                 _animatingRects.Add(menuButtonRects[i]);
                 _animatingOrigPos.Add(menuButtonOriginalPositions[i]);
             }
         }
 
-        // Add the active expand/shrink button to animation
         if (activeExpandShrinkButton != null)
         {
             RectTransform expandShrinkRect = activeExpandShrinkButton.GetComponent<RectTransform>();
             if (expandShrinkRect != null)
             {
-                // Use stored original position (not current position which may be at close button)
                 Vector2 expandShrinkOriginalPos = (activeExpandShrinkButton == ExpandSideMenu_Button)
                     ? expandSideMenuOriginalPosition
                     : shrinkSideMenuOriginalPosition;
@@ -455,8 +438,6 @@ public class UIController : MonoBehaviour
                 _animatingOrigPos.Add(expandShrinkOriginalPos);
             }
         }
-
-        // Animate all buttons
         for (int i = 0; i < _animatingRects.Count; i++)
         {
             _animatingRects[i].DOKill();
@@ -475,8 +456,6 @@ public class UIController : MonoBehaviour
             RectTransform r = SideMenuClose_Button.GetComponent<RectTransform>();
             if (r != null) closeButtonPos = r.anchoredPosition;
         }
-
-        // Collect only visible buttons for animation — reuse cached list
         _visibleRects.Clear();
 
         for (int i = 0; i < menuButtonRects.Length; i++)
@@ -484,8 +463,6 @@ public class UIController : MonoBehaviour
             if (menuButtonRects[i] != null && menuButtonRects[i].gameObject.activeSelf)
                 _visibleRects.Add(menuButtonRects[i]);
         }
-
-        // Add the currently visible expand/shrink button
         Button visibleExpandShrinkButton = isExpanded ? ShrinkSideMenu_Button : ExpandSideMenu_Button;
         if (visibleExpandShrinkButton != null && visibleExpandShrinkButton.gameObject.activeSelf)
         {
@@ -493,8 +470,6 @@ public class UIController : MonoBehaviour
             if (expandShrinkRect != null)
                 _visibleRects.Add(expandShrinkRect);
         }
-
-        // Animate visible buttons in reverse order
         for (int i = 0; i < _visibleRects.Count; i++)
         {
             int reverseIndex = _visibleRects.Count - 1 - i;
@@ -556,13 +531,10 @@ public class UIController : MonoBehaviour
 
     private void SetExpandShrinkButtons(bool isExpanded)
     {
-        // Home & menu screen: toggle visibility with SetActive
         if (ExpandHome_Button) ExpandHome_Button.gameObject.SetActive(!isExpanded);
         if (ShrinkHome_Button) ShrinkHome_Button.gameObject.SetActive(isExpanded);
         if (ExpandMenu_Button) ExpandMenu_Button.gameObject.SetActive(!isExpanded);
         if (ShrinkMenu_Button) ShrinkMenu_Button.gameObject.SetActive(isExpanded);
-
-        // Side menu: use SetActive to control visibility and reset to original positions
         if (ExpandSideMenu_Button)
         {
             RectTransform rect = ExpandSideMenu_Button.GetComponent<RectTransform>();
@@ -581,13 +553,9 @@ public class UIController : MonoBehaviour
 
     private void RegisterFullscreenListener()
     {
-        // Register the callback listener with this GameObject's name
-        // JavaScript will call OnFullscreenChanged on this object
         jsFunctCalls?.RegisterFullscreenListener(gameObject.name);
     }
 
-    // FIX ISSUE 2: This method is called by JavaScript when fullscreen state changes
-    // Handles cases where user exits fullscreen via ESC key or browser controls
     internal void OnFullscreenChanged(string isFullscreen)
     {
         bool newExpandedState = isFullscreen == "1";
@@ -663,13 +631,10 @@ public class UIController : MonoBehaviour
     #region Error Popup
     internal void ShowErrorPopup(string message, string title = "Error", bool showDisconnectAfter = false)
     {
-        // Always close disconnect popup if it's showing - error takes priority
         if (DisconnectPopupParent && DisconnectPopupParent.activeSelf)
         {
             HidePopupImmediate(DisconnectPopupParent, DisconnectPopup);
         }
-
-        // Set flag if disconnect should show after error is dismissed
         if (showDisconnectAfter)
         {
             hasPendingDisconnect = true;
@@ -687,7 +652,6 @@ public class UIController : MonoBehaviour
     {
         CloseErrorPopup();
 
-        // Handle different error scenarios after user dismisses error
         if (isAnotherDeviceError)
         {
             isAnotherDeviceError = false;
@@ -695,7 +659,6 @@ public class UIController : MonoBehaviour
         }
         else if (hasPendingDisconnect)
         {
-            // Show disconnect popup after error is dismissed
             hasPendingDisconnect = false;
             ShowDisconnectPopup();
         }
@@ -733,14 +696,11 @@ public class UIController : MonoBehaviour
     #region Disconnect Popup
     internal void ShowDisconnectPopup()
     {
-        // If error popup is showing, queue disconnect to show after error is dismissed
         if (ErrorPopupParent && ErrorPopupParent.activeSelf)
         {
             hasPendingDisconnect = true;
-            return; // Don't show disconnect yet, wait for error to be dismissed
+            return; 
         }
-
-        // Close reconnect popup if it's showing
         if (ReconnectPopupParent && ReconnectPopupParent.activeSelf)
             SlideOutPopup(ReconnectPopupParent, ReconnectPopup);
 

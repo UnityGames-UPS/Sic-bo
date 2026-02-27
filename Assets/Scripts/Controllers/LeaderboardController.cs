@@ -61,10 +61,6 @@ public class LeaderboardController : MonoBehaviour
         localPlayerAvatar = avatar;
     }
 
-    /// <summary>
-    /// Gets the RectTransform of a player in the leaderboard by username.
-    /// Returns null if player not found.
-    /// </summary>
     internal RectTransform GetPlayerPosition(string username, bool checkWinners)
     {
         if (string.IsNullOrEmpty(username)) return null;
@@ -108,7 +104,6 @@ public class LeaderboardController : MonoBehaviour
         currentWinners.Clear();
         StopAllAnimations();
 
-        // Store original positions
         originalPositions.Clear();
         foreach (var block in richestBlocks)
         {
@@ -145,8 +140,6 @@ public class LeaderboardController : MonoBehaviour
 
         if (leaderboardParent != null && !leaderboardParent.activeSelf)
             leaderboardParent.SetActive(true);
-
-        // Check for cascade scenarios (multiple position changes)
         bool richestCascade = DetectCascade(currentRichest, richestData);
         bool winnersCascade = DetectCascade(currentWinners, winnersData);
 
@@ -155,14 +148,11 @@ public class LeaderboardController : MonoBehaviour
 
         for (int i = 0; i < 3; i++)
             UpdatePlayerBlock(winnersBlocks, currentWinners, i, winnersData[i], 1f, true, winnersCascade);
-
-        // Animation will complete after all blocks finish
         StartCoroutine(MarkAnimationComplete());
     }
 
     private IEnumerator MarkAnimationComplete()
-    {
-        // Wait for longest possible animation duration
+    { 
         float maxDuration = Mathf.Max(interchangeDuration, slideDuration * 2) + 0.5f;
         yield return new WaitForSeconds(maxDuration);
         isAnimating = false;
@@ -180,8 +170,6 @@ public class LeaderboardController : MonoBehaviour
                 positionChanges++;
             }
         }
-
-        // If more than one position is changing, it's a cascade
         return positionChanges > 1;
     }
 
@@ -233,7 +221,6 @@ public class LeaderboardController : MonoBehaviour
         bool playerChanged = !isFirstTime && currentData[index].username != newEntry.username;
         double displayValue = isWinners ? newEntry.totalWins : newEntry.balance;
 
-        // Check if this is a position interchange (player moved from another position)
         int oldPosition = FindPlayerPosition(currentData, newEntry.username);
         bool isPositionSwap = oldPosition != -1 && oldPosition != index;
 
@@ -247,7 +234,6 @@ public class LeaderboardController : MonoBehaviour
         }
         else if (isPositionSwap && !isCascade)
         {
-            // Only use interchange for simple 1:1 swaps (not cascade scenarios)
             LeaderboardPlayerBlock oldBlock = blocks[oldPosition];
             LeaderboardEntry oldBlockEntry = currentData[index];
 
@@ -264,7 +250,6 @@ public class LeaderboardController : MonoBehaviour
         }
         else if (playerChanged)
         {
-            // Use fast slide for cascade scenarios or new players
             currentData[index] = newEntry;
             StopBlockAnimation(block);
             AddBlockCoroutine(block, StartCoroutine(SlideOutAndUpdate(block, newEntry, slideDir, displayValue, index, isWinners)));
@@ -331,24 +316,19 @@ public class LeaderboardController : MonoBehaviour
 
         Vector2 pos1 = rect1.anchoredPosition;
         Vector2 pos2 = rect2.anchoredPosition;
-
-        // Animate position swap
         rect1.DOAnchorPos(pos2, interchangeDuration).SetEase(Ease.InOutQuad);
         rect2.DOAnchorPos(pos1, interchangeDuration).SetEase(Ease.InOutQuad);
 
         yield return new WaitForSeconds(interchangeDuration);
 
-        // Swap the actual positions in hierarchy
         int siblingIndex1 = rect1.GetSiblingIndex();
         int siblingIndex2 = rect2.GetSiblingIndex();
         rect1.SetSiblingIndex(siblingIndex2);
         rect2.SetSiblingIndex(siblingIndex1);
 
-        // Reset positions after hierarchy swap
         rect1.anchoredPosition = pos1;
         rect2.anchoredPosition = pos2;
 
-        // Update data
         ResetTextState(block1.NameText);
         ResetTextState(block1.BalanceText);
         ResetTextState(block2.NameText);
@@ -357,7 +337,6 @@ public class LeaderboardController : MonoBehaviour
         block1.SetPlayerData(entry1.username, displayValue1, PickAvatar(entry1.username));
         block2.SetPlayerData(entry2.username, displayValue2, PickAvatar(entry2.username));
 
-        // Update position badges
         int index1 = -1, index2 = -1;
         var blocks = isWinners ? winnersBlocks : richestBlocks;
         for (int i = 0; i < blocks.Count; i++)
@@ -369,7 +348,6 @@ public class LeaderboardController : MonoBehaviour
         if (index1 != -1) SetPositionBadge(block1, index1, isWinners);
         if (index2 != -1) SetPositionBadge(block2, index2, isWinners);
 
-        // Restart animations
         float randomOffset1 = Random.Range(minRandomOffset, maxRandomOffset);
         float randomOffset2 = Random.Range(minRandomOffset, maxRandomOffset);
 
@@ -393,7 +371,6 @@ public class LeaderboardController : MonoBehaviour
         {
             blockRect.DOKill(complete: true);
 
-            // Use stored original position to ensure card returns correctly
             Vector2 restPos = originalPositions.ContainsKey(blockRect)
                 ? originalPositions[blockRect]
                 : blockRect.anchoredPosition;
@@ -409,7 +386,6 @@ public class LeaderboardController : MonoBehaviour
 
             yield return blockRect.DOAnchorPos(restPos, slideDuration).SetEase(Ease.OutQuad).WaitForCompletion();
 
-            // Force position to original (prevent drift)
             blockRect.anchoredPosition = restPos;
         }
         else
@@ -427,27 +403,25 @@ public class LeaderboardController : MonoBehaviour
 
     private IEnumerator AlternateNameBalance(LeaderboardPlayerBlock block)
     {
-        // SetPlayerData already shows name and hides balance, so we skip
-        // the name-reveal on the very first pass — prevents double-name display.
+ 
         bool firstIteration = true;
 
         while (true)
         {
             if (!firstIteration)
             {
-                // Balance is currently visible — fade it out, fade name in.
+           
                 StartCoroutine(FadeOutUp(block.BalanceText));
                 yield return StartCoroutine(FadeInAtPosition(block.NameText));
             }
 
-            // Name is now visible — hold.
+
             yield return new WaitForSeconds(nameDuration);
 
-            // Fade name out, fade balance in.
             StartCoroutine(FadeOutUp(block.NameText));
             yield return StartCoroutine(FadeInAtPosition(block.BalanceText));
 
-            // Balance is now visible — hold.
+  
             yield return new WaitForSeconds(balanceDuration);
 
             firstIteration = false;

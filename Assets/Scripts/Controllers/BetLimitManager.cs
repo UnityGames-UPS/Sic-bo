@@ -5,9 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
 
-/// <summary>
-/// Manages bet limit display panel
-/// </summary>
+
 [System.Serializable]
 public class BetLimitTexts
 {
@@ -231,7 +229,6 @@ public class BetLimitManager : MonoBehaviour
 
     private void OnConfirmClicked()
     {
-        // Same room selected — just close the panel
         if (currentSelectedRoom == playerCurrentRoom)
         {
             ClosePanel();
@@ -240,17 +237,14 @@ public class BetLimitManager : MonoBehaviour
 
         string targetRoom = currentSelectedRoom;
 
-        // Kill popup immediately — no close animation during a room switch
+     
         if (popupCoroutine != null) StopCoroutine(popupCoroutine);
         betLimitPanel.SetActive(false);
 
-        // Hand off to GameManager: leave current room → wait for server ack → join target room
+     
         gameManager?.SwitchRoom(targetRoom);
     }
 
-    /// <summary>
-    /// Dims the confirm button when the player has already selected their current room.
-    /// </summary>
     private void UpdateConfirmButton()
     {
         if (confirmButton == null) return;

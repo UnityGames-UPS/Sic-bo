@@ -70,7 +70,7 @@ public class LeaderboardEntry
 {
     public string username;
     public double balance;
-    public double totalWins;   // Used by winners leaderboard (richest uses balance)
+    public double totalWins;   
     public int rank;
 }
 
@@ -266,16 +266,9 @@ public class TimerData
 public class BonusData
 {
     public string roundId;
-
-    // Legacy fields (kept for backwards compatibility)
     public int bonusPlayer;
     public int bonusMultiplier;
 
-    // NEW: Dictionary of betOption -> array of multipliers
-    // Examples:
-    // - Single dice: {"single_1": [2, 3, 3]} → match1=2, match2=3, match3=3
-    // - Specific triple: {"specific_3_2": [3, 2]} → specific_3=3, specific_2=2
-    // - Other bets: {"sum_12": [1], "odd": [1]} → single multiplier in array
     public Dictionary<string, List<int>> bonus;
 
     public bool HasBonusDictionary()

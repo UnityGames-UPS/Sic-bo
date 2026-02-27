@@ -9,8 +9,6 @@ internal class ChipWinAnimationController : MonoBehaviour
     [Header("References")]
     [SerializeField] private RectTransform dealerSpawnPoint;
     [SerializeField] private GameObject chipPrefab;
-    // NOTE: chipSprites field removed — sprites are fetched live from BetController
-    // so they always match the current level's chip denominations.
     [SerializeField] private Canvas targetCanvas;
     [SerializeField] private RectTransform playerNameTarget;
     [SerializeField] private BetController betController;
@@ -46,7 +44,6 @@ internal class ChipWinAnimationController : MonoBehaviour
     #endregion
 
     #region Private Fields
-    // Pool stores RectTransform + Chip component together — no repeated GetComponent calls
     private readonly List<(RectTransform rt, Chip chip)> dealerPool = new List<(RectTransform, Chip)>();
     private readonly List<RectTransform> activeWinChips = new List<RectTransform>();
     private readonly List<RectTransform> stakeReturnChips = new List<RectTransform>();
@@ -54,7 +51,6 @@ internal class ChipWinAnimationController : MonoBehaviour
     private Coroutine winCoroutine;
     private Coroutine cashoutCoroutine;
 
-    // GC optimisation: reuse list for RecalculateWinAmounts
     private readonly List<WinAreaData> _recalcCache = new List<WinAreaData>();
     #endregion
 
@@ -260,8 +256,6 @@ internal class ChipWinAnimationController : MonoBehaviour
     private IEnumerator CR_DealerToBetAreas(List<WinAreaData> winAreas)
     {
         isAnimating = true;
-
-        // Pull chip values + sprites live from BetController — always current for the active level
         List<double> chipValues = betController != null ? betController.GetChipValues() : new List<double>();
         Sprite[] chipSprites = betController != null ? betController.GetChipSprites() : null;
 
@@ -278,12 +272,9 @@ internal class ChipWinAnimationController : MonoBehaviour
             Transform chipParent = playerBetComp.transform;
             AudioManager.Instance?.PlayChipAdd();
 
-            // ── Win / profit chips ──────────────────────────────────────────
             bool spawnWinChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
             if (spawnWinChips)
             {
-                // Get denomination breakdown for the win amount
-                // e.g. winAmount=2 with chipValues=[0.5,1,5] → [{0.5,0},{0.5,0},{1,1}]
                 var combination = BuildCombination(area.winAmount, chipValues, chipSprites);
                 int count = Mathf.Clamp(combination.Count, minChipsPerWin, maxChipsPerWin);
 
@@ -310,10 +301,8 @@ internal class ChipWinAnimationController : MonoBehaviour
                 }
             }
 
-            // ── Stake-return chips ──────────────────────────────────────────
             int stakeCount = CalculateStakeReturnChipCount(area.winRatio, area.betAmount);
             var stakeCombination = BuildCombination(area.betAmount, chipValues, chipSprites);
-            // Respect the stakeCount ceiling but never show more chips than we have denominations
             int actualStakeCount = Mathf.Min(stakeCount, Mathf.Max(1, stakeCombination.Count));
 
             for (int i = 0; i < actualStakeCount && poolIdx < dealerPool.Count; i++, poolIdx++)
@@ -340,7 +329,6 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         yield return new WaitForSeconds(0.20f);
 
-        // Reparent to chipParent and collect world targets
         var animData = new List<(RectTransform rt, Vector3 worldTarget)>();
         foreach (var (rt, parent, localPos) in assignments)
         {
@@ -434,8 +422,6 @@ internal class ChipWinAnimationController : MonoBehaviour
             toSweep.Add(rt);
         }
         stakeReturnChips.Clear();
-
-        // Spawn a few extra "flair" chips from the pool
         int extraNeeded = Mathf.Min(3, dealerPool.Count);
         foreach (var (rt, _) in dealerPool)
         {
@@ -455,7 +441,6 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         yield return new WaitForSeconds(0.18f);
 
-        // Snapshot canvas positions before reparenting
         var chipCanvasPositions = new Dictionary<RectTransform, Vector2>();
         foreach (var rt in toSweep)
         {
@@ -514,10 +499,6 @@ internal class ChipWinAnimationController : MonoBehaviour
 
     #region Helpers
 
-    /// <summary>
-    /// Returns a chip denomination list for <paramref name="amount"/> via GameUtilities.FindChipCombination.
-    /// Falls back to a single chip entry if no values are available.
-    /// </summary>
     private List<ChipCombinationItem> BuildCombination(double amount, List<double> chipValues, Sprite[] sprites)
     {
         if (chipValues != null && chipValues.Count > 0)
@@ -527,22 +508,16 @@ internal class ChipWinAnimationController : MonoBehaviour
                 return combo;
         }
 
-        // Fallback: single chip, closest sprite by threshold
         return new List<ChipCombinationItem>
         {
             new ChipCombinationItem { amount = amount, chipIndex = FallbackSpriteIndex(amount, sprites) }
         };
     }
-
-    /// <summary>
-    /// Calls Chip.SetData with the correct sprite and label from the combination.
-    /// Index cycles when there are more visual chips than combination entries.
-    /// </summary>
     private static void ApplyChipVisual(Chip chip, List<ChipCombinationItem> combination, int i, Sprite[] sprites)
     {
         if (chip == null || sprites == null || sprites.Length == 0 || combination.Count == 0) return;
 
-        // Cycle through the combination list if we need to show more chips than entries
+        
         ChipCombinationItem item = combination[i % combination.Count];
         int safeIdx = Mathf.Clamp(item.chipIndex, 0, sprites.Length - 1);
 

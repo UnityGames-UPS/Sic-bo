@@ -98,7 +98,6 @@ public static class GameUtilities
         _chipCombResultCache.Clear();
         if (availableChipValues == null || availableChipValues.Count == 0) return _chipCombResultCache;
 
-        // Reuse sorted list — avoids allocation + GC on every repeat bet
         _sortedValuesCache.Clear();
         _sortedValuesCache.AddRange(availableChipValues);
         _sortedValuesCache.Sort((a, b) => b.CompareTo(a));

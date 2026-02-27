@@ -2,10 +2,7 @@
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Pure display component — holds UI references and exposes data setters.
-/// All name/balance toggle animation is driven by LeaderboardController.
-/// </summary>
+
 public class LeaderboardPlayerBlock : MonoBehaviour
 {
     [Header("UI Elements")]
@@ -15,7 +12,6 @@ public class LeaderboardPlayerBlock : MonoBehaviour
     public GameObject Container;
     public Image PositionImage;
 
-    // ── Public API ───────────────────────────────────────────────────────────
 
     internal void SetPlayerData(string username, double balance, Sprite avatar)
     {
@@ -23,11 +19,6 @@ public class LeaderboardPlayerBlock : MonoBehaviour
         if (BalanceText != null) BalanceText.text = GameUtilities.FormatBalance(balance);
         if (AvatarImage != null && avatar != null) AvatarImage.sprite = avatar;
         if (Container != null) Container.SetActive(true);
-
-        // Start with name visible, balance hidden.
-        // Do NOT call ShowName() here — that would double-show name at the start
-        // of AlternateNameBalance which also begins by showing name.
-        // Instead we set state directly so the controller loop begins on "show balance" first.
         SetNameVisible(true);
         SetBalanceVisible(false);
     }
@@ -45,21 +36,17 @@ public class LeaderboardPlayerBlock : MonoBehaviour
     {
         if (BalanceText != null) BalanceText.text = GameUtilities.FormatBalance(balance);
     }
-
-    /// <summary>Instantly show name, hide balance — no tween.</summary>
     internal void ShowName()
     {
         SetNameVisible(true);
         SetBalanceVisible(false);
     }
 
-    /// <summary>Instantly show balance, hide name — no tween.</summary>
     internal void ShowBalance()
     {
         SetNameVisible(false);
         SetBalanceVisible(true);
     }
-
     internal void HideAll()
     {
         if (Container != null)
@@ -73,12 +60,8 @@ public class LeaderboardPlayerBlock : MonoBehaviour
             AvatarImage?.gameObject.SetActive(false);
         }
     }
-
-
     internal CanvasGroup GetNameCanvasGroup() => NameText != null ? GetOrAddCanvasGroup(NameText.gameObject) : null;
     internal CanvasGroup GetBalanceCanvasGroup() => BalanceText != null ? GetOrAddCanvasGroup(BalanceText.gameObject) : null;
-
-
     private void SetNameVisible(bool visible)
     {
         if (NameText == null) return;
@@ -101,7 +84,6 @@ public class LeaderboardPlayerBlock : MonoBehaviour
         var cg = go.GetComponent<CanvasGroup>();
         return cg != null ? cg : go.AddComponent<CanvasGroup>();
     }
-
     private string MaskUsername(string username)
     {
         if (string.IsNullOrEmpty(username) || username.Length <= 4) return username;

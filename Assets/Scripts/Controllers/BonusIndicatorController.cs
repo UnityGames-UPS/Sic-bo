@@ -136,7 +136,7 @@ internal class BonusIndicatorController : MonoBehaviour
 
     internal void HandleDiceResult(List<string> winningBetOptions)
     {
-        // Reuse cached set — avoids allocating a new HashSet<string> every dice result
+
         _winningSetCache.Clear();
         if (winningBetOptions != null)
             foreach (var s in winningBetOptions)
@@ -170,7 +170,6 @@ internal class BonusIndicatorController : MonoBehaviour
     {
         HideAllActiveIndicators();
 
-        // Kill all tracked DOTween sequences to prevent memory leaks
         foreach (var seq in _activeSequences.Values) seq?.Kill();
         _activeSequences.Clear();
 
@@ -213,8 +212,6 @@ internal class BonusIndicatorController : MonoBehaviour
                 Debug.LogWarning($"[BonusIndicator] No pooled indicator for '{betOption}'");
             return;
         }
-
-        // Reuse cached multiplier list if entry already exists, else allocate once
         if (!currentMultipliers.TryGetValue(betOption, out List<int> cachedList))
         {
             cachedList = new List<int>(multipliers.Count);
@@ -273,7 +270,6 @@ internal class BonusIndicatorController : MonoBehaviour
             );
         });
 
-        // Kill any existing fall sequence for this option before creating a new one
         string fallSeqKey = $"fall_{betOption}";
         if (_activeSequences.TryGetValue(fallSeqKey, out Sequence oldFallSeq)) { oldFallSeq?.Kill(); _activeSequences.Remove(fallSeqKey); }
 
@@ -342,7 +338,6 @@ internal class BonusIndicatorController : MonoBehaviour
 
         indicator.transform.DOKill();
 
-        // Kill any existing exit sequence for this indicator
         string exitSeqKey = $"exit_{indicator.betOption}";
         if (_activeSequences.TryGetValue(exitSeqKey, out Sequence oldExitSeq)) { oldExitSeq?.Kill(); _activeSequences.Remove(exitSeqKey); }
 
