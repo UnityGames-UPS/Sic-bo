@@ -1,7 +1,7 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using DG.Tweening;
 
 public class RoundController : MonoBehaviour
 {
@@ -38,6 +38,13 @@ public class RoundController : MonoBehaviour
 
     [Header("Audio")]
     [SerializeField] private float diceResultSoundDelay = 1.0f;
+
+    [Header("Preset Dice Positions")]
+    [SerializeField] private List<DicePositionSet> dicePositionSets = new List<DicePositionSet>();
+
+    [Header("Random Variation Settings")]
+    [SerializeField] private float maxRotationOffset = 12f;   
+    [SerializeField] private float maxPositionJitter = 5f;   
     #endregion
 
     #region Private Fields
@@ -171,18 +178,9 @@ public class RoundController : MonoBehaviour
         bool isTriple = currentDiceResult.dice1 == currentDiceResult.dice2 && currentDiceResult.dice2 == currentDiceResult.dice3;
 
         SetDiceValues(currentDiceResult);
-        if (DiceContainer) DiceContainer.SetActive(true);
+        ApplyRandomPresetPosition();
         ShowResult(currentDiceResult.sum, currentDiceResult.matchSide, isTriple);
-        AudioManager.Instance?.PlayDiceShow();
         PlayDiceResultSounds(currentDiceResult);
-
-        if (DiceContainer)
-        {
-            DiceContainer.transform.localScale = Vector3.zero;
-            DiceContainer.transform.DOScale(1.2f, 0.3f)
-                .SetEase(Ease.OutBack)
-                .OnComplete(() => DiceContainer.transform.DOScale(1f, 0.2f));
-        }
     }
 
     private void OnAnimationHideDice()
@@ -195,6 +193,35 @@ public class RoundController : MonoBehaviour
     #endregion
 
     #region Dice Display
+    private void ApplyRandomPresetPosition()
+    {
+        if (dicePositionSets == null || dicePositionSets.Count == 0)
+        {
+            Debug.LogWarning("No Dice Position Sets Assigned!");
+            return;
+        }
+
+        int randomIndex = Random.Range(0, dicePositionSets.Count);
+        DicePositionSet selectedSet = dicePositionSets[randomIndex];
+
+        ApplyToDice(Dice1_Image, selectedSet.GetDice1Pos());
+        ApplyToDice(Dice2_Image, selectedSet.GetDice2Pos());
+        ApplyToDice(Dice3_Image, selectedSet.GetDice3Pos());
+    }
+    private void ApplyToDice(Image diceImage, Vector2 basePosition)
+    {
+        if (diceImage == null) return;
+
+        RectTransform rect = diceImage.rectTransform;
+        Vector2 jitter = new Vector2(
+            Random.Range(-maxPositionJitter, maxPositionJitter),
+            Random.Range(-maxPositionJitter, maxPositionJitter)
+        );
+
+        rect.anchoredPosition = basePosition + jitter;
+        float randomZ = Random.Range(-maxRotationOffset, maxRotationOffset);
+        rect.localRotation = Quaternion.Euler(0f, 0f, randomZ);
+    }
     private void SetDiceValues(DiceResultData data)
     {
         if (DiceSprites == null || DiceSprites.Length < 6) return;
@@ -240,4 +267,16 @@ public class RoundController : MonoBehaviour
         AudioManager.Instance?.PlayDiceResultSequence(data.dice1, data.dice2, data.dice3, diceResultSoundDelay);
     }
     #endregion
+}
+
+[System.Serializable]
+public class DicePositionSet
+{
+    public RectTransform dice1Ref;
+    public RectTransform dice2Ref;
+    public RectTransform dice3Ref;
+
+    public Vector2 GetDice1Pos() => dice1Ref != null ? dice1Ref.anchoredPosition : Vector2.zero;
+    public Vector2 GetDice2Pos() => dice2Ref != null ? dice2Ref.anchoredPosition : Vector2.zero;
+    public Vector2 GetDice3Pos() => dice3Ref != null ? dice3Ref.anchoredPosition : Vector2.zero;
 }

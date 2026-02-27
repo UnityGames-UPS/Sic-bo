@@ -7,50 +7,59 @@ using UnityEngine.UI;
 public class DiceBoxAnimationController : MonoBehaviour
 {
     #region Serialized Fields
-    [Header("Animation Sequences")]
+
+    [Header("Base Layer")]
+    [SerializeField] private Image baseImage;
+
+    [Header("Top Layer")]
+    [SerializeField] private Image topImage;
+    [SerializeField] private GameObject topLayerContainer;
+
+    [Header("Containers")]
+    [SerializeField] private GameObject diceContainer;
+
+    [Header("Base Layer Sequences")]
     [SerializeField] private List<Sprite> shakeSequence;
     [SerializeField] private List<Sprite> idleSequence;
     [SerializeField] private List<Sprite> zoomInSequence;
-    [SerializeField] private List<Sprite> openingSequence;
-    [SerializeField] private List<Sprite> closingSequence;
 
-    [Header("UI References")]
-    [SerializeField] private Image animationImage;
-    [SerializeField] private GameObject diceBoxContainer;
-    [SerializeField] private GameObject diceContainer;
+    [Header("Open Close Sequences")]
+    [SerializeField] private List<Sprite> openCloseBaseSequence;
+    [SerializeField] private List<Sprite> openCloseTopSequence;
 
-    [Header("Timing Configuration")]
+    [Header("Timing")]
     [SerializeField] private float shakeDuration = 2.5f;
-    [SerializeField] private float idleDuration = 4f;
+    [SerializeField] private float idleDuration = 4.0f;
     [SerializeField] private float zoomInDuration = 0.8f;
-    [SerializeField] private float openingDuration = 2.3f;
-    [SerializeField] private float holdOpenDuration = 0.5f;
-    [SerializeField] private float closingDuration = 1.5f;
+    [SerializeField] private float openDuration = 2.3f;
+    [SerializeField] private float holdOpenDuration = 2.0f;
+    [SerializeField] private float closeDuration = 1.5f;
     [SerializeField] private float zoomOutDuration = 0.9f;
 
-    [Header("Mask — Opening Frames")]
-    [SerializeField] private int boxOpeningStartFrame = 10;
-    [SerializeField] private int boxFullyOpenFrame = 51;
+    [Header("Open Close Frame Triggers")]
+    [SerializeField] private int holdOnFrame = 51;
+    [SerializeField] private int diceShowFrame = 40;
+    [SerializeField] private int diceHideFrame = 65;
+    [SerializeField] private int boxOpenSoundFrame = 0;
+    [SerializeField] private int boxCloseSoundFrame = 0;
+    [SerializeField] private int diceScaleStartFrame = 40;
+    [SerializeField] private int diceScaleEndFrame = 51;
+    [SerializeField] private float diceScaleTarget = 1.3f;
+    [SerializeField] private AnimationCurve diceScaleCurve = new AnimationCurve(new Keyframe(0f, 0f, 0f, 3f), new Keyframe(0.5f, 0.88f, 1.2f, 0.4f), new Keyframe(1f, 1f, 0.1f, 0f));
+    //[SerializeField] private AnimationCurve diceScaleCurve1 = new AnimationCurve(new Keyframe(0f, 0f, 0f, 3f), new Keyframe(0.5f, 0.88f, 1.2f, 0.4f), new Keyframe(1f, 1f, 0.1f, 0f));
+    [SerializeField] private int diceScaleResetFrameOffset = 5;
 
-    [Header("Mask — Closing Frames")]
-    [SerializeField] private int boxStartClosingFrame = 5;
-    [SerializeField] private int boxClosedFrame = 28;
-
-    [Header("Mask — Scale-Up Frames")]
-    [SerializeField] private int boxScaleUpStartFrame = 10;
-    [SerializeField] private int boxScaleUpEndFrame = 51;
-
-    [Header("Mask Controller")]
-    [SerializeField] private DiceMaskFollowPath diceMaskFollowPath;
-
-    [Header("Speed Control")]
+    [Header("Speed")]
     [SerializeField] private float fastForwardSpeed = 3f;
+
     #endregion
 
     #region Private Fields
+
     private DiceBoxState currentState = DiceBoxState.Hidden;
     private Coroutine animationCoroutine;
     private bool isAnimating = false;
+    private float playbackSpeed = 1f;
 
     private long serverTimeOffset = 0;
 
@@ -62,27 +71,30 @@ public class DiceBoxAnimationController : MonoBehaviour
     private bool hasPlayedBoxOpenSound = false;
     private bool hasPlayedBoxCloseSound = false;
 
-    private float playbackSpeed = 1f;
-
     private bool hasPendingRound = false;
     private long pendingRoundStartTimestamp;
     private long pendingBettingEndTimestamp;
     private long pendingServerTime;
 
     private bool hasPendingReveal = false;
+
     #endregion
 
     #region Unity Lifecycle
+
     private void Awake()
     {
-        if (diceBoxContainer) diceBoxContainer.SetActive(false);
+
         if (diceContainer) diceContainer.SetActive(false);
+        SetTopLayerActive(false);
     }
 
     private void OnDestroy() => StopAllAnimations();
+
     #endregion
 
     #region Internal API
+
     internal void StartAnimationCycleWithServerSync(long roundStartTimestamp, long bettingEndTimestamp, long currentServerTime)
     {
         if (currentState == DiceBoxState.Opening ||
@@ -103,35 +115,26 @@ public class DiceBoxAnimationController : MonoBehaviour
         hasPendingReveal = false;
 
         StopAllAnimations();
-
-        hasPlayedShakeSound = false;
-        hasPlayedBoxOpenSound = false;
-        hasPlayedBoxCloseSound = false;
+        ResetSoundFlags();
 
         serverTimeOffset = currentServerTime - (long)(Time.realtimeSinceStartup * 1000);
 
-        long elapsedMs = currentServerTime - roundStartTimestamp;
-        float elapsedSeconds = elapsedMs / 1000f;
+        float elapsedSeconds = (currentServerTime - roundStartTimestamp) / 1000f;
 
-        if (diceBoxContainer) diceBoxContainer.SetActive(true);
         if (diceContainer) diceContainer.SetActive(false);
+        SetTopLayerActive(false);
 
-        diceMaskFollowPath?.ResetToStart();
         JumpToCorrectPhase(elapsedSeconds);
     }
 
     internal void StartAnimationCycle()
     {
         StopAllAnimations();
+        ResetSoundFlags();
 
-        hasPlayedShakeSound = false;
-        hasPlayedBoxOpenSound = false;
-        hasPlayedBoxCloseSound = false;
-
-        if (diceBoxContainer) diceBoxContainer.SetActive(true);
         if (diceContainer) diceContainer.SetActive(false);
+        SetTopLayerActive(false);
 
-        diceMaskFollowPath?.ResetToStart();
         PlayShakeAnimation();
     }
 
@@ -150,7 +153,7 @@ public class DiceBoxAnimationController : MonoBehaviour
         {
             hasPendingReveal = false;
             StopAllAnimations();
-            PlayOpeningAnimation();
+            PlayOpenCloseAnimation();
         }
         else if (currentState == DiceBoxState.Idle || currentState == DiceBoxState.Shaking)
         {
@@ -160,44 +163,36 @@ public class DiceBoxAnimationController : MonoBehaviour
         }
     }
 
-    internal void CloseAndFinish()
-    {
-        if (currentState == DiceBoxState.Open)
-        {
-            StopAllAnimations();
-            PlayClosingAnimation();
-        }
-    }
-
     internal void ForceHide()
     {
         StopAllAnimations();
-        if (diceBoxContainer) diceBoxContainer.SetActive(false);
         if (diceContainer) diceContainer.SetActive(false);
-        diceMaskFollowPath?.ResetToStart();
+        SetTopLayerActive(false);
         currentState = DiceBoxState.Hidden;
     }
 
-    internal void SetDiceShowCallback(Action callback) => onDiceShouldShow = callback;
-    internal void SetDiceHideCallback(Action callback) => onDiceShouldHide = callback;
-    internal void SetAnimationCycleCompleteCallback(Action callback) => onAnimationCycleComplete = callback;
+    internal void SetDiceShowCallback(Action cb) => onDiceShouldShow = cb;
+    internal void SetDiceHideCallback(Action cb) => onDiceShouldHide = cb;
+    internal void SetAnimationCycleCompleteCallback(Action cb) => onAnimationCycleComplete = cb;
 
     internal DiceBoxState GetCurrentState() => currentState;
     internal bool IsAnimating() => isAnimating;
     internal float GetTotalCycleTime() =>
-        shakeDuration + zoomInDuration + openingDuration + holdOpenDuration + closingDuration + zoomOutDuration;
+        shakeDuration + idleDuration + zoomInDuration + openDuration + holdOpenDuration + closeDuration + zoomOutDuration;
+
     #endregion
 
-    #region Phase Jump Logic
+    #region Phase Jump
+
     private void JumpToCorrectPhase(float elapsedSeconds)
     {
         float shakeEnd = shakeDuration;
         float idleEnd = shakeEnd + idleDuration;
         float zoomInEnd = idleEnd + zoomInDuration;
-        float openingEnd = zoomInEnd + openingDuration;
-        float holdOpenEnd = openingEnd + holdOpenDuration;
-        float closingEnd = holdOpenEnd + closingDuration;
-        float zoomOutEnd = closingEnd + zoomOutDuration;
+        float openEnd = zoomInEnd + openDuration;
+        float holdEnd = openEnd + holdOpenDuration;
+        float closeEnd = holdEnd + closeDuration;
+        float zoomOutEnd = closeEnd + zoomOutDuration;
 
         if (elapsedSeconds < shakeEnd)
         {
@@ -214,36 +209,33 @@ public class DiceBoxAnimationController : MonoBehaviour
             hasPlayedShakeSound = true;
             PlayZoomInAnimation(elapsedSeconds - idleEnd);
         }
-        else if (elapsedSeconds < openingEnd)
+        else if (elapsedSeconds < openEnd)
         {
             hasPlayedShakeSound = true;
             hasPlayedBoxOpenSound = true;
             hasPendingReveal = false;
-            PlayOpeningAnimation(elapsedSeconds - zoomInEnd);
+            PlayOpenCloseAnimation(elapsedSeconds - zoomInEnd, OpenClosePhase.Opening);
         }
-        else if (elapsedSeconds < holdOpenEnd)
+        else if (elapsedSeconds < holdEnd)
         {
             hasPlayedShakeSound = true;
             hasPlayedBoxOpenSound = true;
             hasPendingReveal = false;
-
-            if (openingSequence != null && openingSequence.Count > 0)
-                SetDisplayToFrame(openingSequence, openingSequence.Count - 1);
-
-            diceMaskFollowPath?.SetOpenProgress(1f);
+            SnapOpenCloseToFrame(holdOnFrame);
             if (diceContainer) diceContainer.SetActive(true);
             onDiceShouldShow?.Invoke();
-
             currentState = DiceBoxState.Open;
-            animationCoroutine = StartCoroutine(HoldOpenThenClose(holdOpenEnd - elapsedSeconds));
+            animationCoroutine = StartCoroutine(HoldThenClose(holdEnd - elapsedSeconds));
         }
-        else if (elapsedSeconds < closingEnd)
+        else if (elapsedSeconds < closeEnd)
         {
             hasPlayedShakeSound = true;
             hasPlayedBoxOpenSound = true;
             hasPlayedBoxCloseSound = true;
             hasPendingReveal = false;
-            PlayClosingAnimation(elapsedSeconds - holdOpenEnd);
+            if (diceContainer) diceContainer.SetActive(true);
+            onDiceShouldShow?.Invoke();
+            PlayOpenCloseAnimation(elapsedSeconds - holdEnd, OpenClosePhase.Closing);
         }
         else if (elapsedSeconds < zoomOutEnd)
         {
@@ -251,19 +243,23 @@ public class DiceBoxAnimationController : MonoBehaviour
             hasPlayedBoxOpenSound = true;
             hasPlayedBoxCloseSound = true;
             hasPendingReveal = false;
-            PlayZoomOutAnimation(elapsedSeconds - closingEnd);
+            PlayZoomOutAnimation(elapsedSeconds - closeEnd);
         }
         else
         {
             hasPendingReveal = false;
             currentState = DiceBoxState.Waiting;
-            if (diceBoxContainer) diceBoxContainer.SetActive(false);
+
             onAnimationCycleComplete?.Invoke();
         }
     }
+
+    private enum OpenClosePhase { Opening, Closing }
+
     #endregion
 
     #region Animation Phases
+
     private void PlayShakeAnimation(float startTime = 0f)
     {
         currentState = DiceBoxState.Shaking;
@@ -272,8 +268,9 @@ public class DiceBoxAnimationController : MonoBehaviour
         AudioManager.Instance?.PlayShake();
         hasPlayedShakeSound = true;
 
-        animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            shakeSequence, shakeDuration, false, false, startTime, OnShakeComplete));
+        animationCoroutine = StartCoroutine(PlayBaseSequence(
+            shakeSequence, shakeDuration, loop: false, reverse: false,
+            startTime: startTime, onComplete: OnShakeComplete));
     }
 
     private void OnShakeComplete() => PlayIdleAnimation();
@@ -281,15 +278,17 @@ public class DiceBoxAnimationController : MonoBehaviour
     private void PlayIdleAnimation(float startTime = 0f)
     {
         currentState = DiceBoxState.Idle;
-        animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            idleSequence, idleDuration, false, true, startTime, null));
+        animationCoroutine = StartCoroutine(PlayBaseSequence(
+            idleSequence, idleDuration, loop: true, reverse: false,
+            startTime: startTime, onComplete: null));
     }
 
     private void PlayZoomInAnimation(float startTime = 0f)
     {
         currentState = DiceBoxState.ZoomingIn;
-        animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            zoomInSequence, zoomInDuration, false, false, startTime, OnZoomInComplete));
+        animationCoroutine = StartCoroutine(PlayBaseSequence(
+            zoomInSequence, zoomInDuration, loop: false, reverse: false,
+            startTime: startTime, onComplete: OnZoomInComplete));
     }
 
     private void OnZoomInComplete()
@@ -298,64 +297,76 @@ public class DiceBoxAnimationController : MonoBehaviour
         if (hasPendingReveal)
         {
             hasPendingReveal = false;
-            PlayOpeningAnimation();
+            PlayOpenCloseAnimation();
         }
     }
 
-    private void PlayOpeningAnimation(float startTime = 0f)
+    private void PlayOpenCloseAnimation(float startTime = 0f, OpenClosePhase phase = OpenClosePhase.Opening)
     {
-        currentState = DiceBoxState.Opening;
+        SetTopLayerActive(true);
 
-        if (diceContainer) diceContainer.SetActive(true);
-        onDiceShouldShow?.Invoke();
-
-        if (!hasPlayedBoxOpenSound)
+        if (phase == OpenClosePhase.Opening)
         {
-            AudioManager.Instance?.PlayBoxOpen();
-            hasPlayedBoxOpenSound = true;
-        }
+            currentState = DiceBoxState.Opening;
 
-        animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            openingSequence, openingDuration, false, false, startTime, OnOpeningComplete));
+            animationCoroutine = StartCoroutine(PlayOpenCloseRange(
+                startFrame: 0,
+                endFrame: holdOnFrame,
+                duration: openDuration,
+                startTime: startTime,
+                onComplete: OnOpeningComplete));
+        }
+        else
+        {
+            currentState = DiceBoxState.Closing;
+
+            int totalFrames = TotalOpenCloseFrames();
+            int closeStart = Mathf.Min(holdOnFrame + 1, totalFrames - 1);
+
+            animationCoroutine = StartCoroutine(PlayOpenCloseRange(
+                startFrame: closeStart,
+                endFrame: totalFrames - 1,
+                duration: closeDuration,
+                startTime: startTime,
+                onComplete: OnClosingComplete));
+        }
     }
 
     private void OnOpeningComplete()
     {
         currentState = DiceBoxState.Open;
-        animationCoroutine = StartCoroutine(HoldOpenThenClose(holdOpenDuration));
+        animationCoroutine = StartCoroutine(HoldThenClose(holdOpenDuration));
     }
 
-    private IEnumerator HoldOpenThenClose(float holdDuration)
+    private IEnumerator HoldThenClose(float holdDuration)
     {
         yield return new WaitForSeconds(holdDuration / Mathf.Max(playbackSpeed, 0.01f));
-        PlayClosingAnimation();
-    }
 
-    private void PlayClosingAnimation(float startTime = 0f)
-    {
         currentState = DiceBoxState.Closing;
 
-        if (!hasPlayedBoxCloseSound)
-        {
-            AudioManager.Instance?.PlayBoxClose();
-            hasPlayedBoxCloseSound = true;
-        }
+        int totalFrames = TotalOpenCloseFrames();
+        int closeStart = Mathf.Min(holdOnFrame + 1, totalFrames - 1);
 
-        animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            closingSequence, closingDuration, false, false, startTime, OnClosingComplete));
+        animationCoroutine = StartCoroutine(PlayOpenCloseRange(
+            startFrame: closeStart,
+            endFrame: totalFrames - 1,
+            duration: closeDuration,
+            startTime: 0f,
+            onComplete: OnClosingComplete));
     }
 
     private void OnClosingComplete()
     {
-        diceMaskFollowPath?.ResetToStart();
+        SetTopLayerActive(false);
         PlayZoomOutAnimation();
     }
 
     private void PlayZoomOutAnimation(float startTime = 0f)
     {
         currentState = DiceBoxState.ZoomingOut;
-        animationCoroutine = StartCoroutine(PlaySequenceCoroutine(
-            zoomInSequence, zoomOutDuration, true, false, startTime, OnZoomOutComplete));
+        animationCoroutine = StartCoroutine(PlayBaseSequence(
+            zoomInSequence, zoomOutDuration, loop: false, reverse: true,
+            startTime: startTime, onComplete: OnZoomOutComplete));
     }
 
     private void OnZoomOutComplete()
@@ -371,14 +382,16 @@ public class DiceBoxAnimationController : MonoBehaviour
             StartAnimationCycleWithServerSync(pendingRoundStartTimestamp, pendingBettingEndTimestamp, corrected);
         }
     }
+
     #endregion
 
-    #region Core Animation Playback
-    private IEnumerator PlaySequenceCoroutine(
+    #region Core Coroutines
+
+    private IEnumerator PlayBaseSequence(
         List<Sprite> sequence,
         float duration,
-        bool reverse,
         bool loop,
+        bool reverse,
         float startTime,
         Action onComplete)
     {
@@ -389,48 +402,29 @@ public class DiceBoxAnimationController : MonoBehaviour
         }
 
         isAnimating = true;
-        float baseFrameDelay = duration / sequence.Count;
+        float frameDelay = duration / sequence.Count;
 
-        int startFrame = Mathf.FloorToInt(startTime / baseFrameDelay);
-        float timeIntoStartFrame = startTime - (startFrame * baseFrameDelay);
+        int startFrame = Mathf.FloorToInt(startTime / frameDelay);
+        float timeIntoStartFrame = startTime - startFrame * frameDelay;
 
-        if (timeIntoStartFrame > 0 && startFrame < sequence.Count)
+        if (timeIntoStartFrame > 0f && startFrame < sequence.Count)
         {
-            float remaining = (baseFrameDelay - timeIntoStartFrame) / Mathf.Max(playbackSpeed, 0.01f);
-
-            if (reverse)
-            {
-                int ri = sequence.Count - 1 - startFrame;
-                if (ri >= 0) SetDisplayToFrame(sequence, ri);
-            }
-            else
-            {
-                SetDisplayToFrame(sequence, startFrame);
-                HandleFrameTriggers(startFrame, sequence.Count);
-            }
-
-            yield return new WaitForSeconds(remaining);
+            int displayIdx = reverse ? (sequence.Count - 1 - startFrame) : startFrame;
+            SetBaseFrame(sequence, displayIdx);
+            yield return new WaitForSeconds((frameDelay - timeIntoStartFrame) / Mathf.Max(playbackSpeed, 0.01f));
             startFrame++;
         }
 
         do
         {
-            if (reverse)
+            int iFrom = reverse ? (sequence.Count - 1 - startFrame) : startFrame;
+            int iTo = reverse ? 0 : (sequence.Count - 1);
+            int step = reverse ? -1 : 1;
+
+            for (int i = iFrom; reverse ? (i >= iTo) : (i <= iTo); i += step)
             {
-                for (int i = sequence.Count - 1 - startFrame; i >= 0; i--)
-                {
-                    if (animationImage && sequence[i]) animationImage.sprite = sequence[i];
-                    yield return new WaitForSeconds(baseFrameDelay / Mathf.Max(playbackSpeed, 0.01f));
-                }
-            }
-            else
-            {
-                for (int i = startFrame; i < sequence.Count; i++)
-                {
-                    if (animationImage && sequence[i]) animationImage.sprite = sequence[i];
-                    HandleFrameTriggers(i, sequence.Count);
-                    yield return new WaitForSeconds(baseFrameDelay / Mathf.Max(playbackSpeed, 0.01f));
-                }
+                SetBaseFrame(sequence, i);
+                yield return new WaitForSeconds(frameDelay / Mathf.Max(playbackSpeed, 0.01f));
             }
 
             startFrame = 0;
@@ -443,61 +437,183 @@ public class DiceBoxAnimationController : MonoBehaviour
         if (!loop) onComplete?.Invoke();
     }
 
-    private void HandleFrameTriggers(int frame, int totalFrames)
+    private IEnumerator PlayOpenCloseRange(
+        int startFrame,
+        int endFrame,
+        float duration,
+        float startTime,
+        Action onComplete)
     {
-        if (currentState == DiceBoxState.Opening)
-        {
-            if (frame >= boxOpeningStartFrame && frame <= boxFullyOpenFrame)
-            {
-                int range = boxFullyOpenFrame - boxOpeningStartFrame;
-                float progress = range > 0 ? (float)(frame - boxOpeningStartFrame) / range : 1f;
-                diceMaskFollowPath?.SetOpenProgress(progress);
-            }
-            if (frame > boxFullyOpenFrame)
-                diceMaskFollowPath?.SetOpenProgress(1f);
+        int totalFrames = TotalOpenCloseFrames();
+        startFrame = Mathf.Clamp(startFrame, 0, totalFrames - 1);
+        endFrame = Mathf.Clamp(endFrame, 0, totalFrames - 1);
 
-            if (frame >= boxScaleUpStartFrame && frame <= boxScaleUpEndFrame)
-            {
-                int scaleRange = boxScaleUpEndFrame - boxScaleUpStartFrame;
-                float scaleProgress = scaleRange > 0 ? (float)(frame - boxScaleUpStartFrame) / scaleRange : 1f;
-                diceMaskFollowPath?.SetScaleProgress(scaleProgress);
-            }
-            else if (frame > boxScaleUpEndFrame)
-            {
-                diceMaskFollowPath?.SetScaleProgress(1f);
-            }
+        int frameCount = Mathf.Abs(endFrame - startFrame) + 1;
+        if (frameCount == 0) { onComplete?.Invoke(); yield break; }
+
+        isAnimating = true;
+        float frameDelay = duration / frameCount;
+
+        int skipFrames = Mathf.FloorToInt(startTime / frameDelay);
+        float timeIntoSkipFrame = startTime - skipFrames * frameDelay;
+        int currentFrame = Mathf.Min(startFrame + skipFrames, endFrame);
+
+        if (timeIntoSkipFrame > 0f && currentFrame <= endFrame)
+        {
+            SetOpenCloseFrameBothLayers(currentFrame);
+            FireOpenCloseFrameTriggers(currentFrame);
+            yield return new WaitForSeconds((frameDelay - timeIntoSkipFrame) / Mathf.Max(playbackSpeed, 0.01f));
+            currentFrame++;
         }
 
-        if (currentState == DiceBoxState.Closing)
+        for (int frame = currentFrame; frame <= endFrame; frame++)
         {
-            if (frame >= boxStartClosingFrame && frame <= boxClosedFrame)
-            {
-                int range = boxClosedFrame - boxStartClosingFrame;
-                float progress = range > 0 ? (float)(frame - boxStartClosingFrame) / range : 1f;
-                diceMaskFollowPath?.SetCloseProgress(progress);
-            }
+            SetOpenCloseFrameBothLayers(frame);
+            FireOpenCloseFrameTriggers(frame);
+            yield return new WaitForSeconds(frameDelay / Mathf.Max(playbackSpeed, 0.01f));
+        }
 
-            if (frame == boxClosedFrame)
-            {
-                if (diceContainer) diceContainer.SetActive(false);
-                onDiceShouldHide?.Invoke();
-            }
+        isAnimating = false;
+        animationCoroutine = null;
+        onComplete?.Invoke();
+    }
 
-            if (frame > boxClosedFrame)
-                diceMaskFollowPath?.SetCloseProgress(1f);
+    #endregion
+
+    #region Frame Helpers
+
+    private void SetBaseFrame(List<Sprite> sequence, int index)
+    {
+        if (baseImage == null || sequence == null) return;
+        if (index < 0 || index >= sequence.Count) return;
+        baseImage.sprite = sequence[index];
+    }
+
+    private void SetOpenCloseFrameBothLayers(int frameIndex)
+    {
+        if (baseImage != null && openCloseBaseSequence != null && frameIndex < openCloseBaseSequence.Count)
+            baseImage.sprite = openCloseBaseSequence[frameIndex];
+
+        if (topImage != null && openCloseTopSequence != null && frameIndex < openCloseTopSequence.Count)
+            topImage.sprite = openCloseTopSequence[frameIndex];
+    }
+
+    private void SnapOpenCloseToFrame(int frameIndex)
+    {
+        SetTopLayerActive(true);
+        SetOpenCloseFrameBothLayers(frameIndex);
+        if (diceContainer) diceContainer.transform.localScale = Vector3.one;
+    }
+
+    private void FireOpenCloseFrameTriggers(int frame)
+    {
+        if (frame == boxOpenSoundFrame && !hasPlayedBoxOpenSound)
+        {
+            AudioManager.Instance?.PlayBoxOpen();
+            hasPlayedBoxOpenSound = true;
+        }
+
+        if (frame == boxCloseSoundFrame && !hasPlayedBoxCloseSound)
+        {
+            AudioManager.Instance?.PlayBoxClose();
+            hasPlayedBoxCloseSound = true;
+        }
+
+        if (frame == diceShowFrame)
+        {
+            if (diceContainer)
+            {
+                diceContainer.SetActive(true);
+                diceContainer.transform.localScale = Vector3.one;
+            }
+            onDiceShouldShow?.Invoke();
+            AudioManager.Instance?.PlayDiceShow();
+        }
+
+        if (frame >= diceScaleStartFrame && frame <= diceScaleEndFrame && diceContainer != null)
+        {
+            int range = diceScaleEndFrame - diceScaleStartFrame;
+            float t = range > 0 ? (float)(frame - diceScaleStartFrame) / range : 1f;
+            float eased = diceScaleCurve.Evaluate(t);
+            float scale = Mathf.Lerp(1f, diceScaleTarget, eased);
+            diceContainer.transform.localScale = new Vector3(scale, scale, scale);
+        }
+        else if (frame > diceScaleEndFrame && frame < diceHideFrame + diceScaleResetFrameOffset && diceContainer != null)
+        {
+            diceContainer.transform.localScale = new Vector3(diceScaleTarget, diceScaleTarget, diceScaleTarget);
+        }
+        else if (frame == diceHideFrame + diceScaleResetFrameOffset && diceContainer != null)
+        {
+            diceContainer.transform.localScale = Vector3.one;
+        }
+
+        if (frame == diceHideFrame)
+        {
+            if (diceContainer)
+                diceContainer.SetActive(false);
+            onDiceShouldHide?.Invoke();
         }
     }
 
-    private void SetDisplayToFrame(List<Sprite> sequence, int index)
+    private int TotalOpenCloseFrames() =>
+        openCloseBaseSequence != null ? openCloseBaseSequence.Count : 0;
+
+    private void SetTopLayerActive(bool active)
     {
-        if (animationImage && sequence != null && index >= 0 && index < sequence.Count)
-            animationImage.sprite = sequence[index];
+        if (topLayerContainer) topLayerContainer.SetActive(active);
+        else if (topImage) topImage.gameObject.SetActive(active);
     }
+
+    #endregion
+
+    #region Utility
 
     private void StopAllAnimations()
     {
-        if (animationCoroutine != null) { StopCoroutine(animationCoroutine); animationCoroutine = null; }
+        if (animationCoroutine != null)
+        {
+            StopCoroutine(animationCoroutine);
+            animationCoroutine = null;
+        }
         isAnimating = false;
     }
+
+    private void ResetSoundFlags()
+    {
+        hasPlayedShakeSound = false;
+        hasPlayedBoxOpenSound = false;
+        hasPlayedBoxCloseSound = false;
+    }
+
+    #endregion
+
+    #region Editor
+
+#if UNITY_EDITOR
+    [ContextMenu("Debug: Force Start Cycle")]
+    private void EditorStartCycle() => StartAnimationCycle();
+
+    [ContextMenu("Debug: Force Reveal Dice")]
+    private void EditorRevealDice() => RevealDiceResult();
+
+    [ContextMenu("Debug: Force Hide")]
+    private void EditorForceHide() => ForceHide();
+
+    private void OnValidate()
+    {
+        int total = TotalOpenCloseFrames();
+        if (total == 0) return;
+
+        if (holdOnFrame >= total)
+            Debug.LogWarning($"[DiceBoxAnimationController] holdOnFrame ({holdOnFrame}) >= sequence count ({total}).");
+        if (diceShowFrame >= total)
+            Debug.LogWarning($"[DiceBoxAnimationController] diceShowFrame ({diceShowFrame}) >= sequence count ({total}).");
+        if (diceHideFrame >= total)
+            Debug.LogWarning($"[DiceBoxAnimationController] diceHideFrame ({diceHideFrame}) >= sequence count ({total}).");
+        if (openCloseTopSequence != null && openCloseTopSequence.Count != total)
+            Debug.LogWarning($"[DiceBoxAnimationController] Top sequence count ({openCloseTopSequence.Count}) != base count ({total}). Must match.");
+    }
+#endif
+
     #endregion
 }

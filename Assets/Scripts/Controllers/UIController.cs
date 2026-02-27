@@ -700,7 +700,7 @@ public class UIController : MonoBehaviour
         {
             hasPendingDisconnect = true;
             return; 
-        }
+        }   
         if (ReconnectPopupParent && ReconnectPopupParent.activeSelf)
             SlideOutPopup(ReconnectPopupParent, ReconnectPopup);
 
