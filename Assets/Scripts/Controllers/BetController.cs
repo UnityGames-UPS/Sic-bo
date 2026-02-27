@@ -102,6 +102,12 @@ public class BetController : MonoBehaviour
     private Coroutine repeatPanelCoroutine;
     private Vector2 mainChipOriginalPosition;
     private Tween mainChipTween;
+
+    // GC optimisation: reuse collections instead of allocating every call/round
+    private readonly HashSet<int> _uniqueDiceCache = new HashSet<int>();
+    private readonly List<WinAreaData> _winAreasCache = new List<WinAreaData>();
+    private readonly List<string> _winOptionsCache = new List<string>();
+    private readonly List<string> _betOptionsCache = new List<string>();
     #endregion
 
     #region Private Fields - Opponent System
@@ -426,7 +432,8 @@ public class BetController : MonoBehaviour
 
         if (hasPlacedBetThisRound && betHistory.Count > 0)
         {
-            previousRoundBets = new List<BetAction>(betHistory);
+            previousRoundBets.Clear();
+            previousRoundBets.AddRange(betHistory);
             placedBetInPreviousRound = true;
         }
         else
@@ -481,8 +488,11 @@ public class BetController : MonoBehaviour
                 TripleDiceAreas[diceIndex].SetHighlight(true);
         }
 
-        HashSet<int> uniqueDice = new HashSet<int> { dice1, dice2, dice3 };
-        foreach (int num in uniqueDice)
+        _uniqueDiceCache.Clear();
+        _uniqueDiceCache.Add(dice1);
+        _uniqueDiceCache.Add(dice2);
+        _uniqueDiceCache.Add(dice3);
+        foreach (int num in _uniqueDiceCache)
         {
             int index = num - 1;
             if (index >= 0 && index < SingleDiceAreas.Count && SingleDiceAreas[index] != null)
@@ -1219,7 +1229,7 @@ public class BetController : MonoBehaviour
     #region Win Animation Data
     internal List<WinAreaData> GetWinningAreasData()
     {
-        List<WinAreaData> winAreas = new List<WinAreaData>();
+        _winAreasCache.Clear();
         foreach (var kvp in areaBets)
         {
             Transform areaTransform = GetBetAreaTransform(kvp.Key);
@@ -1229,7 +1239,7 @@ public class BetController : MonoBehaviour
             if (winImage == null || !winImage.activeSelf) continue;
 
             BetWager wager = gameManager.GetWagerForBetOption(kvp.Key);
-            winAreas.Add(new WinAreaData
+            _winAreasCache.Add(new WinAreaData
             {
                 betOption = kvp.Key,
                 betAreaTarget = areaTransform,
@@ -1237,7 +1247,7 @@ public class BetController : MonoBehaviour
                 winAmount = wager?.CalculateWin(kvp.Value) ?? 0
             });
         }
-        return winAreas;
+        return _winAreasCache;
     }
 
     private Transform GetBetAreaTransform(string betOption) => GetBetAreaByOption(betOption)?.PlayerBetContainer;
@@ -1245,19 +1255,22 @@ public class BetController : MonoBehaviour
 
     internal List<string> GetWinningBetOptions()
     {
-        List<string> winningOptions = new List<string>();
+        _winOptionsCache.Clear();
         foreach (var kvp in areaBets)
         {
             GameObject winImage = GetWinImage(kvp.Key);
             if (winImage != null && winImage.activeSelf)
-                winningOptions.Add(kvp.Key);
+                _winOptionsCache.Add(kvp.Key);
         }
-        return winningOptions;
+        return _winOptionsCache;
     }
 
     internal List<string> GetCurrentBetOptions()
     {
-        return new List<string>(areaBets.Keys);
+        _betOptionsCache.Clear();
+        foreach (var key in areaBets.Keys)
+            _betOptionsCache.Add(key);
+        return _betOptionsCache;
     }
     #endregion
 

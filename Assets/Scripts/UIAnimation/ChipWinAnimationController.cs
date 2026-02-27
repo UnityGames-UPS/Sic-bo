@@ -40,7 +40,7 @@ internal class ChipWinAnimationController : MonoBehaviour
     [Header("Chip Count Settings")]
     [SerializeField] private int minChipsPerWin = 1;
     [SerializeField] private int maxChipsPerWin = 8;
-    [SerializeField] private double minWinForExtraChips = 1.0; 
+    [SerializeField] private double minWinForExtraChips = 1.0;
     #endregion
 
     #region Private Fields
@@ -50,6 +50,9 @@ internal class ChipWinAnimationController : MonoBehaviour
     private bool isAnimating;
     private Coroutine winCoroutine;
     private Coroutine cashoutCoroutine;
+
+    // GC optimisation: reuse list for RecalculateWinAmounts (called each dice result)
+    private readonly List<WinAreaData> _recalcCache = new List<WinAreaData>();
     #endregion
 
     #region Unity Lifecycle
@@ -109,7 +112,8 @@ internal class ChipWinAnimationController : MonoBehaviour
     #region Win Calculation
     private List<WinAreaData> RecalculateWinAmounts(List<WinAreaData> winAreas, DiceResultData diceResult)
     {
-        var recalculated = new List<WinAreaData>();
+        // Reuse cached list — avoids one allocation per dice result
+        _recalcCache.Clear();
 
         foreach (var area in winAreas)
         {
@@ -119,7 +123,7 @@ internal class ChipWinAnimationController : MonoBehaviour
 
             if (actualWinAmount > 0)
             {
-                recalculated.Add(new WinAreaData
+                _recalcCache.Add(new WinAreaData
                 {
                     betOption = area.betOption,
                     betAreaTarget = area.betAreaTarget,
@@ -130,7 +134,7 @@ internal class ChipWinAnimationController : MonoBehaviour
             }
         }
 
-        return recalculated;
+        return _recalcCache;
     }
 
     private double CalculateActualWin(string betOption, double betAmount, DiceResultData diceResult)
@@ -194,17 +198,17 @@ internal class ChipWinAnimationController : MonoBehaviour
         switch (matchCount)
         {
             case 3:
-   
+
                 if (gameManager.CurrentWagers.side_bets.single_match_3 != null)
                     return gameManager.CurrentWagers.side_bets.single_match_3.CalculateWin(betAmount);
                 break;
             case 2:
-   
+
                 if (gameManager.CurrentWagers.side_bets.single_match_2 != null)
                     return gameManager.CurrentWagers.side_bets.single_match_2.CalculateWin(betAmount);
                 break;
             case 1:
-     
+
                 if (gameManager.CurrentWagers.side_bets.single_match_1 != null)
                     return gameManager.CurrentWagers.side_bets.single_match_1.CalculateWin(betAmount);
                 break;
@@ -220,12 +224,12 @@ internal class ChipWinAnimationController : MonoBehaviour
         switch (matchCount)
         {
             case 3:
-        
+
                 if (gameManager.CurrentWagers.side_bets.specific_3 != null)
                     return gameManager.CurrentWagers.side_bets.specific_3.CalculateWin(betAmount);
                 break;
             case 2:
-          
+
                 if (gameManager.CurrentWagers.side_bets.specific_2 != null)
                     return gameManager.CurrentWagers.side_bets.specific_2.CalculateWin(betAmount);
                 break;
@@ -312,7 +316,7 @@ internal class ChipWinAnimationController : MonoBehaviour
         {
             if (area.betAreaTarget == null) continue;
 
-            
+
             PlayerBetComponent playerBetComp = betController?.GetPlayerBetComponent(area.betOption);
             if (playerBetComp == null) continue;
 
@@ -320,7 +324,7 @@ internal class ChipWinAnimationController : MonoBehaviour
 
             AudioManager.Instance?.PlayChipAdd();
 
-           
+
             bool shouldSpawnWinChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
             if (shouldSpawnWinChips)
             {
@@ -347,7 +351,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                 }
             }
 
-          
+
             int stakeChipCount = CalculateStakeReturnChipCount(area.winRatio, area.betAmount);
             for (int i = 0; i < stakeChipCount && poolIdx < dealerPool.Count; i++, poolIdx++)
             {
@@ -357,7 +361,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                 double stakeReturnValue = area.winRatio * area.betAmount;
                 SetSprite(chip, SpriteIndex(stakeReturnValue / Mathf.Max(1, stakeChipCount)));
 
-               
+
                 RectTransform parentRT = chipParent as RectTransform;
                 if (parentRT == null) continue;
 
@@ -367,7 +371,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                     Random.Range(-betAreaScatterX, betAreaScatterX),
                     Random.Range(-betAreaScatterY, betAreaScatterY), 0f);
                 chip.localScale = Vector3.zero;
-                chip.gameObject.SetActive(false); 
+                chip.gameObject.SetActive(false);
 
                 stakeReturnChips.Add(chip);
             }
@@ -375,7 +379,7 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         yield return new WaitForSeconds(0.20f);
 
-      
+
         var animData = new List<(RectTransform chip, Vector2 worldTarget)>();
 
         foreach (var (chip, parent, localPos) in assignments)
@@ -393,7 +397,7 @@ internal class ChipWinAnimationController : MonoBehaviour
             animData.Add((chip, worldTarget));
         }
 
-      
+
         if (enableWinAnimations && assignments.Count > 0)
         {
             DOVirtual.DelayedCall(
@@ -516,7 +520,7 @@ internal class ChipWinAnimationController : MonoBehaviour
         foreach (var chip in toSweep)
         {
             if (chip == null) continue;
-   
+
             chipCanvasPositions[chip] = GetCanvasPosition(chip);
         }
 
@@ -527,7 +531,7 @@ internal class ChipWinAnimationController : MonoBehaviour
             if (chip.parent != targetCanvas.transform)
             {
                 chip.SetParent(targetCanvas.transform, worldPositionStays: false);
-                chip.SetAsLastSibling(); 
+                chip.SetAsLastSibling();
                 if (chipCanvasPositions.ContainsKey(chip))
                 {
                     chip.anchoredPosition = chipCanvasPositions[chip];

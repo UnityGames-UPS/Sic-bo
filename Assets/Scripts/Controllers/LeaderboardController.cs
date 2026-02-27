@@ -48,6 +48,10 @@ public class LeaderboardController : MonoBehaviour
     private Sprite localPlayerAvatar = null;
     private bool isAnimating = false;
     private Dictionary<RectTransform, Vector2> originalPositions = new Dictionary<RectTransform, Vector2>();
+
+    // GC optimisation: reuse lists in PadToThree — called twice per leaderboard update (once each for richest/winners)
+    private readonly List<LeaderboardEntry> _padRichestCache = new List<LeaderboardEntry>(3);
+    private readonly List<LeaderboardEntry> _padWinnersCache = new List<LeaderboardEntry>(3);
     #endregion
 
     #region Internal API — Local Player
@@ -136,8 +140,8 @@ public class LeaderboardController : MonoBehaviour
     {
         isAnimating = true;
 
-        var richestData = PadToThree(leaderboards?.richest);
-        var winnersData = PadToThree(leaderboards?.winners);
+        var richestData = PadToThree(leaderboards?.richest, _padRichestCache);
+        var winnersData = PadToThree(leaderboards?.winners, _padWinnersCache);
 
         if (leaderboardParent != null && !leaderboardParent.activeSelf)
             leaderboardParent.SetActive(true);
@@ -203,11 +207,12 @@ public class LeaderboardController : MonoBehaviour
         rank = rank
     };
 
-    private List<LeaderboardEntry> PadToThree(List<LeaderboardEntry> source)
+    private List<LeaderboardEntry> PadToThree(List<LeaderboardEntry> source, List<LeaderboardEntry> cache)
     {
-        var result = source != null ? new List<LeaderboardEntry>(source) : new List<LeaderboardEntry>();
-        while (result.Count < 3) result.Add(MakeDummy(result.Count + 1));
-        return result;
+        cache.Clear();
+        if (source != null) cache.AddRange(source);
+        while (cache.Count < 3) cache.Add(MakeDummy(cache.Count + 1));
+        return cache;
     }
     #endregion
 

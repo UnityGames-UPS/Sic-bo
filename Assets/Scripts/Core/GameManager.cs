@@ -36,6 +36,11 @@ public class GameManager : MonoBehaviour
 
     #region Private Fields
     private string pendingRoomSwitch = null;
+
+    // GC optimisation: reuse collections in GetAllWinningAreasFromDice (called every dice result)
+    private readonly List<string> _winnersCache = new List<string>(12);
+    private readonly HashSet<int> _seenDiceCache = new HashSet<int>();
+    private static readonly List<string> _emptyStringList = new List<string>(0);
     #endregion
 
     #region Socket Callbacks - Initialization
@@ -172,7 +177,7 @@ public class GameManager : MonoBehaviour
 
         // Lock leaderboards for this round to prevent badge flickering
         opponentChipManager?.LockLeaderboardsForRound();
-        opponentChipManager?.SetWinningBetAreas(new List<string>());
+        opponentChipManager?.SetWinningBetAreas(null);
     }
 
     internal void OnBettingTimer(TimerData data)
@@ -224,32 +229,30 @@ public class GameManager : MonoBehaviour
     }
     private List<string> GetAllWinningAreasFromDice(DiceResultData data)
     {
-        var winners = new List<string>();
+        // Reuse cached collections — caller must not hold reference beyond current frame
+        _winnersCache.Clear();
+        _seenDiceCache.Clear();
 
         // Main bets - from matchSide
         string side = (data.matchSide ?? "").ToLower();
-        if (side == "small") winners.Add("small");
-        if (side == "big") winners.Add("big");
-        if (side == "odd") winners.Add("odd");
-        if (side == "even") winners.Add("even");
+        if (side == "small") _winnersCache.Add("small");
+        if (side == "big") _winnersCache.Add("big");
+        if (side == "odd") _winnersCache.Add("odd");
+        if (side == "even") _winnersCache.Add("even");
 
         // Sum areas
-        winners.Add($"sum_{data.sum}");
+        _winnersCache.Add($"sum_{data.sum}");
 
-        // Single dice (1-6)
-        var diceValues = new[] { data.dice1, data.dice2, data.dice3 };
-        var seen = new HashSet<int>();
-        foreach (int d in diceValues)
-        {
-            if (seen.Add(d))
-                winners.Add($"single_{d}");
-        }
+        // Single dice (1-6) — deduplicated
+        if (_seenDiceCache.Add(data.dice1)) _winnersCache.Add($"single_{data.dice1}");
+        if (_seenDiceCache.Add(data.dice2)) _winnersCache.Add($"single_{data.dice2}");
+        if (_seenDiceCache.Add(data.dice3)) _winnersCache.Add($"single_{data.dice3}");
 
         // Triple same dice → specific_3_X
         if (data.dice1 == data.dice2 && data.dice2 == data.dice3)
-            winners.Add($"specific_3_{data.dice1}");
+            _winnersCache.Add($"specific_3_{data.dice1}");
 
-        return winners;
+        return _winnersCache;
     }
     internal void OnBetPlaced(BetPlacedData data)
     {
@@ -398,11 +401,14 @@ public class GameManager : MonoBehaviour
         CurrentRoom = null;
         CurrentRoundId = null;
         uiController.ClearRoundId();
+
+        // Clear string caches accumulated during the session
+        GameUtilities.ClearCaches();
     }
 
 
     internal void SwitchRoom(string targetRoom)
-    {
+    {   
         if (targetRoom == CurrentRoom) return;
 
         pendingRoomSwitch = targetRoom;
@@ -421,6 +427,8 @@ public class GameManager : MonoBehaviour
         CurrentRoundId = null;
         uiController.ClearRoundId();
 
+        // Clear string caches accumulated during the previous session
+        GameUtilities.ClearCaches();
 
         socketManager.ReturnHome();
     }

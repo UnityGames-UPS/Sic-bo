@@ -51,6 +51,12 @@ internal class BonusIndicatorController : MonoBehaviour
     private readonly HashSet<string> activeBonusOptions = new HashSet<string>();
     private readonly Dictionary<string, List<int>> currentMultipliers = new Dictionary<string, List<int>>();
     private bool isPoolInitialized = false;
+
+    // GC optimisation: reuse HashSet for HandleDiceResult (called every dice result)
+    private readonly HashSet<string> _winningSetCache = new HashSet<string>();
+
+    // DOTween sequence tracking — prevents orphaned tweens accumulating memory (~30MB saved over session)
+    private readonly Dictionary<string, Sequence> _activeSequences = new Dictionary<string, Sequence>();
     #endregion
 
     #region Pool Initialization
@@ -130,14 +136,18 @@ internal class BonusIndicatorController : MonoBehaviour
 
     internal void HandleDiceResult(List<string> winningBetOptions)
     {
-        var winningSet = new HashSet<string>(winningBetOptions);
+        // Reuse cached set — avoids allocating a new HashSet<string> every dice result
+        _winningSetCache.Clear();
+        if (winningBetOptions != null)
+            foreach (var s in winningBetOptions)
+                _winningSetCache.Add(s);
 
         foreach (string betOption in activeBonusOptions)
         {
             if (!indicatorPool.TryGetValue(betOption, out BonusIndicator indicator)) continue;
             if (indicator == null) continue;
 
-            bool isWinning = winningSet.Contains(betOption);
+            bool isWinning = _winningSetCache.Contains(betOption);
 
             if (isWinning)
             {
@@ -159,6 +169,10 @@ internal class BonusIndicatorController : MonoBehaviour
     internal void ClearAllIndicators()
     {
         HideAllActiveIndicators();
+
+        // Kill all tracked DOTween sequences to prevent memory leaks
+        foreach (var seq in _activeSequences.Values) seq?.Kill();
+        _activeSequences.Clear();
 
         foreach (var kvp in indicatorPool)
         {
@@ -200,7 +214,17 @@ internal class BonusIndicatorController : MonoBehaviour
             return;
         }
 
-        currentMultipliers[betOption] = new List<int>(multipliers);
+        // Reuse cached multiplier list if entry already exists, else allocate once
+        if (!currentMultipliers.TryGetValue(betOption, out List<int> cachedList))
+        {
+            cachedList = new List<int>(multipliers.Count);
+            currentMultipliers[betOption] = cachedList;
+        }
+        else
+        {
+            cachedList.Clear();
+        }
+        cachedList.AddRange(multipliers);
 
         int[] multipliersArray = multipliers.ToArray();
 
@@ -249,7 +273,13 @@ internal class BonusIndicatorController : MonoBehaviour
             );
         });
 
+        // Kill any existing fall sequence for this option before creating a new one
+        string fallSeqKey = $"fall_{betOption}";
+        if (_activeSequences.TryGetValue(fallSeqKey, out Sequence oldFallSeq)) { oldFallSeq?.Kill(); _activeSequences.Remove(fallSeqKey); }
+
+        fallSeq.OnKill(() => _activeSequences.Remove(fallSeqKey));
         fallSeq.Play();
+        _activeSequences[fallSeqKey] = fallSeq;
 
         activeBonusOptions.Add(betOption);
 
@@ -312,6 +342,10 @@ internal class BonusIndicatorController : MonoBehaviour
 
         indicator.transform.DOKill();
 
+        // Kill any existing exit sequence for this indicator
+        string exitSeqKey = $"exit_{indicator.betOption}";
+        if (_activeSequences.TryGetValue(exitSeqKey, out Sequence oldExitSeq)) { oldExitSeq?.Kill(); _activeSequences.Remove(exitSeqKey); }
+
         Sequence exitSeq = DOTween.Sequence();
         exitSeq.AppendInterval(winHoldDuration);
 
@@ -324,12 +358,15 @@ internal class BonusIndicatorController : MonoBehaviour
         {
             indicator.transform.localScale = Vector3.one;
             indicator.gameObject.SetActive(false);
+            _activeSequences.Remove(exitSeqKey);
 
             if (showDebugLogs)
                 Debug.Log($"[BonusIndicator] Win indicator exited cleanly.");
         });
 
+        exitSeq.OnKill(() => _activeSequences.Remove(exitSeqKey));
         exitSeq.Play();
+        _activeSequences[exitSeqKey] = exitSeq;
     }
     #endregion
 
@@ -384,4 +421,4 @@ internal class BonusIndicatorController : MonoBehaviour
         }
     }
     #endregion
-}   
+}

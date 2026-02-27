@@ -7,19 +7,60 @@ public static class GameUtilities
 {
     private const int MaxChipCombinationCount = 20;
 
+    // GC optimisation: reuse static lists across calls to FindChipCombination
+    private static readonly List<double> _sortedValuesCache = new List<double>(16);
+    private static readonly List<ChipCombinationItem> _chipCombResultCache = new List<ChipCombinationItem>(MaxChipCombinationCount);
+
+    // String result caching — FormatCurrency is called per chip, per frame during animations
+    private static readonly Dictionary<double, string> _currencyCache = new Dictionary<double, string>(300);
+    private static readonly Dictionary<double, string> _betValueCache = new Dictionary<double, string>(100);
+    private static readonly Dictionary<double, string> _balanceCache = new Dictionary<double, string>(50);
+    private static readonly System.Text.StringBuilder _sb = new System.Text.StringBuilder(32);
+
+    /// <summary>Call when leaving or switching rooms to release cached string memory.</summary>
+    internal static void ClearCaches()
+    {
+        if (_currencyCache.Count > 200) _currencyCache.Clear();
+        if (_betValueCache.Count > 80) _betValueCache.Clear();
+        if (_balanceCache.Count > 40) _balanceCache.Clear();
+    }
+
     #region Currency Formatting
     internal static string FormatCurrency(double amount)
     {
-        if (amount >= 1000) return $"{amount / 1000:F1}K";
-        if (amount < 1) return amount.ToString("F1");
-        if (amount % 1 != 0) return amount.ToString("F1");
-        return amount.ToString("F0");
+        if (_currencyCache.TryGetValue(amount, out string cached)) return cached;
+
+        string result;
+        if (amount >= 1000)
+        {
+            _sb.Clear();
+            _sb.Append((amount / 1000).ToString("F1"));
+            _sb.Append("K");
+            result = _sb.ToString();
+        }
+        else if (amount < 1) result = amount.ToString("F1");
+        else if (amount % 1 != 0) result = amount.ToString("F1");
+        else result = amount.ToString("F0");
+
+        if (_currencyCache.Count < 300) _currencyCache[amount] = result;
+        return result;
     }
 
-    internal static string FormatBetValue(double value) =>
-        value % 1 == 0 ? value.ToString("F0") : value.ToString("F2");
+    internal static string FormatBetValue(double value)
+    {
+        if (_betValueCache.TryGetValue(value, out string cached)) return cached;
+        string result = value % 1 == 0 ? value.ToString("F0") : value.ToString("F2");
+        if (_betValueCache.Count < 100) _betValueCache[value] = result;
+        return result;
+    }
 
-    internal static string FormatBalance(double balance) => balance.ToString("F2");
+    internal static string FormatBalance(double balance)
+    {
+        if (_balanceCache.TryGetValue(balance, out string cached)) return cached;
+        string result = balance.ToString("F2");
+        if (_balanceCache.Count < 50) _balanceCache[balance] = result;
+        return result;
+    }
     #endregion
 
     #region Time Calculations
@@ -54,11 +95,13 @@ public static class GameUtilities
     #region Chip Combination
     internal static List<ChipCombinationItem> FindChipCombination(double targetAmount, List<double> availableChipValues)
     {
-        List<ChipCombinationItem> result = new List<ChipCombinationItem>();
-        if (availableChipValues == null || availableChipValues.Count == 0) return result;
+        _chipCombResultCache.Clear();
+        if (availableChipValues == null || availableChipValues.Count == 0) return _chipCombResultCache;
 
-        List<double> sortedValues = new List<double>(availableChipValues);
-        sortedValues.Sort((a, b) => b.CompareTo(a));
+        // Reuse sorted list — avoids allocation + GC on every repeat bet
+        _sortedValuesCache.Clear();
+        _sortedValuesCache.AddRange(availableChipValues);
+        _sortedValuesCache.Sort((a, b) => b.CompareTo(a));
 
         double remaining = targetAmount;
         const double tolerance = 0.01;
@@ -66,26 +109,26 @@ public static class GameUtilities
         while (remaining > tolerance)
         {
             bool foundChip = false;
-            for (int i = 0; i < sortedValues.Count; i++)
+            for (int i = 0; i < _sortedValuesCache.Count; i++)
             {
-                if (sortedValues[i] <= remaining + tolerance)
+                if (_sortedValuesCache[i] <= remaining + tolerance)
                 {
-                    result.Add(new ChipCombinationItem
+                    _chipCombResultCache.Add(new ChipCombinationItem
                     {
-                        amount = sortedValues[i],
-                        chipIndex = availableChipValues.IndexOf(sortedValues[i])
+                        amount = _sortedValuesCache[i],
+                        chipIndex = availableChipValues.IndexOf(_sortedValuesCache[i])
                     });
-                    remaining -= sortedValues[i];
+                    remaining -= _sortedValuesCache[i];
                     foundChip = true;
                     break;
                 }
             }
 
             if (!foundChip) break;
-            if (result.Count >= MaxChipCombinationCount) break;
+            if (_chipCombResultCache.Count >= MaxChipCombinationCount) break;
         }
 
-        return result;
+        return _chipCombResultCache;
     }
     #endregion
 

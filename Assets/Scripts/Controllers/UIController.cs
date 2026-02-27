@@ -175,6 +175,11 @@ public class UIController : MonoBehaviour
     private bool isExpanded = false;
     private Vector2 expandSideMenuOriginalPosition;
     private Vector2 shrinkSideMenuOriginalPosition;
+
+    // GC optimisation: reuse lists for side menu button animations (called every menu open/close)
+    private readonly List<RectTransform> _animatingRects = new List<RectTransform>();
+    private readonly List<Vector2> _animatingOrigPos = new List<Vector2>();
+    private readonly List<RectTransform> _visibleRects = new List<RectTransform>();
     #endregion
 
     #region Unity Lifecycle
@@ -420,9 +425,9 @@ public class UIController : MonoBehaviour
             activeExpandShrinkButton.interactable = true;
         }
 
-        // Build list of buttons to animate
-        var animatingRects = new List<RectTransform>();
-        var animatingOriginalPos = new List<Vector2>();
+        // Build list of buttons to animate — reuse cached lists
+        _animatingRects.Clear();
+        _animatingOrigPos.Clear();
 
         // Reactivate and add all regular menu buttons (they were deactivated in CloseSideMenu)
         for (int i = 0; i < menuButtonRects.Length; i++)
@@ -430,8 +435,8 @@ public class UIController : MonoBehaviour
             if (menuButtonRects[i] != null)
             {
                 menuButtonRects[i].gameObject.SetActive(true); // Reactivate for animation
-                animatingRects.Add(menuButtonRects[i]);
-                animatingOriginalPos.Add(menuButtonOriginalPositions[i]);
+                _animatingRects.Add(menuButtonRects[i]);
+                _animatingOrigPos.Add(menuButtonOriginalPositions[i]);
             }
         }
 
@@ -446,17 +451,17 @@ public class UIController : MonoBehaviour
                     ? expandSideMenuOriginalPosition
                     : shrinkSideMenuOriginalPosition;
 
-                animatingRects.Add(expandShrinkRect);
-                animatingOriginalPos.Add(expandShrinkOriginalPos);
+                _animatingRects.Add(expandShrinkRect);
+                _animatingOrigPos.Add(expandShrinkOriginalPos);
             }
         }
 
         // Animate all buttons
-        for (int i = 0; i < animatingRects.Count; i++)
+        for (int i = 0; i < _animatingRects.Count; i++)
         {
-            animatingRects[i].DOKill();
-            animatingRects[i].anchoredPosition = closeButtonPos;
-            animatingRects[i].DOAnchorPos(animatingOriginalPos[i], buttonDropDuration)
+            _animatingRects[i].DOKill();
+            _animatingRects[i].anchoredPosition = closeButtonPos;
+            _animatingRects[i].DOAnchorPos(_animatingOrigPos[i], buttonDropDuration)
                 .SetEase(Ease.OutCubic)
                 .SetDelay(i * buttonDropDelay);
         }
@@ -471,13 +476,13 @@ public class UIController : MonoBehaviour
             if (r != null) closeButtonPos = r.anchoredPosition;
         }
 
-        // Collect only visible buttons for animation
-        var visibleRects = new List<RectTransform>();
+        // Collect only visible buttons for animation — reuse cached list
+        _visibleRects.Clear();
 
         for (int i = 0; i < menuButtonRects.Length; i++)
         {
             if (menuButtonRects[i] != null && menuButtonRects[i].gameObject.activeSelf)
-                visibleRects.Add(menuButtonRects[i]);
+                _visibleRects.Add(menuButtonRects[i]);
         }
 
         // Add the currently visible expand/shrink button
@@ -486,14 +491,14 @@ public class UIController : MonoBehaviour
         {
             RectTransform expandShrinkRect = visibleExpandShrinkButton.GetComponent<RectTransform>();
             if (expandShrinkRect != null)
-                visibleRects.Add(expandShrinkRect);
+                _visibleRects.Add(expandShrinkRect);
         }
 
         // Animate visible buttons in reverse order
-        for (int i = 0; i < visibleRects.Count; i++)
+        for (int i = 0; i < _visibleRects.Count; i++)
         {
-            int reverseIndex = visibleRects.Count - 1 - i;
-            RectTransform rect = visibleRects[reverseIndex];
+            int reverseIndex = _visibleRects.Count - 1 - i;
+            RectTransform rect = _visibleRects[reverseIndex];
             rect.DOKill();
             rect.DOAnchorPos(closeButtonPos, buttonDropDuration * 0.7f)
                 .SetEase(Ease.InCubic)
@@ -501,7 +506,7 @@ public class UIController : MonoBehaviour
                 .OnComplete(() => rect.gameObject.SetActive(false));
         }
 
-        float totalButtonTime = (visibleRects.Count - 1) * buttonDropDelay + buttonDropDuration * 0.7f;
+        float totalButtonTime = (_visibleRects.Count - 1) * buttonDropDelay + buttonDropDuration * 0.7f;
         if (menuPanelContainerRect != null)
         {
             Vector2 endPos = panelOriginalPosition;

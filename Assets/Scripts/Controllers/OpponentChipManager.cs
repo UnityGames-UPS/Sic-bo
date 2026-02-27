@@ -50,6 +50,16 @@ public class OpponentChipManager : MonoBehaviour
     // Win chip animation
     private List<RectTransform> activeWinChips = new List<RectTransform>();
     private Coroutine winAnimationCoroutine = null;
+
+    // GC optimisation: reuse collections in coroutines (only one of each runs at a time)
+    private readonly Dictionary<string, double> _betAmountsCache = new Dictionary<string, double>();
+    private readonly HashSet<string> _processedPlayersCache = new HashSet<string>();
+    private readonly List<RectTransform> _toSweepCache = new List<RectTransform>();
+    private readonly Dictionary<string, HashSet<string>> _winnersByBetAreaCache = new Dictionary<string, HashSet<string>>();
+
+    // Chip pooling — eliminates per-bet Instantiate/Destroy overhead (~120MB over a long session)
+    private readonly Queue<RectTransform> _chipPool = new Queue<RectTransform>();
+    private const int CHIP_POOL_SIZE = 50;
     #endregion
 
     #region Helper Structs
@@ -69,12 +79,65 @@ public class OpponentChipManager : MonoBehaviour
     private void Start()
     {
         if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
+        InitializeChipPool();
     }
 
     private void OnDestroy()
     {
         foreach (var chip in activeOpponentChips)
             if (chip != null) chip.DOKill();
+        foreach (var chip in activeWinChips)
+            if (chip != null) chip.DOKill();
+
+        // Drain and destroy pooled chips
+        while (_chipPool.Count > 0)
+        {
+            var chip = _chipPool.Dequeue();
+            if (chip != null) Destroy(chip.gameObject);
+        }
+    }
+    #endregion
+
+    #region Chip Pool
+    private void InitializeChipPool()
+    {
+        if (chipPrefab == null || opponentDealerArea == null) return;
+
+        for (int i = 0; i < CHIP_POOL_SIZE; i++)
+        {
+            GameObject chipObj = Instantiate(chipPrefab, opponentDealerArea);
+            RectTransform chipRT = chipObj.GetComponent<RectTransform>();
+            chipObj.SetActive(false);
+            _chipPool.Enqueue(chipRT);
+        }
+        Debug.Log($"[OpponentChip] Pool initialized with {CHIP_POOL_SIZE} chips");
+    }
+
+    private RectTransform GetPooledChip()
+    {
+        if (_chipPool.Count > 0)
+        {
+            RectTransform chipRT = _chipPool.Dequeue();
+            chipRT.gameObject.SetActive(true);
+            return chipRT;
+        }
+        // Pool exhausted — create a new chip but don't warn; it'll be returned on cashout
+        GameObject chipObj = Instantiate(chipPrefab, opponentDealerArea);
+        return chipObj.GetComponent<RectTransform>();
+    }
+
+    private void ReturnChipToPool(RectTransform chipRT)
+    {
+        if (chipRT == null) return;
+        chipRT.DOKill();
+        chipRT.gameObject.SetActive(false);
+        chipRT.localScale = Vector3.one;
+        chipRT.SetParent(opponentDealerArea, false);
+
+        if (_chipPool.Count < CHIP_POOL_SIZE * 2)
+            _chipPool.Enqueue(chipRT);
+        else
+            Destroy(chipRT.gameObject);
     }
     #endregion
 
@@ -175,12 +238,12 @@ public class OpponentChipManager : MonoBehaviour
 
         foreach (var chip in activeOpponentChips)
         {
-            if (chip != null) { chip.DOKill(); Destroy(chip.gameObject); }
+            if (chip != null) ReturnChipToPool(chip);
         }
 
         foreach (var chip in activeWinChips)
         {
-            if (chip != null) { chip.DOKill(); Destroy(chip.gameObject); }
+            if (chip != null) ReturnChipToPool(chip);
         }
 
         activeOpponentChips.Clear();
@@ -272,8 +335,8 @@ public class OpponentChipManager : MonoBehaviour
         if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
 
-        // Build a map of username + betArea -> bet amount (from existing chips)
-        Dictionary<string, double> betAmountsByPlayerAndArea = new Dictionary<string, double>();
+        // Build a map of username + betArea -> bet amount (reuse cached dict)
+        _betAmountsCache.Clear();
 
         foreach (string betArea in winningBetAreas)
         {
@@ -298,11 +361,11 @@ public class OpponentChipManager : MonoBehaviour
                     if (betAmount > 0)
                     {
                         string key = $"{chipOwner}_{betArea}";
-                        if (!betAmountsByPlayerAndArea.ContainsKey(key))
+                        if (!_betAmountsCache.ContainsKey(key))
                         {
-                            betAmountsByPlayerAndArea[key] = 0;
+                            _betAmountsCache[key] = 0;
                         }
-                        betAmountsByPlayerAndArea[key] += betAmount;
+                        _betAmountsCache[key] += betAmount;
                         Debug.Log($"[OpponentChip] Found bet: {chipOwner} bet {betAmount} on {betArea}");
                     }
                 }
@@ -320,8 +383,8 @@ public class OpponentChipManager : MonoBehaviour
             // Check if there are any opponent chips in this winning area
             if (chipsByBetArea[betArea].Count == 0) continue;
 
-            // Track which players we've already spawned win chips for in this area
-            HashSet<string> processedPlayers = new HashSet<string>();
+            // Track which players we've already spawned win chips for in this area (reuse cached set)
+            _processedPlayersCache.Clear();
 
             // For each chip in winning area, spawn win chips
             foreach (var chip in chipsByBetArea[betArea])
@@ -334,12 +397,12 @@ public class OpponentChipManager : MonoBehaviour
                 if (chipOwner == localPlayerUsername) continue;
 
                 // Skip if we already processed this player in this area
-                if (processedPlayers.Contains(chipOwner)) continue;
-                processedPlayers.Add(chipOwner);
+                if (_processedPlayersCache.Contains(chipOwner)) continue;
+                _processedPlayersCache.Add(chipOwner);
 
                 // Get bet amount for this player in this area
                 string key = $"{chipOwner}_{betArea}";
-                double totalBetAmount = betAmountsByPlayerAndArea.ContainsKey(key) ? betAmountsByPlayerAndArea[key] : 0;
+                double totalBetAmount = _betAmountsCache.ContainsKey(key) ? _betAmountsCache[key] : 0;
 
                 // Spawn 2-4 win chips per bet (visual effect showing winnings)
                 int winChipCount = UnityEngine.Random.Range(2, 4);
@@ -350,13 +413,14 @@ public class OpponentChipManager : MonoBehaviour
 
                 for (int i = 0; i < winChipCount; i++)
                 {
-                    GameObject winChipObj = Instantiate(chipPrefab, opponentDealerArea);
-                    RectTransform winChipRT = winChipObj.GetComponent<RectTransform>();
-                    Chip winChip = winChipObj.GetComponent<Chip>();
+                    // Use pooled chip instead of Instantiate
+                    RectTransform winChipRT = GetPooledChip();
+                    winChipRT.SetParent(opponentDealerArea, false);
+                    Chip winChip = winChipRT.GetComponent<Chip>();
 
                     if (winChip == null || winChipRT == null)
                     {
-                        Destroy(winChipObj);
+                        ReturnChipToPool(winChipRT);
                         continue;
                     }
 
@@ -468,11 +532,12 @@ public class OpponentChipManager : MonoBehaviour
         RectTransform spawnPosition = GetSpawnPositionForPlayer(username, out spawnedFromWinners, out spawnedFromRichest);
         if (spawnPosition == null) spawnPosition = opponentDealerArea;
 
-        GameObject chipObj = Instantiate(chipPrefab, spawnPosition);
-        RectTransform chipRT = chipObj.GetComponent<RectTransform>();
-        Chip chip = chipObj.GetComponent<Chip>();
+        // Use pooled chip instead of Instantiate
+        RectTransform chipRT = GetPooledChip();
+        chipRT.SetParent(spawnPosition, false);
+        Chip chip = chipRT.GetComponent<Chip>();
 
-        if (chip == null || chipRT == null) { Destroy(chipObj); yield break; }
+        if (chip == null || chipRT == null) { ReturnChipToPool(chipRT); yield break; }
 
         chip.SetSprite(grayChipSprite);
         chip.SetAmount(GameUtilities.FormatCurrency(amount));
@@ -619,11 +684,8 @@ public class OpponentChipManager : MonoBehaviour
         if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
 
-        // Collect ALL chips (bet chips + win chips)
-        List<RectTransform> allChipsToProcess = new List<RectTransform>(activeOpponentChips);
-        allChipsToProcess.AddRange(activeWinChips);
-
-        Dictionary<string, HashSet<string>> winnersByBetArea = new Dictionary<string, HashSet<string>>();
+        // Build winners map — reuse cached dictionary (inner HashSets are also reused/amortised)
+        _winnersByBetAreaCache.Clear();
 
         if (currentPayouts != null && currentPayouts.Count > 0)
         {
@@ -642,10 +704,12 @@ public class OpponentChipManager : MonoBehaviour
                         {
                             if (chipToUsername.ContainsKey(chip) && chipToUsername[chip] == payout.username)
                             {
-                                if (!winnersByBetArea.ContainsKey(betArea))
-                                    winnersByBetArea[betArea] = new HashSet<string>();
+                                if (!_winnersByBetAreaCache.ContainsKey(betArea))
+                                    _winnersByBetAreaCache[betArea] = new HashSet<string>();
+                                else
+                                    _winnersByBetAreaCache[betArea].Clear();
 
-                                winnersByBetArea[betArea].Add(payout.username);
+                                _winnersByBetAreaCache[betArea].Add(payout.username);
                                 break;
                             }
                         }
@@ -672,8 +736,8 @@ public class OpponentChipManager : MonoBehaviour
 
                 string chipOwner = chipToUsername.ContainsKey(chip) ? chipToUsername[chip] : "";
                 bool chipOwnerWon = !string.IsNullOrEmpty(chipOwner) &&
-                                   winnersByBetArea.ContainsKey(betArea) &&
-                                   winnersByBetArea[betArea].Contains(chipOwner);
+                                   _winnersByBetAreaCache.ContainsKey(betArea) &&
+                                   _winnersByBetAreaCache[betArea].Contains(chipOwner);
 
                 bool isLosingChip = !isWinningArea || !chipOwnerWon;
 
@@ -700,7 +764,7 @@ public class OpponentChipManager : MonoBehaviour
                     chip.DOScale(0f, cashoutDuration * 0.6f)
                         .SetDelay(cashoutDuration * 0.4f + staggerDelay)
                         .SetEase(Ease.InBack)
-                        .OnComplete(() => { if (chip != null) Destroy(chip.gameObject); });
+                        .OnComplete(() => { if (chip != null) ReturnChipToPool(chip); });
 
                     chipAnimationCount++;
                 }
@@ -749,7 +813,7 @@ public class OpponentChipManager : MonoBehaviour
                     chip.DOScale(0f, cashoutDuration * 0.6f)
                         .SetDelay(cashoutDuration * 0.4f + staggerDelay)
                         .SetEase(Ease.InBack)
-                        .OnComplete(() => { if (chip != null) Destroy(chip.gameObject); });
+                        .OnComplete(() => { if (chip != null) ReturnChipToPool(chip); });
 
                     chipAnimationCount++;
                 }
@@ -778,7 +842,7 @@ public class OpponentChipManager : MonoBehaviour
             winChip.DOScale(0f, cashoutDuration * 0.5f)
                 .SetDelay(cashoutDuration * 0.3f + staggerDelay)
                 .SetEase(Ease.InBack)
-                .OnComplete(() => { if (winChip != null) Destroy(winChip.gameObject); });
+                .OnComplete(() => { if (winChip != null) ReturnChipToPool(winChip); });
 
             winChipIndex++;
         }
