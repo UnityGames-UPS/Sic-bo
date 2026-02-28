@@ -106,7 +106,7 @@ public class OpponentChipManager : MonoBehaviour
             chipObj.SetActive(false);
             _chipPool.Enqueue(chipRT);
         }
-        Debug.Log($"[OpponentChip] Pool initialized with {CHIP_POOL_SIZE} chips");
+       
     }
 
     private RectTransform GetPooledChip()
@@ -171,18 +171,14 @@ public class OpponentChipManager : MonoBehaviour
         if (activeOpponentChips.Count == 0 && activeWinChips.Count == 0)
         {
             lockedLeaderboards = leaderboards;
-            Debug.Log("[OpponentChip] Leaderboards updated and LOCKED (no active chips)");
+         
         }
-        else
-        {
-            Debug.Log("[OpponentChip] Leaderboards updated but NOT locked (chips active - preventing flicker)");
-        }
+      
     }
 
     internal void LockLeaderboardsForRound()
     {
         lockedLeaderboards = currentLeaderboards;
-        Debug.Log("[OpponentChip] Leaderboards LOCKED for this round - badges won't change until cashout");
     }
 
     internal void SetCashoutData(List<Payout> payouts) => currentPayouts = payouts;
@@ -199,7 +195,6 @@ public class OpponentChipManager : MonoBehaviour
                 winningBetAreas.Add(area);
             }
         }
-        Debug.Log($"[OpponentChip] Set {winningBetAreas.Count} winning bet areas: {string.Join(", ", winningBetAreas)}");
     }
 
     internal void AddOpponentBet(string betOption, double amount, string username = "")
@@ -253,8 +248,6 @@ public class OpponentChipManager : MonoBehaviour
             list.Clear();
 
         isCashoutRunning = false;
-
-        Debug.Log("[OpponentChip] All opponent bets cleared - leaderboards UNLOCKED");
     }
 
     internal void PlayCashoutAnimation()
@@ -315,12 +308,10 @@ public class OpponentChipManager : MonoBehaviour
     {
         if (winningBetAreas.Count == 0)
         {
-            Debug.Log("[OpponentChip] No winning areas for opponent win animation");
             winAnimationCoroutine = null;
             yield break;
         }
 
-        Debug.Log($"[OpponentChip] Starting WIN ANIMATION for {winningBetAreas.Count} winning bet areas");
 
         if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
@@ -353,7 +344,6 @@ public class OpponentChipManager : MonoBehaviour
                             _betAmountsCache[key] = 0;
                         }
                         _betAmountsCache[key] += betAmount;
-                        Debug.Log($"[OpponentChip] Found bet: {chipOwner} bet {betAmount} on {betArea}");
                     }
                 }
             }
@@ -397,27 +387,16 @@ public class OpponentChipManager : MonoBehaviour
                     {
                         BadgeState badge = chipToOriginalBadge[chip];
                         winChip.SetLeaderboardBadge(badge.isRichest, badge.isWinner);
-                        Debug.Log($"[OpponentChip] Win chip spawned with badge: Richest={badge.isRichest}, Winner={badge.isWinner}");
                     }
                     if (estimatedWinPerChip > 0)
                     {
                         string formattedAmount = GameUtilities.FormatCurrency(estimatedWinPerChip);
                         winChip.SetAmount(formattedAmount);
-                        Debug.Log($"[OpponentChip] Win chip for {chipOwner}: {formattedAmount} (estimated from bet: {totalBetAmount})");
 
-                        if (winChip.chipText != null)
-                        {
-                            Debug.Log($"[OpponentChip] Chip text component value: '{winChip.chipText.text}'");
-                        }
-                        else
-                        {
-                            Debug.LogError($"[OpponentChip] Chip text component is NULL! Cannot display amount.");
-                        }
                     }
                     else
                     {
                         winChip.SetAmount("");
-                        Debug.LogWarning($"[OpponentChip] No bet amount data for {chipOwner}, showing empty chip");
                     }
                     winChipRT.localPosition = new Vector3(
                         Random.Range(-dealerScatterX, dealerScatterX),
@@ -443,7 +422,6 @@ public class OpponentChipManager : MonoBehaviour
 
         yield return new WaitForSeconds(dealerToBetDuration * 0.8f);
 
-        Debug.Log($"[OpponentChip] WIN ANIMATION complete - spawned {activeWinChips.Count} win chips");
         winAnimationCoroutine = null;
     }
     private double ParseFormattedCurrency(string formatted)
@@ -497,7 +475,6 @@ public class OpponentChipManager : MonoBehaviour
 
         if (showRichestBadge && showWinnerBadge)
         {
-            Debug.LogWarning($"[OpponentChip] {username} has BOTH badges at spawn! Prioritizing Winner badge.");
             showRichestBadge = false;
         }
 
@@ -511,11 +488,9 @@ public class OpponentChipManager : MonoBehaviour
 
         if (spawnPosition == opponentDealerArea)
         {
-            Debug.Log($"[OpponentChip] {username} NOT in leaderboard → spawn from dealer, NO badges");
         }
         else
         {
-            Debug.Log($"[OpponentChip] {username} IN leaderboard → badge LOCKED: Richest={showRichestBadge}, Winner={showWinnerBadge}");
         }
 
         float scatterX = spawnPosition == opponentDealerArea ? dealerScatterX : 15f;
@@ -693,8 +668,6 @@ public class OpponentChipManager : MonoBehaviour
 
                     RectTransform targetDealer = Random.value > 0.5f ? playerDealerArea : opponentDealerArea;
 
-                    Debug.Log($"[OpponentChip] LOSING chip: owner={chipOwner}, area={betArea}, won={chipOwnerWon} → dealer (badges cleared)");
-
                     Vector2 targetPos = GetCanvasPosition(targetDealer) + new Vector2(
                         Random.Range(-dealerScatterX, dealerScatterX),
                         Random.Range(-dealerScatterY, dealerScatterY));
@@ -720,15 +693,7 @@ public class OpponentChipManager : MonoBehaviour
                         {
                             chipComponent.SetLeaderboardBadge(originalBadge.isRichest, originalBadge.isWinner);
                         }
-                        if (!originalBadge.isRichest && !originalBadge.isWinner)
-                        {
-                            Debug.Log($"[OpponentChip] WINNING chip (NON-LEADERBOARD): owner={chipOwner}, area={betArea} → dealer (no badges)");
-                        }
-                        else
-                        {
-                            string badgeType = originalBadge.isWinner ? "WINNER" : "RICHEST";
-                            Debug.Log($"[OpponentChip] WINNING chip (LEADERBOARD): owner={chipOwner}, badge={badgeType}, area={betArea} → leaderboard");
-                        }
+                        
                     }
 
                     RectTransform targetPosition = GetCashoutDestinationForWinner(chip);
@@ -797,8 +762,6 @@ public class OpponentChipManager : MonoBehaviour
 
         isCashoutRunning = false;
         cashoutCoroutine = null;
-
-        Debug.Log("[OpponentChip] Cashout complete - leaderboards UNLOCKED for next round");
     }
 
     private RectTransform GetCashoutDestinationForWinner(RectTransform chipRT)
@@ -809,7 +772,6 @@ public class OpponentChipManager : MonoBehaviour
 
         if (chipOwner == localPlayerUsername)
         {
-            Debug.Log($"[OpponentChip] Winner chip from local player → player dealer");
             return playerDealerArea;
         }
 
@@ -821,18 +783,14 @@ public class OpponentChipManager : MonoBehaviour
                 originalSpawnPosition != opponentDealerArea &&
                 originalSpawnPosition != playerDealerArea)
             {
-                Debug.Log($"[OpponentChip] Winner chip returning to original leaderboard spawn position");
                 return originalSpawnPosition;
             }
 
             if (originalSpawnPosition == opponentDealerArea)
             {
-                Debug.Log($"[OpponentChip] Winner chip spawned from dealer, returning to opponent dealer");
                 return opponentDealerArea;
             }
         }
-
-        Debug.Log($"[OpponentChip] Winner chip fallback → opponent dealer");
         return opponentDealerArea;
     }
     #endregion

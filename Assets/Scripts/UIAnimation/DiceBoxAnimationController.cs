@@ -548,10 +548,20 @@ public class DiceBoxAnimationController : MonoBehaviour
 
         if (frame == diceHideFrame)
         {
-            if (diceContainer)
-                diceContainer.SetActive(false);
-            onDiceShouldHide?.Invoke();
+            // Defer by one frame so the current sprite frame fully renders before
+            // the diceContainer is hidden. Without this, SetActive(false) fires
+            // mid-frame and the dice pop off one frame before the box visually closes.
+            StartCoroutine(HideDiceNextFrame());
         }
+    }
+
+    // Waits one frame so the current sprite frame is fully rendered before
+    // hiding the diceContainer. This prevents the dice popping off one frame early.
+    private IEnumerator HideDiceNextFrame()
+    {
+        yield return null;  // skip to end of current frame
+        if (diceContainer) diceContainer.SetActive(false);
+        onDiceShouldHide?.Invoke();
     }
 
     private int TotalOpenCloseFrames() =>
@@ -586,33 +596,5 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     #endregion
 
-    #region Editor
-
-#if UNITY_EDITOR
-    [ContextMenu("Debug: Force Start Cycle")]
-    private void EditorStartCycle() => StartAnimationCycle();
-
-    [ContextMenu("Debug: Force Reveal Dice")]
-    private void EditorRevealDice() => RevealDiceResult();
-
-    [ContextMenu("Debug: Force Hide")]
-    private void EditorForceHide() => ForceHide();
-
-    private void OnValidate()
-    {
-        int total = TotalOpenCloseFrames();
-        if (total == 0) return;
-
-        if (holdOnFrame >= total)
-            Debug.LogWarning($"[DiceBoxAnimationController] holdOnFrame ({holdOnFrame}) >= sequence count ({total}).");
-        if (diceShowFrame >= total)
-            Debug.LogWarning($"[DiceBoxAnimationController] diceShowFrame ({diceShowFrame}) >= sequence count ({total}).");
-        if (diceHideFrame >= total)
-            Debug.LogWarning($"[DiceBoxAnimationController] diceHideFrame ({diceHideFrame}) >= sequence count ({total}).");
-        if (openCloseTopSequence != null && openCloseTopSequence.Count != total)
-            Debug.LogWarning($"[DiceBoxAnimationController] Top sequence count ({openCloseTopSequence.Count}) != base count ({total}). Must match.");
-    }
-#endif
-
-    #endregion
+   
 }

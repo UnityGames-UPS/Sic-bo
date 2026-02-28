@@ -397,23 +397,4 @@ internal class BonusIndicatorController : MonoBehaviour
     }
     #endregion
 
-    #region Validation
-
-    private void OnValidate()
-    {
-        if (brownNumberSprites.Length != 10)
-            Debug.LogWarning("[BonusIndicatorController] brownNumberSprites needs exactly 10 entries (0-9).");
-
-        if (greenNumberSprites.Length != 10)
-            Debug.LogWarning("[BonusIndicatorController] greenNumberSprites needs exactly 10 entries (0-9).");
-
-        if (supportDecimalMultipliers)
-        {
-            if (brownDotSprite == null)
-                Debug.LogWarning("[BonusIndicatorController] brownDotSprite not assigned (required for decimals).");
-            if (greenDotSprite == null)
-                Debug.LogWarning("[BonusIndicatorController] greenDotSprite not assigned (required for decimals).");
-        }
-    }
-    #endregion
 }

@@ -58,27 +58,22 @@ public class ResultPlaneController : MonoBehaviour
     {
         slotPositions = new Vector2[11];
 
-        // Store positions 0-9 directly from the scene – these are the visible slots
         for (int i = 0; i < 10; i++)
         {
-            var rt = GetRT(resultRows[i]);
+            var rt = resultRows[i].RT;
             if (rt != null) slotPositions[i] = rt.anchoredPosition;
         }
 
-        // Derive uniform row spacing from rows 0 and 1
-        var rt0 = GetRT(resultRows[0]);
-        var rt1 = GetRT(resultRows[1]);
+        var rt0 = resultRows[0].RT;
+        var rt1 = resultRows[1].RT;
         if (rt0 != null && rt1 != null)
             rowWidth = Mathf.Abs(rt1.anchoredPosition.x - rt0.anchoredPosition.x);
 
         if (rowWidth < 1f) rowWidth = 100f;
 
-        // Position 10 (staging slot) is always exactly one rowWidth to the right of slot 9,
-        // regardless of where row 10 was placed in the scene – this eliminates the gap mismatch
         slotPositions[10] = slotPositions[9] + new Vector2(rowWidth, 0f);
 
-        // Physically move the staging row to that calculated position so it is correct from frame 1
-        var rt10 = GetRT(resultRows[10]);
+        var rt10 = resultRows[10].RT;
         if (rt10 != null) rt10.anchoredPosition = slotPositions[10];
     }
 
@@ -129,7 +124,7 @@ public class ResultPlaneController : MonoBehaviour
 
         for (int i = 0; i < resultRows.Count; i++)
         {
-            var rt = GetRT(resultRows[i]);
+            var rt = resultRows[i].RT;
             if (rt != null) rt.anchoredPosition = slotPositions[i];
             if (resultRows[i].rowContainer != null) resultRows[i].rowContainer.SetActive(i < 10);
             resultRows[i].SetScaleToOne();
@@ -144,7 +139,7 @@ public class ResultPlaneController : MonoBehaviour
 
         for (int i = 0; i < 11; i++)
         {
-            var rt = GetRT(resultRows[i]);
+            var rt = resultRows[i].RT;
             if (rt != null) rt.anchoredPosition = slotPositions[i];
         }
 
@@ -156,7 +151,7 @@ public class ResultPlaneController : MonoBehaviour
         slideSeq = DOTween.Sequence();
         for (int i = 0; i < 11; i++)
         {
-            var rt = GetRT(resultRows[i]);
+            var rt = resultRows[i].RT;
             if (rt == null) continue;
             Vector2 from = slotPositions[i];
             Vector2 to = from - new Vector2(rowWidth, 0f);
@@ -207,7 +202,7 @@ public class ResultPlaneController : MonoBehaviour
         if (resultRows.Count != 11) return;
 
         ResultRow old0 = resultRows[0];
-        var rt = GetRT(old0);
+        var rt = old0.RT;
         if (rt != null) rt.anchoredPosition = slotPositions[10];
         if (old0.rowContainer != null) old0.rowContainer.SetActive(false);
 
@@ -217,12 +212,6 @@ public class ResultPlaneController : MonoBehaviour
     #endregion
 
     #region Helpers
-    private RectTransform GetRT(ResultRow row)
-    {
-        if (row?.rowContainer == null) return null;
-        return row.rowContainer.GetComponent<RectTransform>();
-    }
-
     private Sprite GetDiceSprite(int v) => v switch
     {
         1 => dice1Sprite,
@@ -250,11 +239,21 @@ public class ResultPlaneController : MonoBehaviour
         public Image dice2Image;
         public Image dice3Image;
 
-        private Transform _t;
-        public Transform transform
+        // Cached RectTransform — avoids GetComponent every frame during slide animation
+        private RectTransform _rt;
+        public RectTransform RT
         {
-            get { if (_t == null && rowContainer != null) _t = rowContainer.transform; return _t; }
+            get
+            {
+                if (_rt == null && rowContainer != null)
+                    _rt = rowContainer.GetComponent<RectTransform>();
+                return _rt;
+            }
         }
+
+        // Cached Color structs — avoids new Color() allocations every result
+        private static readonly Color EvenColor = new Color(0.1f, 0.1f, 0.1f, 1f);
+        private static readonly Color OddColor = new Color(0.8f, 0.1f, 0.1f, 1f);
 
         public bool IsValid() =>
             rowContainer != null && sumText != null && bigImage != null &&
@@ -265,9 +264,7 @@ public class ResultPlaneController : MonoBehaviour
             if (sumText != null)
             {
                 sumText.text = data.sum.ToString();
-                sumText.color = data.sum % 2 == 0
-                    ? new Color(0.1f, 0.1f, 0.1f, 1f)
-                    : new Color(0.8f, 0.1f, 0.1f, 1f);
+                sumText.color = data.sum % 2 == 0 ? EvenColor : OddColor;
             }
 
             bool isTriple = data.dice1 == data.dice2 && data.dice2 == data.dice3;

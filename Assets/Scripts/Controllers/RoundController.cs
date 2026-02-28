@@ -127,7 +127,7 @@ public class RoundController : MonoBehaviour
     internal void ClearRoundDisplay()
     {
         if (DiceContainer) DiceContainer.SetActive(false);
-        if (ResultPanel) ResultPanel.SetActive(false);
+        if (ResultPanel) ResultPanel.SetActive(false);  
         if (SmallImage) SmallImage.SetActive(false);
         if (BigImage) BigImage.SetActive(false);
         if (OddImage) OddImage.SetActive(false);

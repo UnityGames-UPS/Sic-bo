@@ -36,7 +36,7 @@ public class SicBoGameData
     public Wagers wagers;
     public Lobby lobby;
     public Leaderboards leaderboards;
-    public List<object> stats;
+    public List<string> stats;          // was List<object> — caused JToken boxing
     public BonusMultipliers bonusMultipliers;
 }
 
@@ -70,7 +70,7 @@ public class LeaderboardEntry
 {
     public string username;
     public double balance;
-    public double totalWins;   
+    public double totalWins;
     public int rank;
 }
 
@@ -138,18 +138,14 @@ public class BetWager
     public string GetPayoutRatioString()
     {
         if (payout != null && payout.Count >= 2)
-        {
             return $"1 : {payout[1]}";
-        }
         return "1 : 1";
     }
 
     public double CalculateWin(double betAmount)
     {
         if (payout != null && payout.Count >= 2)
-        {
             return betAmount * payout[1];
-        }
         return betAmount;
     }
 
@@ -173,14 +169,10 @@ public class BetWager
         string specific3Payout = "1";
 
         if (specific2?.payout != null && specific2.payout.Count >= 2)
-        {
             specific2Payout = specific2.payout[1].ToString();
-        }
 
         if (specific3?.payout != null && specific3.payout.Count >= 2)
-        {
             specific3Payout = specific3.payout[1].ToString();
-        }
 
         return $"2 HIT PAYS 1 : {specific2Payout}   3 HIT PAYS 1 : {specific3Payout}";
     }
@@ -279,39 +271,8 @@ public class BonusData
     public List<int> GetMultipliers(string betOption)
     {
         if (bonus != null && bonus.TryGetValue(betOption, out List<int> multipliers))
-        {
             return multipliers;
-        }
         return new List<int>();
-    }
-
-    public string GetBonusDescription()
-    {
-        if (bonus == null || bonus.Count == 0) return "No bonuses";
-
-        string description = "";
-        foreach (var kvp in bonus)
-        {
-            string betOption = kvp.Key;
-            List<int> multipliers = kvp.Value;
-
-            if (multipliers.Count == 1)
-            {
-                description += $"{betOption}: x{multipliers[0]}, ";
-            }
-            else
-            {
-                description += $"{betOption}: [";
-                for (int i = 0; i < multipliers.Count; i++)
-                {
-                    description += $"x{multipliers[i]}";
-                    if (i < multipliers.Count - 1) description += ", ";
-                }
-                description += "], ";
-            }
-        }
-
-        return description.TrimEnd(',', ' ');
     }
 }
 
@@ -398,15 +359,10 @@ public class HistoryEntry
     public string created_at;
     public List<BetDetail> bets;
 
-    public double GetProfitLoss()
-    {
-        return win_amount - bet_amount;
-    }
+    public double GetProfitLoss() => win_amount - bet_amount;
 
-    public string GetFormattedDateTime()
-    {
-        return GameUtilities.FormatDateTime(GameUtilities.ParseTimestamp(created_at));
-    }
+    public string GetFormattedDateTime() =>
+        GameUtilities.FormatDateTime(GameUtilities.ParseTimestamp(created_at));
 }
 
 [Serializable]
@@ -449,15 +405,11 @@ public class BetLimitInfo
     public double CurrentBetOnArea { get; set; }
     public double TotalBet { get; set; }
 
-    public bool CanPlaceBet(double betAmount)
-    {
-        return (CurrentBetOnArea + betAmount) <= MaxBet;
-    }
+    public bool CanPlaceBet(double betAmount) =>
+        (CurrentBetOnArea + betAmount) <= MaxBet;
 
-    public bool ExceedsMax(double betAmount)
-    {
-        return (CurrentBetOnArea + betAmount) > MaxBet;
-    }
+    public bool ExceedsMax(double betAmount) =>
+        (CurrentBetOnArea + betAmount) > MaxBet;
 }
 
 [Serializable]
@@ -485,7 +437,6 @@ public class ChipCombinationItem
 #endregion
 
 #region Result Data
-
 [System.Serializable]
 public class ResultData
 {
@@ -517,9 +468,7 @@ public class GameRequest
 }
 
 [Serializable]
-public class EmptyPayload
-{
-}
+public class EmptyPayload { }
 
 [Serializable]
 public class JoinLevelPayload

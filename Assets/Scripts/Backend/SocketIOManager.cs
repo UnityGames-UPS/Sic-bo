@@ -23,7 +23,7 @@ public class SocketIOManager : MonoBehaviour
     [Header("Settings")]
     [SerializeField] private float disconnectDelay = 60f;
 
-    [Header("Debug")]
+    [Header("Debug — disable in production builds")]
     [SerializeField] private bool showDebugLogs = false;
     #endregion
 
@@ -98,15 +98,15 @@ public class SocketIOManager : MonoBehaviour
         if (manager != null)
         {
             try { manager.Close(); }
-            catch (Exception e) { Debug.LogWarning($"[SOCKET] Close error: {e.Message}"); }
+            catch (Exception e) { if (showDebugLogs) Debug.LogWarning($"[SOCKET] Close error: {e.Message}"); }
             manager = null;
         }
 
         gameSocket = null;
     }
+
     void CloseGame()
     {
-        Debug.Log("Unity: Closing Game");
         StartCoroutine(CloseSocket());
     }
 
@@ -264,7 +264,7 @@ public class SocketIOManager : MonoBehaviour
         missedPongs = 0;
         lastPongTime = Time.time;
 
-        Debug.Log("[SOCKET] Connected");
+        if (showDebugLogs) Debug.Log("[SOCKET] Connected");
 
         StartPingPongChecks();
 
@@ -284,7 +284,7 @@ public class SocketIOManager : MonoBehaviour
         IsInitialized = false;
         ResetPingRoutine();
 
-        Debug.LogWarning("[SOCKET] Disconnected");
+        if (showDebugLogs) Debug.LogWarning("[SOCKET] Disconnected");
 
         if (hasEverConnected && !isExiting)
             uiController?.ShowDisconnectPopup();
@@ -296,6 +296,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnError(Error error)
     {
         if (isBeingDestroyed) return;
+        // Always log socket-level errors — these are exceptional, not high-frequency
         Debug.LogError($"[SOCKET] Error: {error.message}");
 
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -308,8 +309,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnRoomJoined(string json)
     {
         if (isBeingDestroyed) return;
-
-        Debug.Log($"[RESPONSE] room:joined {json}");
+        if (showDebugLogs) Debug.Log($"[RESPONSE] room:joined {json}");
 
         try
         {
@@ -329,8 +329,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnRoomLeft(string json)
     {
         if (isBeingDestroyed) return;
-
-        Debug.Log($"[RESPONSE] room:left {json}");
+        if (showDebugLogs) Debug.Log($"[RESPONSE] room:left {json}");
 
         try
         {
@@ -341,12 +340,11 @@ public class SocketIOManager : MonoBehaviour
                 !string.IsNullOrEmpty(CurrentRoomId) &&
                 payload.roomId != CurrentRoomId)
             {
-                Debug.Log($"[RESPONSE] room:left ignored — different room ({payload.roomId} vs {CurrentRoomId})");
+                if (showDebugLogs) Debug.Log($"[RESPONSE] room:left ignored — different room ({payload.roomId} vs {CurrentRoomId})");
                 return;
             }
 
             uiController?.UpdatePlayerCountInLevel(payload.playerCount);
-            Debug.Log($"[RESPONSE] room:left — player count updated to {payload.playerCount}");
         }
         catch (Exception e)
         {
@@ -359,8 +357,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnInitData(string json)
     {
         if (isBeingDestroyed) return;
-
-        Debug.Log($"[RESPONSE] game:init {json}");
+        if (showDebugLogs) Debug.Log($"[RESPONSE] game:init {json}");
 
         isWaitingForInitData = false;
         if (initTimeoutRoutine != null)
@@ -403,56 +400,56 @@ public class SocketIOManager : MonoBehaviour
     private void OnRoundStart(string json)
     {
         if (isBeingDestroyed) return;
-        Debug.Log($"[RESPONSE] game:round_start {json}");
+        if (showDebugLogs) Debug.Log($"[RESPONSE] game:round_start {json}");
         TryDeserializeAndForward<RoundStartData>(json, gameManager.OnRoundStart, "round_start");
     }
 
+    // High-frequency: fires every second — never log raw JSON in production
     private void OnBettingTimer(string json)
     {
         if (isBeingDestroyed) return;
-        if (showDebugLogs) Debug.Log($"[RESPONSE] game:betting_timer {json}");
         TryDeserializeAndForward<TimerData>(json, gameManager.OnBettingTimer, "betting_timer");
     }
 
     private void OnBonus(string json)
     {
         if (isBeingDestroyed) return;
-        Debug.Log($"[RESPONSE] game:bonus {json}");
+        if (showDebugLogs) Debug.Log($"[RESPONSE] game:bonus {json}");
         TryDeserializeAndForward<BonusData>(json, gameManager.OnBonus, "bonus");
     }
 
     private void OnDiceResult(string json)
     {
         if (isBeingDestroyed) return;
-        Debug.Log($"[RESPONSE] game:dice_result {json}");
+        if (showDebugLogs) Debug.Log($"[RESPONSE] game:dice_result {json}");
         TryDeserializeAndForward<DiceResultData>(json, gameManager.OnDiceResult, "dice_result");
     }
 
+    // High-frequency: fires on every player bet in the room — never log raw JSON in production
     private void OnBetPlaced(string json)
     {
         if (isBeingDestroyed) return;
-        if (showDebugLogs) Debug.Log($"[RESPONSE] game:bet_placed {json}");
         TryDeserializeAndForward<BetPlacedData>(json, gameManager.OnBetPlaced, "bet_placed");
     }
 
     private void OnCashout(string json)
     {
         if (isBeingDestroyed) return;
-        Debug.Log($"[RESPONSE] game:cashout {json}");
+        if (showDebugLogs) Debug.Log($"[RESPONSE] game:cashout {json}");
         TryDeserializeAndForward<CashoutData>(json, gameManager.OnCashout, "cashout");
     }
 
     private void OnRoundEnd(string json)
     {
         if (isBeingDestroyed) return;
-        Debug.Log($"[RESPONSE] game:round_end {json}");
+        if (showDebugLogs) Debug.Log($"[RESPONSE] game:round_end {json}");
         TryDeserializeAndForward<RoundEndPayload>(json, gameManager.OnRoundEnd, "round_end");
     }
 
+    // High-frequency: fires regularly — never log raw JSON in production
     private void OnLobbyCount(string json)
     {
         if (isBeingDestroyed) return;
-        if (showDebugLogs) Debug.Log($"[RESPONSE] game:lobby_count {json}");
         TryDeserializeAndForward<LobbyCountData>(json, gameManager.OnLobbyCount, "lobby_count");
     }
 
@@ -486,19 +483,15 @@ public class SocketIOManager : MonoBehaviour
         lastPongTime = Time.time;
 
         if (missedPongs >= 2)
-        {
             uiController?.CloseReconnectPopup();
-            Debug.Log("[PING-PONG] Connection restored");
-        }
 
         missedPongs = 0;
-        Debug.Log("[PING-PONG] Pong received");
     }
 
     private void OnInternalError(string json)
     {
         if (isBeingDestroyed) return;
-        Debug.LogError($"[RESPONSE] error: {json}");
+        if (showDebugLogs) Debug.LogError($"[RESPONSE] error: {json}");
 
         string message = TryParseErrorMessage(json);
 
@@ -542,7 +535,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnForceDisconnect(string json)
     {
         if (isBeingDestroyed) return;
-        Debug.LogWarning("[SOCKET] Force disconnect received");
+        if (showDebugLogs) Debug.LogWarning("[SOCKET] Force disconnect received");
         uiController?.ShowAnotherDevicePopup();
     }
     #endregion
@@ -551,14 +544,12 @@ public class SocketIOManager : MonoBehaviour
     internal void JoinLevel(string level)
     {
         if (!CanEmit()) return;
-
         EmitRequest("JOIN_LEVEL", new JoinLevelPayload { level = level }, OnJoinLevelAck);
     }
 
     internal void PlaceBet(string betType, string betOption, int chipIndex, string level)
     {
         if (!CanEmit()) return;
-
         EmitRequest("PLACE_BET", new PlaceBetPayload
         {
             amountIndex = chipIndex,
@@ -575,7 +566,6 @@ public class SocketIOManager : MonoBehaviour
     internal void RequestHistory(int page)
     {
         if (!CanEmit()) return;
-
         EmitRequest("BET_HISTORY", new HistoryRequestPayload { page = page }, OnHistoryAck);
     }
 
@@ -590,7 +580,7 @@ public class SocketIOManager : MonoBehaviour
         if (manager != null)
         {
             try { manager.Close(); }
-            catch (Exception e) { Debug.LogWarning($"[SOCKET] Error closing: {e.Message}"); }
+            catch (Exception e) { if (showDebugLogs) Debug.LogWarning($"[SOCKET] Error closing: {e.Message}"); }
             manager = null;
         }
 
@@ -609,7 +599,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnJoinLevelAck(string json)
     {
         if (isBeingDestroyed) return;
-        Debug.Log($"[ACK] JOIN_LEVEL {json}");
+        if (showDebugLogs) Debug.Log($"[ACK] JOIN_LEVEL {json}");
 
         try
         {
@@ -632,7 +622,7 @@ public class SocketIOManager : MonoBehaviour
     private void HandleBetAck(string json, string label)
     {
         if (isBeingDestroyed) return;
-        Debug.Log($"[ACK] {label} {json}");
+        if (showDebugLogs) Debug.Log($"[ACK] {label} {json}");
 
         try
         {
@@ -649,7 +639,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnHistoryAck(string json)
     {
         if (isBeingDestroyed) return;
-        Debug.Log($"[ACK] BET_HISTORY {json}");
+        if (showDebugLogs) Debug.Log($"[ACK] BET_HISTORY {json}");
 
         try
         {
@@ -658,7 +648,7 @@ public class SocketIOManager : MonoBehaviour
             if (response != null && response.success && response.payload?.history != null && response.payload.meta != null)
                 gameManager.OnHistoryReceived(response.payload.history, response.payload.meta);
             else
-                Debug.LogWarning("[ACK] BET_HISTORY: invalid response or empty payload");
+                if (showDebugLogs) Debug.LogWarning("[ACK] BET_HISTORY: invalid response or empty payload");
         }
         catch (Exception e)
         {
@@ -669,7 +659,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnHomeAck(string json)
     {
         if (isBeingDestroyed) return;
-        Debug.Log($"[ACK] HOME {json}");
+        if (showDebugLogs) Debug.Log($"[ACK] HOME {json}");
 
         try
         {
@@ -689,7 +679,6 @@ public class SocketIOManager : MonoBehaviour
                 if (response.payload.lobby != null)
                     gameManager.OnLobbyCount(new LobbyCountData { lobby = response.payload.lobby });
 
-                // Let GameManager decide: hide loading (normal leave) or join pending room (switch)
                 gameManager?.OnLeaveAcknowledged();
             }
         }
@@ -781,14 +770,13 @@ public class SocketIOManager : MonoBehaviour
             if (waitingForPong)
             {
                 missedPongs++;
-                Debug.Log($"[PING-PONG] Missed pong {missedPongs}/{MaxMissedPongs}");
 
                 if (missedPongs == 2)
                     uiController?.ShowReconnectPopup();
 
                 if (missedPongs >= MaxMissedPongs)
                 {
-                    Debug.LogError("[PING-PONG] Connection lost - max pongs missed");
+                    if (showDebugLogs) Debug.LogError("[PING-PONG] Connection lost - max pongs missed");
                     isConnected = false;
                     uiController?.ShowDisconnectPopup();
                     break;
@@ -797,7 +785,6 @@ public class SocketIOManager : MonoBehaviour
 
             waitingForPong = true;
             EmitSimpleEvent("ping");
-            Debug.Log("[PING-PONG] Ping sent");
         }
     }
 
@@ -828,14 +815,14 @@ public class SocketIOManager : MonoBehaviour
         {
             if (Time.time - focusLostTime >= maxBackgroundTime)
             {
-                Debug.LogError("[SOCKET] Background timeout");
+                if (showDebugLogs) Debug.LogError("[SOCKET] Background timeout");
                 isConnected = false;
                 ResetPingRoutine();
 
                 if (manager != null)
                 {
                     try { manager.Close(); }
-                    catch (Exception e) { Debug.LogWarning($"[SOCKET] Focus close error: {e.Message}"); }
+                    catch (Exception e) { if (showDebugLogs) Debug.LogWarning($"[SOCKET] Focus close error: {e.Message}"); }
                 }
 
                 ShowErrorAndBlock("Game timed out due to inactivity. Please refresh.", showDisconnectAfter: true);
@@ -860,7 +847,7 @@ public class SocketIOManager : MonoBehaviour
         try
         {
             string json = JsonConvert.SerializeObject(new GameRequest { type = requestType, payload = payload });
-            Debug.Log($"[EMIT] {requestType} {json}");
+            if (showDebugLogs) Debug.Log($"[EMIT] {requestType} {json}");
             gameSocket.ExpectAcknowledgement<string>(ackCallback).Emit("request", json);
         }
         catch (Exception e)
@@ -884,17 +871,13 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
         uiController?.ShowErrorPopup(message, "Error", showDisconnectAfter);
-        //RaycastBlocker?.SetActive(true);
     }
 
     private void StartPingPongChecks()
     {
         ResetPingRoutine();
         if (gameObject.activeInHierarchy && !isBeingDestroyed)
-        {
             PingRoutine = StartCoroutine(PingPongCheck());
-            Debug.Log("[PING-PONG] Monitoring started");
-        }
     }
 
     private void ResetPingRoutine()

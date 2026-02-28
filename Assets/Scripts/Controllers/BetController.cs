@@ -1163,12 +1163,9 @@ public class BetController : MonoBehaviour
             if (!hasActiveChips)
             {
                 opponentChipManager.SetLeaderboardData(leaderboards);
-                Debug.Log("[BetController] Leaderboards updated for opponent chips (no active chips)");
+         
             }
-            else
-            {
-                Debug.Log("[BetController] Leaderboards NOT updated for opponent chips (chips active - preventing flicker)");
-            }
+        
         }
 
         RefreshPlayerLeaderboardStatus();

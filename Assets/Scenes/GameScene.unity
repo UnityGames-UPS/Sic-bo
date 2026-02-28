@@ -25099,10 +25099,10 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: b8d0324d0ae145dda5f0513bffb778a2
+  testToken: 0de604885a034eeeac336428ccbd7144
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
-  showDebugLogs: 1
+  showDebugLogs: 0
 --- !u!4 &410521237
 Transform:
   m_ObjectHideFlags: 0
@@ -117170,7 +117170,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 461.8}
+  m_AnchoredPosition: {x: -371.4, y: 442.8}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2043634638

@@ -20,9 +20,7 @@ public class GameManager : MonoBehaviour
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
 
-
-
-    [Header("Debug")]
+    [Header("Debug — disable in production builds")]
     [SerializeField] private bool showDebugLogs = false;
     #endregion
 
@@ -108,7 +106,6 @@ public class GameManager : MonoBehaviour
                             payload.roundState.serverTime);
 
                         uiController.ShowBettingPhase(timeRemaining);
-                        //uiController.UpdateRoundPhase("BETTING");
                         betController.EnableBetting();
 
                         roundController.StartRound(new RoundStartData
@@ -124,27 +121,21 @@ public class GameManager : MonoBehaviour
                 case "rolling":
                 case "result":
                     uiController.ShowBetLocked();
-                    //uiController.UpdateRoundPhase("ROLLING");
                     betController.DisableBetting();
                     break;
                 case "nextround":
                     {
-                        // Use the pre-computed timeRemaining from the server payload
-                        // (already the ms until next round start). Fall back to
-                        // recalculating from bettingEndTime if timeRemaining is absent.
                         int secondsUntilNext = payload.roundState.timeRemaining > 0
                             ? Mathf.Max(0, Mathf.RoundToInt(payload.roundState.timeRemaining / 1000f))
                             : GameUtilities.CalculateTimeRemaining(
                                 payload.roundState.bettingEndTime,
                                 payload.roundState.serverTime);
                         uiController.ShowNextRound(secondsUntilNext);
-                        //uiController.UpdateRoundPhase("NEXTROUND");
                         betController.DisableBetting();
                         break;
                     }
                 default:
                     uiController.ShowBetLocked();
-                    //uiController.UpdateRoundPhase("WAITING");
                     betController.DisableBetting();
                     break;
             }
@@ -153,7 +144,6 @@ public class GameManager : MonoBehaviour
         {
             CurrentRoundId = null;
             uiController.UpdateRoundId(null);
-            //uiController.UpdateRoundPhase("WAITING");
             uiController.HideAllTimers();
         }
     }
@@ -171,7 +161,6 @@ public class GameManager : MonoBehaviour
         uiController.UpdatePlayerCountInLevel(data.playerCount);
         uiController.UpdateRoundId(data.roundId);
         uiController.ShowBettingPhase(timeRemaining);
-        //uiController.UpdateRoundPhase("BETTING");
 
         roundController.StartRound(data);
         betController.OnRoundStart();
@@ -180,9 +169,14 @@ public class GameManager : MonoBehaviour
         chipWinAnimationController?.ResetAll();
         bonusIndicatorController?.ClearAllIndicators();
 
-        // Lock leaderboards for this round to prevent badge flickering
         opponentChipManager?.LockLeaderboardsForRound();
         opponentChipManager?.SetWinningBetAreas(null);
+
+        // Force GC collection at the natural round boundary — frees accumulated garbage
+        // from the previous round (JSON deserialization objects, string allocations, etc.)
+        GameUtilities.ClearCaches();
+        System.GC.Collect();
+        System.GC.WaitForPendingFinalizers();
     }
 
     internal void OnBettingTimer(TimerData data)
@@ -197,9 +191,6 @@ public class GameManager : MonoBehaviour
     {
         if (data == null) return;
 
-        // game:bonus is the server's authoritative signal that the betting window
-        // has closed. Lock bets and start the dice-box zoom-in animation here so
-        // every client transitions at exactly the same server-driven moment.
         betController.DisableBetting();
         uiController.ShowBetLocked();
         roundController.OnBettingLockedByServer();
@@ -214,11 +205,8 @@ public class GameManager : MonoBehaviour
 
         resultPlaneController?.AddNewResult(data);
 
-        // Safety fallback: if game:bonus was missed (e.g. mid-join), ensure bets
-        // are locked before showing the result. These calls are idempotent.
         betController.DisableBetting();
         uiController.ShowBetLocked();
-        //uiController.UpdateRoundPhase("RESULT");
 
         roundController.ShowDiceResult(data);
         betController.HighlightWinningAreas(data.matchSide, data.sum);
@@ -231,7 +219,6 @@ public class GameManager : MonoBehaviour
 
         bonusIndicatorController?.HandleDiceResult(allWinningAreas);
 
-        // Play player win animation
         if (chipWinAnimationController != null)
         {
             List<WinAreaData> winAreas = betController.GetWinningAreasData();
@@ -239,36 +226,33 @@ public class GameManager : MonoBehaviour
                 chipWinAnimationController.PlayDiceResultAnimation(winAreas, data);
         }
 
-        // Play opponent win animations (chips from dealer to their winning bet areas)
         opponentChipManager?.PlayOpponentWinAnimations();
     }
+
     private List<string> GetAllWinningAreasFromDice(DiceResultData data)
     {
         // Reuse cached collections — caller must not hold reference beyond current frame
         _winnersCache.Clear();
         _seenDiceCache.Clear();
 
-        // Main bets - from matchSide
         string side = (data.matchSide ?? "").ToLower();
         if (side == "small") _winnersCache.Add("small");
         if (side == "big") _winnersCache.Add("big");
         if (side == "odd") _winnersCache.Add("odd");
         if (side == "even") _winnersCache.Add("even");
 
-        // Sum areas
         _winnersCache.Add($"sum_{data.sum}");
 
-        // Single dice (1-6) — deduplicated
         if (_seenDiceCache.Add(data.dice1)) _winnersCache.Add($"single_{data.dice1}");
         if (_seenDiceCache.Add(data.dice2)) _winnersCache.Add($"single_{data.dice2}");
         if (_seenDiceCache.Add(data.dice3)) _winnersCache.Add($"single_{data.dice3}");
 
-        // Triple same dice → specific_3_X
         if (data.dice1 == data.dice2 && data.dice2 == data.dice3)
             _winnersCache.Add($"specific_3_{data.dice1}");
 
         return _winnersCache;
     }
+
     internal void OnBetPlaced(BetPlacedData data)
     {
         if (data == null) return;
@@ -287,6 +271,7 @@ public class GameManager : MonoBehaviour
 
         if (data.stats != null && data.stats.Count > 0)
             uiController.UpdateStats(GameUtilities.CalculateStats(data.stats));
+
         if (data.payouts != null)
         {
             betController.SetCashoutData(data.payouts);
@@ -316,7 +301,6 @@ public class GameManager : MonoBehaviour
 
         int secondsUntilNextRound = GameUtilities.CalculateTimeRemaining(data.nextRoundStartTime, data.serverTime);
         uiController.ShowNextRound(secondsUntilNextRound);
-        //uiController.UpdateRoundPhase("NEXTROUND");
         betController.OnRoundEnd();
     }
 
@@ -425,10 +409,10 @@ public class GameManager : MonoBehaviour
         CurrentRoundId = null;
         uiController.ClearRoundId();
 
-        // Clear string caches accumulated during the session
         GameUtilities.ClearCaches();
+        System.GC.Collect();
+        System.GC.WaitForPendingFinalizers();
     }
-
 
     internal void SwitchRoom(string targetRoom)
     {
@@ -450,12 +434,12 @@ public class GameManager : MonoBehaviour
         CurrentRoundId = null;
         uiController.ClearRoundId();
 
-        // Clear string caches accumulated during the previous session
         GameUtilities.ClearCaches();
+        System.GC.Collect();
+        System.GC.WaitForPendingFinalizers();
 
         socketManager.ReturnHome();
     }
-
 
     internal void OnLeaveAcknowledged()
     {
@@ -478,7 +462,6 @@ public class GameManager : MonoBehaviour
         if (string.IsNullOrEmpty(CurrentRoom)) return;
 
         AudioManager.Instance?.PlayPlayerBetPlace();
-
         socketManager.PlaceBet(GetBetType(betOption), betOption, chipIndex, CurrentRoom);
     }
 
@@ -494,7 +477,6 @@ public class GameManager : MonoBehaviour
     internal void ExitGame()
     {
         uiController.ShowLoadingScreen("Exiting Game...");
-
 
         betController?.DisableBetting();
         betController?.ClearAllBets(true);
