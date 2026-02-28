@@ -12,6 +12,9 @@ public class LeaderboardPlayerBlock : MonoBehaviour
     public GameObject Container;
     public Image PositionImage;
 
+    [Header("Crown (Separate from Badge)")]
+    public GameObject CrownObject; // Assign the crown GameObject/Image here
+
 
     internal void SetPlayerData(string username, double balance, Sprite avatar)
     {
@@ -30,6 +33,25 @@ public class LeaderboardPlayerBlock : MonoBehaviour
             PositionImage.sprite = positionSprite;
             PositionImage.gameObject.SetActive(positionSprite != null);
         }
+    }
+
+    /// <summary>
+    /// Show or hide the crown. Crown should only be visible for 1st place (index 0)
+    /// </summary>
+    internal void SetCrownVisible(bool visible)
+    {
+        if (CrownObject != null)
+        {
+            CrownObject.SetActive(visible);
+        }
+    }
+
+    /// <summary>
+    /// Hide crown immediately (used during swaps)
+    /// </summary>
+    internal void HideCrown()
+    {
+        SetCrownVisible(false);
     }
 
     internal void UpdateBalance(double balance)
@@ -59,6 +81,9 @@ public class LeaderboardPlayerBlock : MonoBehaviour
             SetBalanceVisible(false);
             AvatarImage?.gameObject.SetActive(false);
         }
+
+        // Also hide crown when hiding the block
+        HideCrown();
     }
     internal CanvasGroup GetNameCanvasGroup() => NameText != null ? GetOrAddCanvasGroup(NameText.gameObject) : null;
     internal CanvasGroup GetBalanceCanvasGroup() => BalanceText != null ? GetOrAddCanvasGroup(BalanceText.gameObject) : null;

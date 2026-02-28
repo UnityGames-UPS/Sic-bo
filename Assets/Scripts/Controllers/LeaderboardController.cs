@@ -20,6 +20,9 @@ public class LeaderboardController : MonoBehaviour
     [SerializeField] private Sprite[] richestPositionBadges = new Sprite[3]; // 1st, 2nd, 3rd
     [SerializeField] private Sprite[] winnersPositionBadges = new Sprite[3]; // 1st, 2nd, 3rd
 
+    [Header("Crown (For 1st Place Only)")]
+    [SerializeField] private bool useSeparateCrown = true; // Enable if crown is separate from badges
+
     [Header("Animation Settings")]
     [SerializeField] private float nameDuration = 2f;
     [SerializeField] private float balanceDuration = 2f;
@@ -97,8 +100,8 @@ public class LeaderboardController : MonoBehaviour
     #region Internal API
     internal void Initialize()
     {
-        foreach (var b in richestBlocks) b?.HideAll();
-        foreach (var b in winnersBlocks) b?.HideAll();
+        foreach (var b in richestBlocks) b?.HideAll(); // HideAll() now also hides crown
+        foreach (var b in winnersBlocks) b?.HideAll(); // HideAll() now also hides crown
 
         currentRichest.Clear();
         currentWinners.Clear();
@@ -152,7 +155,7 @@ public class LeaderboardController : MonoBehaviour
     }
 
     private IEnumerator MarkAnimationComplete()
-    { 
+    {
         float maxDuration = Mathf.Max(interchangeDuration, slideDuration * 2) + 0.5f;
         yield return new WaitForSeconds(maxDuration);
         isAnimating = false;
@@ -222,137 +225,190 @@ public class LeaderboardController : MonoBehaviour
         double displayValue = isWinners ? newEntry.totalWins : newEntry.balance;
 
         int oldPosition = FindPlayerPosition(currentData, newEntry.username);
-        bool isPositionSwap = oldPosition != -1 && oldPosition != index;
+        bool playerMovedUp = oldPosition > index;
 
         if (isFirstTime)
         {
-            currentData[index] = newEntry;
+            StopBlockAnimation(block);
             block.SetPlayerData(newEntry.username, displayValue, PickAvatar(newEntry.username));
             SetPositionBadge(block, index, isWinners);
-            float offset = Random.Range(minRandomOffset, maxRandomOffset);
-            AddBlockCoroutine(block, StartCoroutine(DelayedAlternateStart(block, offset)));
-        }
-        else if (isPositionSwap && !isCascade)
-        {
-            LeaderboardPlayerBlock oldBlock = blocks[oldPosition];
-            LeaderboardEntry oldBlockEntry = currentData[index];
-
-            currentData[oldPosition] = oldBlockEntry;
             currentData[index] = newEntry;
-
-            StopBlockAnimation(block);
-            StopBlockAnimation(oldBlock);
-
-            AddBlockCoroutine(block, StartCoroutine(InterchangePositions(
-                block, oldBlock, newEntry, oldBlockEntry, displayValue,
-                isWinners ? currentWinners[oldPosition].totalWins : currentRichest[oldPosition].balance,
-                isWinners)));
+            float randomOffset = Random.Range(minRandomOffset, maxRandomOffset);
+            StartCoroutine(DelayedStartAnimation(block, randomOffset));
         }
         else if (playerChanged)
         {
+            if (isCascade)
+            {
+                StopBlockAnimation(block);
+                AddBlockCoroutine(block, StartCoroutine(
+                    SlideOutAndUpdate(block, newEntry, slideDir, displayValue, index, isWinners)
+                ));
+            }
+            else if (playerMovedUp && oldPosition != -1)
+            {
+                int newIndex = index;
+                int oldIndex = oldPosition;
+                LeaderboardPlayerBlock oldBlock = blocks[oldIndex];
+                LeaderboardEntry oldEntry = currentData[oldIndex];
+
+                StopBlockAnimation(block);
+                StopBlockAnimation(oldBlock);
+
+                currentData[newIndex] = newEntry;
+                currentData[oldIndex] = oldEntry;
+
+                double oldDisplayValue = isWinners ? oldEntry.totalWins : oldEntry.balance;
+
+                AddBlockCoroutine(block, StartCoroutine(
+                    InterchangeBlocks(
+                        block, oldBlock, newEntry, oldEntry, displayValue,
+                        oldDisplayValue, isWinners, newIndex, oldIndex
+                    )
+                ));
+            }
+            else
+            {
+                StopBlockAnimation(block);
+                AddBlockCoroutine(block, StartCoroutine(
+                    SlideOutAndUpdate(block, newEntry, slideDir, displayValue, index, isWinners)
+                ));
+            }
             currentData[index] = newEntry;
-            StopBlockAnimation(block);
-            AddBlockCoroutine(block, StartCoroutine(SlideOutAndUpdate(block, newEntry, slideDir, displayValue, index, isWinners)));
         }
         else
         {
-            double prev = isWinners ? currentData[index].totalWins : currentData[index].balance;
-            if (System.Math.Abs(prev - displayValue) > 0.001)
+            if (displayValue != (isWinners ? currentData[index].totalWins : currentData[index].balance))
             {
-                currentData[index] = newEntry;
                 block.UpdateBalance(displayValue);
+                currentData[index].balance = newEntry.balance;
+                currentData[index].totalWins = newEntry.totalWins;
             }
         }
     }
 
+    private IEnumerator DelayedStartAnimation(LeaderboardPlayerBlock block, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        AddBlockCoroutine(block, StartCoroutine(AlternateNameBalance(block)));
+    }
+
     private int FindPlayerPosition(Dictionary<int, LeaderboardEntry> currentData, string username)
     {
-        if (string.IsNullOrEmpty(username)) return -1;
-
         foreach (var kvp in currentData)
         {
             if (kvp.Value.username == username)
                 return kvp.Key;
         }
-
         return -1;
     }
 
-    private void SetPositionBadge(LeaderboardPlayerBlock block, int index, bool isWinners)
+    private void SetPositionBadge(LeaderboardPlayerBlock block, int position, bool isWinners)
     {
-        if (block == null) return;
-
-        Sprite[] badges = isWinners ? winnersPositionBadges : richestPositionBadges;
-        if (badges != null && index >= 0 && index < badges.Length)
+        var badges = isWinners ? winnersPositionBadges : richestPositionBadges;
+        if (position >= 0 && position < badges.Length)
         {
-            block.SetPositionBadge(badges[index]);
+            block.SetPositionBadge(badges[position]);
+        }
+
+        // Manage crown visibility - only show for 1st place (position 0)
+        if (useSeparateCrown)
+        {
+            block.SetCrownVisible(position == 0);
         }
     }
 
-    private IEnumerator DelayedAlternateStart(LeaderboardPlayerBlock block, float delay)
-    {
-        if (delay > 0f) yield return new WaitForSeconds(delay);
-        AddBlockCoroutine(block, StartCoroutine(AlternateNameBalance(block)));
-    }
-    #endregion
-
-    #region Animations
-    private IEnumerator InterchangePositions(
+    private IEnumerator InterchangeBlocks(
         LeaderboardPlayerBlock block1,
         LeaderboardPlayerBlock block2,
         LeaderboardEntry entry1,
         LeaderboardEntry entry2,
         double displayValue1,
         double displayValue2,
-        bool isWinners)
+        bool isWinners,
+        int newIndex1,  // New position for block1 (where it's going)
+        int newIndex2)  // New position for block2 (where it's going)
     {
+        // STOP ALL ANIMATIONS ON BOTH BLOCKS FIRST
+        StopBlockAnimation(block1);
+        StopBlockAnimation(block2);
+
         RectTransform rect1 = block1.GetComponent<RectTransform>();
         RectTransform rect2 = block2.GetComponent<RectTransform>();
 
         if (rect1 == null || rect2 == null) yield break;
 
+        // Kill any existing DOTween animations
         rect1.DOKill(complete: true);
         rect2.DOKill(complete: true);
 
         Vector2 pos1 = rect1.anchoredPosition;
         Vector2 pos2 = rect2.anchoredPosition;
-        rect1.DOAnchorPos(pos2, interchangeDuration).SetEase(Ease.InOutQuad);
-        rect2.DOAnchorPos(pos1, interchangeDuration).SetEase(Ease.InOutQuad);
 
-        yield return new WaitForSeconds(interchangeDuration);
+        // HIDE BOTH POSITION BADGES AND CROWNS BEFORE SWAP
+        block1.SetPositionBadge(null);
+        block2.SetPositionBadge(null);
+        if (useSeparateCrown)
+        {
+            block1.HideCrown();
+            block2.HideCrown();
+        }
 
-        int siblingIndex1 = rect1.GetSiblingIndex();
-        int siblingIndex2 = rect2.GetSiblingIndex();
-        rect1.SetSiblingIndex(siblingIndex2);
-        rect2.SetSiblingIndex(siblingIndex1);
-
-        rect1.anchoredPosition = pos1;
-        rect2.anchoredPosition = pos2;
-
+        // Reset text states to ensure clean animation
         ResetTextState(block1.NameText);
         ResetTextState(block1.BalanceText);
         ResetTextState(block2.NameText);
         ResetTextState(block2.BalanceText);
 
+        // Perform the position swap animation
+        rect1.DOAnchorPos(pos2, interchangeDuration).SetEase(Ease.InOutQuad);
+        rect2.DOAnchorPos(pos1, interchangeDuration).SetEase(Ease.InOutQuad);
+
+        yield return new WaitForSeconds(interchangeDuration);
+
+        // Swap sibling indices to maintain proper layer order
+        int siblingIndex1 = rect1.GetSiblingIndex();
+        int siblingIndex2 = rect2.GetSiblingIndex();
+        rect1.SetSiblingIndex(siblingIndex2);
+        rect2.SetSiblingIndex(siblingIndex1);
+
+        // FORCE set positions to avoid stuck blocks
+        rect1.anchoredPosition = pos2;
+        rect2.anchoredPosition = pos1;
+
+        // Update the original positions dictionary
+        if (originalPositions.ContainsKey(rect1))
+        {
+            originalPositions[rect1] = pos2;
+        }
+        if (originalPositions.ContainsKey(rect2))
+        {
+            originalPositions[rect2] = pos1;
+        }
+
+        // Reset text states again before setting data
+        ResetTextState(block1.NameText);
+        ResetTextState(block1.BalanceText);
+        ResetTextState(block2.NameText);
+        ResetTextState(block2.BalanceText);
+
+        // Update player data
         block1.SetPlayerData(entry1.username, displayValue1, PickAvatar(entry1.username));
         block2.SetPlayerData(entry2.username, displayValue2, PickAvatar(entry2.username));
 
-        int index1 = -1, index2 = -1;
-        var blocks = isWinners ? winnersBlocks : richestBlocks;
-        for (int i = 0; i < blocks.Count; i++)
-        {
-            if (blocks[i] == block1) index1 = i;
-            if (blocks[i] == block2) index2 = i;
-        }
+        // SET POSITION BADGES AFTER SWAP IS COMPLETE
+        // block1 is now at newIndex1 position, so it gets that position's badge
+        // block2 is now at newIndex2 position, so it gets that position's badge
+        SetPositionBadge(block1, newIndex1, isWinners);
+        SetPositionBadge(block2, newIndex2, isWinners);
 
-        if (index1 != -1) SetPositionBadge(block1, index1, isWinners);
-        if (index2 != -1) SetPositionBadge(block2, index2, isWinners);
-
+        // Wait a bit before starting the name/balance animation
         float randomOffset1 = Random.Range(minRandomOffset, maxRandomOffset);
         float randomOffset2 = Random.Range(minRandomOffset, maxRandomOffset);
 
         yield return new WaitForSeconds(Mathf.Max(randomOffset1, randomOffset2));
 
+        // Start the alternating animation for both blocks
         AddBlockCoroutine(block1, StartCoroutine(AlternateNameBalance(block1)));
         AddBlockCoroutine(block2, StartCoroutine(AlternateNameBalance(block2)));
     }
@@ -369,6 +425,7 @@ public class LeaderboardController : MonoBehaviour
 
         if (blockRect != null)
         {
+            // Kill any ongoing animations
             blockRect.DOKill(complete: true);
 
             Vector2 restPos = originalPositions.ContainsKey(blockRect)
@@ -377,15 +434,19 @@ public class LeaderboardController : MonoBehaviour
 
             Vector2 offScreenPos = restPos + new Vector2(slideDir * slideDistance, 0f);
 
+            // Slide out
             yield return blockRect.DOAnchorPos(offScreenPos, slideDuration).SetEase(Ease.InQuad).WaitForCompletion();
 
+            // Update data while off-screen
             ResetTextState(block.NameText);
             ResetTextState(block.BalanceText);
             block.SetPlayerData(entry.username, displayValue, PickAvatar(entry.username));
             SetPositionBadge(block, index, isWinners);
 
+            // Slide back in
             yield return blockRect.DOAnchorPos(restPos, slideDuration).SetEase(Ease.OutQuad).WaitForCompletion();
 
+            // Force set position to avoid stuck blocks
             blockRect.anchoredPosition = restPos;
         }
         else
@@ -403,14 +464,14 @@ public class LeaderboardController : MonoBehaviour
 
     private IEnumerator AlternateNameBalance(LeaderboardPlayerBlock block)
     {
- 
+
         bool firstIteration = true;
 
         while (true)
         {
             if (!firstIteration)
             {
-           
+
                 StartCoroutine(FadeOutUp(block.BalanceText));
                 yield return StartCoroutine(FadeInAtPosition(block.NameText));
             }
@@ -421,7 +482,7 @@ public class LeaderboardController : MonoBehaviour
             StartCoroutine(FadeOutUp(block.NameText));
             yield return StartCoroutine(FadeInAtPosition(block.BalanceText));
 
-  
+
             yield return new WaitForSeconds(balanceDuration);
 
             firstIteration = false;
@@ -459,6 +520,14 @@ public class LeaderboardController : MonoBehaviour
         if (textComponent == null) yield break;
 
         CanvasGroup canvasGroup = GetOrAddCanvasGroup(textComponent.gameObject);
+
+        // CRITICAL: Reset position before fading in
+        RectTransform textRect = textComponent.GetComponent<RectTransform>();
+        if (textRect != null)
+        {
+            textRect.anchoredPosition = Vector2.zero; // Reset to original position
+        }
+
         canvasGroup.alpha = 0f;
         textComponent.gameObject.SetActive(true);
         float elapsed = 0f;
@@ -476,11 +545,21 @@ public class LeaderboardController : MonoBehaviour
     private void ResetTextState(TMP_Text textComponent)
     {
         if (textComponent == null) return;
+
+        // Kill any DOTween animations on the text
+        RectTransform textRect = textComponent.GetComponent<RectTransform>();
+        if (textRect != null)
+        {
+            textRect.DOKill(complete: true);
+            textRect.anchoredPosition = Vector2.zero; // Reset position
+        }
+
         // Ensure CanvasGroup exists and is fully visible
         var cg = textComponent.GetComponent<CanvasGroup>();
         if (cg == null) cg = textComponent.gameObject.AddComponent<CanvasGroup>();
         cg.alpha = 1f;
-        textComponent.GetComponent<RectTransform>()?.DOKill(complete: false);
+
+        textComponent.gameObject.SetActive(true);
     }
 
     private CanvasGroup GetOrAddCanvasGroup(GameObject go)
@@ -503,22 +582,81 @@ public class LeaderboardController : MonoBehaviour
     {
         if (block == null) return;
         int id = block.GetInstanceID();
+
+        // Stop all tracked coroutines for this block
         if (blockCoroutines.TryGetValue(id, out var coroutines))
         {
-            foreach (var c in coroutines) if (c != null) StopCoroutine(c);
+            foreach (var c in coroutines)
+            {
+                if (c != null)
+                {
+                    try
+                    {
+                        StopCoroutine(c);
+                    }
+                    catch
+                    {
+                        // Coroutine might already be stopped
+                    }
+                }
+            }
             coroutines.Clear();
         }
-        block.GetComponent<RectTransform>()?.DOKill(complete: false);
+
+        // Kill all DOTween animations on the block
+        RectTransform blockRect = block.GetComponent<RectTransform>();
+        if (blockRect != null)
+        {
+            blockRect.DOKill(complete: true);
+        }
+
+        // Also kill animations on text components
+        if (block.NameText != null)
+        {
+            RectTransform nameRect = block.NameText.GetComponent<RectTransform>();
+            if (nameRect != null) nameRect.DOKill(complete: true);
+        }
+        if (block.BalanceText != null)
+        {
+            RectTransform balanceRect = block.BalanceText.GetComponent<RectTransform>();
+            if (balanceRect != null) balanceRect.DOKill(complete: true);
+        }
     }
 
     private void StopAllAnimations()
     {
         foreach (var kvp in blockCoroutines)
             foreach (var c in kvp.Value)
-                if (c != null) StopCoroutine(c);
+                if (c != null)
+                {
+                    try
+                    {
+                        StopCoroutine(c);
+                    }
+                    catch
+                    {
+                        // Coroutine might already be stopped
+                    }
+                }
 
         blockCoroutines.Clear();
         DOTween.Kill(this);
+
+        // Also kill animations on all blocks
+        foreach (var block in richestBlocks)
+        {
+            if (block != null)
+            {
+                block.GetComponent<RectTransform>()?.DOKill(complete: true);
+            }
+        }
+        foreach (var block in winnersBlocks)
+        {
+            if (block != null)
+            {
+                block.GetComponent<RectTransform>()?.DOKill(complete: true);
+            }
+        }
     }
     #endregion
 
