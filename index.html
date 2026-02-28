@@ -91,6 +91,7 @@
           createUnityInstance(canvas, config, (progress) => {
           }).then((unityInstance) => {
              window.unityInstance = unityInstance;
+             window.gameInstance = unityInstance;
           }).catch((message) => {
             alert(message);
           });
