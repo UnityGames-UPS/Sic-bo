@@ -56856,15 +56856,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: 11
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8002569642911b348a2bce9fbe959ca3, type: 2}
-  m_sharedMaterial: {fileID: 2870210248413001566, guid: 8002569642911b348a2bce9fbe959ca3, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1271bafd0b71d554ea4e9515a18574c4, type: 2}
+  m_sharedMaterial: {fileID: 5940935547364425812, guid: 1271bafd0b71d554ea4e9515a18574c4, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4278190335
-  m_fontColor: {r: 1, g: 0, b: 0, a: 1}
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -94595,8 +94595,8 @@ MonoBehaviour:
   BigImage: {fileID: 1119504920}
   OddImage: {fileID: 1199594325}
   EvenImage: {fileID: 288508438}
-  oddSumColor: {r: 1, g: 0, b: 0, a: 1}
-  evenSumColor: {r: 0, g: 0, b: 0, a: 1}
+  oddSumColor: {r: 1, g: 1, b: 1, a: 1}
+  evenSumColor: {r: 1, g: 1, b: 1, a: 1}
   uiController: {fileID: 1759262012}
   betController: {fileID: 275686507}
   diceBoxAnimController: {fileID: 1317873481}

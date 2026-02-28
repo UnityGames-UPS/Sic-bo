@@ -1,7 +1,6 @@
 mergeInto(LibraryManager.library, {
     SendLogToReactNative: function (messagePtr) {
         var message = UTF8ToString(messagePtr);
-        // console.log('jslib fun : ' + message);
         if (window.ReactNativeWebView) {
           window.ReactNativeWebView.postMessage(message);
         } 
@@ -9,7 +8,6 @@ mergeInto(LibraryManager.library, {
 
     SendPostMessage: function(messagePtr) {
       var message = UTF8ToString(messagePtr);
-      // console.log('SendReactPostMessage, message sent: ' + message);
       if(window.ReactNativeWebView){
         if(message == "authToken"){
           window.ReactNativeWebView.postMessage("if message is authtoken");
@@ -39,51 +37,121 @@ mergeInto(LibraryManager.library, {
     },
 
     RequestFullscreen: function () {
+      console.log('[JS] RequestFullscreen called');
       var el = document.documentElement;
       var req = el.requestFullscreen
              || el.webkitRequestFullscreen
              || el.mozRequestFullScreen
              || el.msRequestFullscreen;
       if (req) {
-        req.call(el).catch(function(err) {
-          console.warn('RequestFullscreen failed: ' + err);
+        req.call(el).then(function() {
+          console.log('[JS] Fullscreen request succeeded');
+        }).catch(function(err) {
+          console.warn('[JS] RequestFullscreen failed:', err);
         });
+      } else {
+        console.error('[JS] No fullscreen API available!');
       }
     },
 
     ExitFullscreen: function () {
+      console.log('[JS] ExitFullscreen called');
       var exit = document.exitFullscreen
               || document.webkitExitFullscreen
               || document.mozCancelFullScreen
               || document.msExitFullscreen;
       if (exit) {
-        exit.call(document).catch(function(err) {
-          console.warn('ExitFullscreen failed: ' + err);
+        exit.call(document).then(function() {
+          console.log('[JS] Exit fullscreen succeeded');
+        }).catch(function(err) {
+          console.warn('[JS] ExitFullscreen failed:', err);
         });
+      } else {
+        console.error('[JS] No exit fullscreen API available!');
       }
     },
 
-RegisterFullscreenChangeListener: function(gameObjectNamePtr) {
-    var gameObjectName = UTF8ToString(gameObjectNamePtr);
-    console.log('[JS] Registering fullscreen listener');
-    
-    window._unityFullscreenCallback = function() {
-        var isFS = !!(document.fullscreenElement || document.webkitFullscreenElement || 
-                      document.mozFullScreenElement || document.msFullscreenElement);
-        console.log('[JS] Fullscreen:', isFS);
-        
-        try {
-            (window.unityInstance || window.gameInstance).SendMessage(
-                gameObjectName, 'OnFullscreenChanged', isFS ? '1' : '0'
-            );
-        } catch (err) { console.error('[JS] Error:', err); }
-    };
-    
-    document.removeEventListener('fullscreenchange', window._unityFullscreenCallback);
-    document.removeEventListener('webkitfullscreenchange', window._unityFullscreenCallback);
-    document.addEventListener('fullscreenchange', window._unityFullscreenCallback);
-    document.addEventListener('webkitfullscreenchange', window._unityFullscreenCallback);
-    
-    setTimeout(window._unityFullscreenCallback, 100);
-}
+    RegisterFullscreenChangeListener: function(gameObjectNamePtr) {
+        var gameObjectName = UTF8ToString(gameObjectNamePtr);
+        console.log('[JS] RegisterFullscreenChangeListener called for GameObject:', gameObjectName);
+
+        // Helper to check current fullscreen state
+        function isCurrentlyFullscreen() {
+            return !!(document.fullscreenElement || 
+                      document.webkitFullscreenElement || 
+                      document.mozFullScreenElement || 
+                      document.msFullscreenElement);
+        }
+
+        // Helper to find the Unity instance
+        function getUnityInstance() {
+            if (typeof window.unityInstance !== 'undefined' && window.unityInstance && window.unityInstance.SendMessage) {
+                return window.unityInstance;
+            }
+            if (typeof window.gameInstance !== 'undefined' && window.gameInstance && window.gameInstance.SendMessage) {
+                return window.gameInstance;
+            }
+            if (typeof Module !== 'undefined' && Module && Module.SendMessage) {
+                return Module;
+            }
+            if (typeof unityInstance !== 'undefined' && unityInstance && unityInstance.SendMessage) {
+                return unityInstance;
+            }
+            if (window.parent && window.parent !== window) {
+                if (window.parent.unityInstance && window.parent.unityInstance.SendMessage) {
+                    return window.parent.unityInstance;
+                }
+                if (window.parent.gameInstance && window.parent.gameInstance.SendMessage) {
+                    return window.parent.gameInstance;
+                }
+            }
+            for (var key in window) {
+                try {
+                    if (window.hasOwnProperty(key)) {
+                        var obj = window[key];
+                        if (obj && typeof obj === 'object' && typeof obj.SendMessage === 'function') {
+                            return obj;
+                        }
+                    }
+                } catch(e) {}
+            }
+            return null;
+        }
+
+        // Send fullscreen state to Unity
+        function sendToUnity(isFS) {
+            try {
+                var instance = getUnityInstance();
+                if (instance && instance.SendMessage) {
+                    instance.SendMessage(gameObjectName, 'OnFullscreenChanged', isFS ? '1' : '0');
+                    console.log('[JS] Sent fullscreen state to Unity: ' + (isFS ? 'EXPANDED' : 'SHRINK'));
+                } else {
+                    console.warn('[JS] Unity instance not available, cannot send');
+                }
+            } catch (err) {
+                console.error('[JS] Error sending message to Unity:', err);
+            }
+        }
+
+        // Fullscreen change callback
+        window._unityFullscreenCallback = function() {
+            var isFS = isCurrentlyFullscreen();
+            console.log('[JS] Fullscreen event fired. State:', isFS ? 'EXPANDED' : 'SHRINK');
+            sendToUnity(isFS);
+        };
+
+        // Remove any previously registered listeners to avoid duplicates
+        document.removeEventListener('fullscreenchange',       window._unityFullscreenCallback);
+        document.removeEventListener('webkitfullscreenchange', window._unityFullscreenCallback);
+        document.removeEventListener('mozfullscreenchange',    window._unityFullscreenCallback);
+        document.removeEventListener('MSFullscreenChange',     window._unityFullscreenCallback);
+
+        // Register listeners for all browser engines
+        document.addEventListener('fullscreenchange',       window._unityFullscreenCallback);
+        document.addEventListener('webkitfullscreenchange', window._unityFullscreenCallback);
+        document.addEventListener('mozfullscreenchange',    window._unityFullscreenCallback);
+        document.addEventListener('MSFullscreenChange',     window._unityFullscreenCallback);
+
+        console.log('[JS] Fullscreen event listeners registered for:', gameObjectName);
+    }
 });
