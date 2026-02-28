@@ -90,6 +90,7 @@
         script.onload = () => {
           createUnityInstance(canvas, config, (progress) => {
           }).then((unityInstance) => {
+             window.unityInstance = unityInstance;
           }).catch((message) => {
             alert(message);
           });
