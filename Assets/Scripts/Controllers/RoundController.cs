@@ -43,14 +43,13 @@ public class RoundController : MonoBehaviour
     [SerializeField] private List<DicePositionSet> dicePositionSets = new List<DicePositionSet>();
 
     [Header("Random Variation Settings")]
-    [SerializeField] private float maxRotationOffset = 12f;   
-    [SerializeField] private float maxPositionJitter = 5f;   
+    [SerializeField] private float maxRotationOffset = 12f;
+    [SerializeField] private float maxPositionJitter = 5f;
     #endregion
 
     #region Private Fields
     private string currentRoundId;
     private bool isRoundActive = false;
-    private Coroutine finalCountdownCoroutine;
     private DiceResultData currentDiceResult;
     private bool diceResultReceived = false;
     private long currentBettingEndTime = 0;
@@ -82,12 +81,6 @@ public class RoundController : MonoBehaviour
         currentDiceResult = null;
         currentBettingEndTime = data.bettingEndTime;
 
-        if (finalCountdownCoroutine != null)
-        {
-            StopCoroutine(finalCountdownCoroutine);
-            finalCountdownCoroutine = null;
-        }
-
         ClearRoundDisplay();
         betController?.ClearAllWinHighlights();
         AudioManager.Instance?.PlayRoundStart();
@@ -107,11 +100,7 @@ public class RoundController : MonoBehaviour
     internal void UpdateTimer(int secondsRemaining)
     {
         if (!isRoundActive) return;
-
         uiController.UpdateTimer(secondsRemaining);
-
-        if (secondsRemaining == 1 && finalCountdownCoroutine == null)
-            finalCountdownCoroutine = StartCoroutine(FinalCountdownToZero());
     }
 
     internal void ShowDiceResult(DiceResultData data)
@@ -144,30 +133,23 @@ public class RoundController : MonoBehaviour
         if (OddImage) OddImage.SetActive(false);
         if (EvenImage) EvenImage.SetActive(false);
 
-        if (finalCountdownCoroutine != null)
-        {
-            StopCoroutine(finalCountdownCoroutine);
-            finalCountdownCoroutine = null;
-        }
-
         currentDiceResult = null;
         diceResultReceived = false;
     }
 
+    /// <summary>
+    /// Called by GameManager when the server sends the <c>game:bonus</c> event,
+    /// which is the authoritative signal that the betting window has closed.
+    /// Disables betting and starts the dice-box zoom-in animation.
+    /// </summary>
+    internal void OnBettingLockedByServer()
+    {
+        betController.DisableBetting();
+        diceBoxAnimController?.OnBettingLocked();
+    }
+
     internal string GetCurrentRoundId() => currentRoundId;
     internal bool IsRoundActive() => isRoundActive;
-    #endregion
-
-    #region Countdown
-    private IEnumerator FinalCountdownToZero()
-    {
-        yield return new WaitForSeconds(1f);
-        uiController.UpdateTimer(0);
-        betController.DisableBetting();
-        uiController.ShowBetLocked();
-        diceBoxAnimController?.OnBettingLocked();
-        finalCountdownCoroutine = null;
-    }
     #endregion
 
     #region Animation Callbacks

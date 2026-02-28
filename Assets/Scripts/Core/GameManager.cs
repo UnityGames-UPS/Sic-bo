@@ -129,9 +129,14 @@ public class GameManager : MonoBehaviour
                     break;
                 case "nextround":
                     {
-                        int secondsUntilNext = GameUtilities.CalculateTimeRemaining(
-                            payload.roundState.bettingEndTime,
-                            payload.roundState.serverTime);
+                        // Use the pre-computed timeRemaining from the server payload
+                        // (already the ms until next round start). Fall back to
+                        // recalculating from bettingEndTime if timeRemaining is absent.
+                        int secondsUntilNext = payload.roundState.timeRemaining > 0
+                            ? Mathf.Max(0, Mathf.RoundToInt(payload.roundState.timeRemaining / 1000f))
+                            : GameUtilities.CalculateTimeRemaining(
+                                payload.roundState.bettingEndTime,
+                                payload.roundState.serverTime);
                         uiController.ShowNextRound(secondsUntilNext);
                         //uiController.UpdateRoundPhase("NEXTROUND");
                         betController.DisableBetting();
@@ -185,14 +190,22 @@ public class GameManager : MonoBehaviour
         if (!ValidateTimerData(data)) return;
 
         int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
-        roundController.UpdateTimer(timeRemaining);
         uiController.UpdateTimer(timeRemaining);
     }
 
     internal void OnBonus(BonusData data)
     {
-        if (data == null || !data.HasBonusDictionary()) return;
-        bonusIndicatorController?.ShowBonusAnnouncements(data.bonus);
+        if (data == null) return;
+
+        // game:bonus is the server's authoritative signal that the betting window
+        // has closed. Lock bets and start the dice-box zoom-in animation here so
+        // every client transitions at exactly the same server-driven moment.
+        betController.DisableBetting();
+        uiController.ShowBetLocked();
+        roundController.OnBettingLockedByServer();
+
+        if (data.HasBonusDictionary())
+            bonusIndicatorController?.ShowBonusAnnouncements(data.bonus);
     }
 
     internal void OnDiceResult(DiceResultData data)
@@ -201,6 +214,8 @@ public class GameManager : MonoBehaviour
 
         resultPlaneController?.AddNewResult(data);
 
+        // Safety fallback: if game:bonus was missed (e.g. mid-join), ensure bets
+        // are locked before showing the result. These calls are idempotent.
         betController.DisableBetting();
         uiController.ShowBetLocked();
         //uiController.UpdateRoundPhase("RESULT");

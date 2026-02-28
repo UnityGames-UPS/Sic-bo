@@ -46,7 +46,6 @@ public class DiceBoxAnimationController : MonoBehaviour
     [SerializeField] private int diceScaleEndFrame = 51;
     [SerializeField] private float diceScaleTarget = 1.3f;
     [SerializeField] private AnimationCurve diceScaleCurve = new AnimationCurve(new Keyframe(0f, 0f, 0f, 3f), new Keyframe(0.5f, 0.88f, 1.2f, 0.4f), new Keyframe(1f, 1f, 0.1f, 0f));
-    //[SerializeField] private AnimationCurve diceScaleCurve1 = new AnimationCurve(new Keyframe(0f, 0f, 0f, 3f), new Keyframe(0.5f, 0.88f, 1.2f, 0.4f), new Keyframe(1f, 1f, 0.1f, 0f));
     [SerializeField] private int diceScaleResetFrameOffset = 5;
 
     [Header("Speed")]
