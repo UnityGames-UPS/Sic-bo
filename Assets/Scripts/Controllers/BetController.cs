@@ -922,13 +922,17 @@ public class BetController : MonoBehaviour
     private void AnimateBetLocked()
     {
         ChipAreaPanel?.DOAnchorPosY(-200f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
-        TotalStakePanel?.DOAnchorPosY(0f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
+        TotalStakePanel?.DOAnchorPosY(-12f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
     }
 
     private void AnimateBetUnlocked()
     {
         ChipAreaPanel?.DOAnchorPosY(0f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
-        TotalStakePanel?.DOAnchorPosY(-200f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
+        TotalStakePanel?.DOAnchorPosY(-200f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad).OnComplete(() =>
+        {
+            currentTotalBet = 0;
+            UpdateTotalBet();
+        });
     }
 
     private void ShowRepeatPanelAnimated()
@@ -989,7 +993,7 @@ public class BetController : MonoBehaviour
     #region UI Updates
     private void UpdateTotalBet()
     {
-        if (TotalBet_Text) TotalBet_Text.text = $"{currentTotalBet:F2}";
+        if (TotalBet_Text) TotalBet_Text.text = currentTotalBet % 1 == 0 ? $"{currentTotalBet:F0}" : $"{currentTotalBet:F2}";
     }
 
     private void HideBetPanels()
@@ -1163,9 +1167,9 @@ public class BetController : MonoBehaviour
             if (!hasActiveChips)
             {
                 opponentChipManager.SetLeaderboardData(leaderboards);
-         
+
             }
-        
+
         }
 
         RefreshPlayerLeaderboardStatus();

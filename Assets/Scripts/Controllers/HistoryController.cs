@@ -15,7 +15,7 @@ public class HistoryController : MonoBehaviour
     [SerializeField] private Button NextPage_Button;
     [SerializeField] private Button Prev5Page_Button;
     [SerializeField] private Button Next5Page_Button;
-    [SerializeField] private Button Close_Button;
+    //[SerializeField] private Button Close_Button;
 
     [Header("References")]
     [SerializeField] private GameManager gameManager;
@@ -45,13 +45,13 @@ public class HistoryController : MonoBehaviour
         NextPage_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); OnNextPageClicked(); });
         Prev5Page_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); OnPrev5PageClicked(); });
         Next5Page_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayArrowButton(); OnNext5PageClicked(); });
-        Close_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); HideHistoryPanel(); });
+       // Close_Button?.onClick.AddListener(() => { AudioManager.Instance?.PlayButtonClick(); HideHistoryPanel(); });
 
         AddButtonPressAnimation(PrevPage_Button, 1.2f);
         AddButtonPressAnimation(NextPage_Button, 1.2f);
         AddButtonPressAnimation(Prev5Page_Button, 1.2f);
         AddButtonPressAnimation(Next5Page_Button, 1.2f);
-        AddButtonPressAnimation(Close_Button, 0.95f);
+       // AddButtonPressAnimation(Close_Button, 0.95f);
     }
 
     private void AddButtonPressAnimation(Button button, float targetScale)

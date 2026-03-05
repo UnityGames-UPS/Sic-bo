@@ -144,6 +144,24 @@ public class MenuController : MonoBehaviour
 
         mainArea.transform.localScale = Vector3.one * startScale;
 
+        if (!isOpening)
+        {
+            float bounceScale = 1.1f;
+            float bounceDuration = 0.15f;
+            float bounceElapsed = 0f;
+
+            while (bounceElapsed < bounceDuration)
+            {
+                bounceElapsed += Time.deltaTime;
+                float bounceProgress = bounceElapsed / bounceDuration;
+                float scale = Mathf.Lerp(1f, bounceScale, Mathf.Sin(bounceProgress * Mathf.PI));
+                mainArea.transform.localScale = Vector3.one * scale;
+                yield return null;
+            }
+
+            mainArea.transform.localScale = Vector3.one;
+        }
+
         while (elapsed < popupDuration)
         {
             elapsed += Time.deltaTime;
@@ -161,7 +179,6 @@ public class MenuController : MonoBehaviour
         if (!isOpening)
         {
             menuScreen?.SetActive(false);
-            HideAllPanels();
         }
 
         popupCoroutine = null;

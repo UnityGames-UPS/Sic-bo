@@ -113,7 +113,7 @@ public class AudioManager : MonoBehaviour
         }
         else
         {
-           PauseAudio();
+            PauseAudio();
         }
     }
 
@@ -178,10 +178,43 @@ public class AudioManager : MonoBehaviour
     #region Toggle Management
     private void SetupToggleListeners()
     {
+        SetupToggle(sfxHomeToggle);
+        SetupToggle(musicHomeToggle);
+        SetupToggle(sfxGameToggle);
+        SetupToggle(musicGameToggle);
+
         sfxHomeToggle?.onValueChanged.AddListener(OnSfxToggleChanged);
         musicHomeToggle?.onValueChanged.AddListener(OnMusicToggleChanged);
         sfxGameToggle?.onValueChanged.AddListener(OnSfxToggleChanged);
         musicGameToggle?.onValueChanged.AddListener(OnMusicToggleChanged);
+    }
+
+    private void SetupToggle(Toggle toggle)
+    {
+        if (toggle == null) return;
+
+        Image background = toggle.targetGraphic as Image;
+        if (background == null) background = toggle.GetComponent<Image>();
+
+        if (background != null)
+        {
+            UpdateToggleBackground(background, toggle.isOn);
+        }
+
+        toggle.onValueChanged.AddListener((isOn) =>
+        {
+            if (background != null)
+            {
+                UpdateToggleBackground(background, isOn);
+            }
+        });
+    }
+
+    private void UpdateToggleBackground(Image background, bool isOn)
+    {
+        Color color = background.color;
+        color.a = isOn ? 0f : 1f;
+        background.color = color;
     }
 
     private void RemoveToggleListeners()
@@ -399,4 +432,4 @@ public class AudioManager : MonoBehaviour
         sfxSource2?.PlayOneShot(clip, sfxVolume);
     }
     #endregion
-}
+}   

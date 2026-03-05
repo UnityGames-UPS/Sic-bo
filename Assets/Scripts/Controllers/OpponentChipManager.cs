@@ -106,7 +106,7 @@ public class OpponentChipManager : MonoBehaviour
             chipObj.SetActive(false);
             _chipPool.Enqueue(chipRT);
         }
-       
+
     }
 
     private RectTransform GetPooledChip()
@@ -171,9 +171,9 @@ public class OpponentChipManager : MonoBehaviour
         if (activeOpponentChips.Count == 0 && activeWinChips.Count == 0)
         {
             lockedLeaderboards = leaderboards;
-         
+
         }
-      
+
     }
 
     internal void LockLeaderboardsForRound()
@@ -493,8 +493,15 @@ public class OpponentChipManager : MonoBehaviour
         {
         }
 
-        float scatterX = spawnPosition == opponentDealerArea ? dealerScatterX : 15f;
-        float scatterY = spawnPosition == opponentDealerArea ? dealerScatterY : 10f;
+        float scatterX = dealerScatterX;
+        float scatterY = dealerScatterY;
+
+        if (spawnPosition != opponentDealerArea && spawnPosition != null)
+        {
+            Rect spawnRect = spawnPosition.rect;
+            scatterX = Mathf.Min(spawnRect.width * 0.4f, 15f);
+            scatterY = Mathf.Min(spawnRect.height * 0.4f, 10f);
+        }
 
         chipRT.localPosition = new Vector3(
             Random.Range(-scatterX, scatterX),
@@ -693,7 +700,7 @@ public class OpponentChipManager : MonoBehaviour
                         {
                             chipComponent.SetLeaderboardBadge(originalBadge.isRichest, originalBadge.isWinner);
                         }
-                        
+
                     }
 
                     RectTransform targetPosition = GetCashoutDestinationForWinner(chip);
