@@ -510,7 +510,7 @@ public class LeaderboardController : MonoBehaviour
             yield return null;
         }
 
-        textRect.anchoredPosition = startPos;
+        // Don't reset position here - let FadeInAtPosition handle it
         canvasGroup.alpha = 0f;
         textComponent.gameObject.SetActive(false);
     }
@@ -520,12 +520,23 @@ public class LeaderboardController : MonoBehaviour
         if (textComponent == null) yield break;
 
         CanvasGroup canvasGroup = GetOrAddCanvasGroup(textComponent.gameObject);
-
-        // CRITICAL: Reset position before fading in
         RectTransform textRect = textComponent.GetComponent<RectTransform>();
+
         if (textRect != null)
         {
-            textRect.anchoredPosition = Vector2.zero; // Reset to original position
+            // Get the original position from the block
+            LeaderboardPlayerBlock block = textComponent.GetComponentInParent<LeaderboardPlayerBlock>();
+            if (block != null)
+            {
+                Vector2 originalPos = (textComponent == block.NameText)
+                    ? block.GetNameOriginalPosition()
+                    : block.GetBalanceOriginalPosition();
+                textRect.anchoredPosition = originalPos; // Reset to ORIGINAL inspector position
+            }
+            else
+            {
+                textRect.anchoredPosition = Vector2.zero; // Fallback
+            }
         }
 
         canvasGroup.alpha = 0f;
@@ -546,15 +557,26 @@ public class LeaderboardController : MonoBehaviour
     {
         if (textComponent == null) return;
 
-        // Kill any DOTween animations on the text
         RectTransform textRect = textComponent.GetComponent<RectTransform>();
         if (textRect != null)
         {
             textRect.DOKill(complete: true);
-            textRect.anchoredPosition = Vector2.zero; // Reset position
+
+            // Reset to ORIGINAL inspector position
+            LeaderboardPlayerBlock block = textComponent.GetComponentInParent<LeaderboardPlayerBlock>();
+            if (block != null)
+            {
+                Vector2 originalPos = (textComponent == block.NameText)
+                    ? block.GetNameOriginalPosition()
+                    : block.GetBalanceOriginalPosition();
+                textRect.anchoredPosition = originalPos;
+            }
+            else
+            {
+                textRect.anchoredPosition = Vector2.zero; // Fallback
+            }
         }
 
-        // Ensure CanvasGroup exists and is fully visible
         var cg = textComponent.GetComponent<CanvasGroup>();
         if (cg == null) cg = textComponent.gameObject.AddComponent<CanvasGroup>();
         cg.alpha = 1f;

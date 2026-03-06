@@ -406,12 +406,14 @@ public class OpponentChipManager : MonoBehaviour
                     yield return new WaitForSeconds(0.04f);
                     winChipRT.SetParent(canvasRoot, worldPositionStays: true);
 
-                    Vector2 containerWorldPos = GetCanvasPosition(targetContainer);
-                    Vector2 destination = containerWorldPos + new Vector2(
-                        Random.Range(-betAreaScatterX, betAreaScatterX),
-                        Random.Range(-betAreaScatterY, betAreaScatterY));
+                    // Use world-space position – reliable across all resolutions/ratios.
+                    float winCanvasScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
+                    Vector3 winTargetWorldPos = targetContainer.position + new Vector3(
+                        Random.Range(-betAreaScatterX, betAreaScatterX) * winCanvasScale,
+                        Random.Range(-betAreaScatterY, betAreaScatterY) * winCanvasScale,
+                        0f);
 
-                    winChipRT.DOAnchorPos(destination, dealerToBetDuration * 0.8f).SetEase(Ease.OutQuad);
+                    winChipRT.DOMove(winTargetWorldPos, dealerToBetDuration * 0.8f).SetEase(Ease.OutQuad);
 
                     activeWinChips.Add(winChipRT);
 
@@ -512,15 +514,17 @@ public class OpponentChipManager : MonoBehaviour
         chipRT.DOScale(chipScale, 0.2f).SetEase(Ease.OutBack);
         yield return new WaitForSeconds(0.22f);
 
-        chipRT.SetParent(canvasRoot, worldPositionStays: true);
+        // Use world-space position so the destination is always accurate regardless
+        // of CanvasScaler matchWidthOrHeight value or device aspect ratio.
+        // Scatter offsets are in canvas units, so we multiply by the canvas lossyScale
+        // to convert them into world-space units.
+        float canvasScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
+        Vector3 targetWorldPos = container.position + new Vector3(
+            Random.Range(-betAreaScatterX, betAreaScatterX) * canvasScale,
+            Random.Range(-betAreaScatterY, betAreaScatterY) * canvasScale,
+            0f);
 
-        Vector2 containerWorldPos = GetCanvasPosition(container);
-
-        Vector2 destination = containerWorldPos + new Vector2(
-            Random.Range(-betAreaScatterX, betAreaScatterX),
-            Random.Range(-betAreaScatterY, betAreaScatterY));
-
-        chipRT.DOAnchorPos(destination, dealerToBetDuration).SetEase(Ease.OutQuad);
+        chipRT.DOMove(targetWorldPos, dealerToBetDuration).SetEase(Ease.OutQuad);
         yield return new WaitForSeconds(dealerToBetDuration);
 
         chipRT.SetParent(container, worldPositionStays: true);
@@ -675,12 +679,14 @@ public class OpponentChipManager : MonoBehaviour
 
                     RectTransform targetDealer = Random.value > 0.5f ? playerDealerArea : opponentDealerArea;
 
-                    Vector2 targetPos = GetCanvasPosition(targetDealer) + new Vector2(
-                        Random.Range(-dealerScatterX, dealerScatterX),
-                        Random.Range(-dealerScatterY, dealerScatterY));
+                    float coScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
+                    Vector3 cashoutLoseTarget = targetDealer.position + new Vector3(
+                        Random.Range(-dealerScatterX, dealerScatterX) * coScale,
+                        Random.Range(-dealerScatterY, dealerScatterY) * coScale,
+                        0f);
                     float staggerDelay = chipAnimationCount * cashoutStagger * 0.1f;
 
-                    chip.DOAnchorPos(targetPos, cashoutDuration).SetEase(Ease.InQuad).SetDelay(staggerDelay);
+                    chip.DOMove(cashoutLoseTarget, cashoutDuration).SetEase(Ease.InQuad).SetDelay(staggerDelay);
                     chip.DOScale(0f, cashoutDuration * 0.6f)
                         .SetDelay(cashoutDuration * 0.4f + staggerDelay)
                         .SetEase(Ease.InBack)
@@ -714,13 +720,15 @@ public class OpponentChipManager : MonoBehaviour
                         scatterY = dealerScatterY;
                     }
 
-                    Vector2 targetPos = GetCanvasPosition(targetPosition) + new Vector2(
-                        Random.Range(-scatterX, scatterX),
-                        Random.Range(-scatterY, scatterY));
+                    float coWinScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
+                    Vector3 cashoutWinTarget = targetPosition.position + new Vector3(
+                        Random.Range(-scatterX, scatterX) * coWinScale,
+                        Random.Range(-scatterY, scatterY) * coWinScale,
+                        0f);
 
                     float staggerDelay = chipAnimationCount * cashoutStagger * 0.1f;
 
-                    chip.DOAnchorPos(targetPos, cashoutDuration).SetEase(Ease.InQuad).SetDelay(staggerDelay);
+                    chip.DOMove(cashoutWinTarget, cashoutDuration).SetEase(Ease.InQuad).SetDelay(staggerDelay);
                     chip.DOScale(0f, cashoutDuration * 0.6f)
                         .SetDelay(cashoutDuration * 0.4f + staggerDelay)
                         .SetEase(Ease.InBack)
@@ -738,12 +746,14 @@ public class OpponentChipManager : MonoBehaviour
             winChip.SetParent(canvasRoot, worldPositionStays: true);
             RectTransform targetDealer = Random.value > 0.5f ? playerDealerArea : opponentDealerArea;
 
-            Vector2 targetPos = GetCanvasPosition(targetDealer) + new Vector2(
-                Random.Range(-dealerScatterX, dealerScatterX),
-                Random.Range(-dealerScatterY, dealerScatterY));
+            float winCashoutScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
+            Vector3 winCashoutTarget = targetDealer.position + new Vector3(
+                Random.Range(-dealerScatterX, dealerScatterX) * winCashoutScale,
+                Random.Range(-dealerScatterY, dealerScatterY) * winCashoutScale,
+                0f);
             float staggerDelay = winChipIndex * cashoutStagger * 0.1f;
 
-            winChip.DOAnchorPos(targetPos, cashoutDuration * 0.7f).SetEase(Ease.InQuad).SetDelay(staggerDelay);
+            winChip.DOMove(winCashoutTarget, cashoutDuration * 0.7f).SetEase(Ease.InQuad).SetDelay(staggerDelay);
             winChip.DOScale(0f, cashoutDuration * 0.5f)
                 .SetDelay(cashoutDuration * 0.3f + staggerDelay)
                 .SetEase(Ease.InBack)

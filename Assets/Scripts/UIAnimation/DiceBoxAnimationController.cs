@@ -126,6 +126,86 @@ public class DiceBoxAnimationController : MonoBehaviour
         JumpToCorrectPhase(elapsedSeconds);
     }
 
+    internal void SyncToPhaseOnJoin(string phase, long timeUntilNextRound, long serverTime)
+    {
+        StopAllAnimations();
+        ResetSoundFlags();
+
+        if (diceContainer) diceContainer.SetActive(false);
+        SetTopLayerActive(false);
+
+        float secondsUntilNext = timeUntilNextRound / 1000f;
+
+        switch (phase.ToLower())
+        {
+            case "betting":
+                PlayIdleAnimation();
+                currentState = DiceBoxState.Idle;
+                break;
+
+            case "rolling":
+                if (secondsUntilNext > 0)
+                {
+                    float adjustedIdleDuration = Mathf.Max(1f, secondsUntilNext * 0.3f);
+                    float remainingTime = secondsUntilNext - adjustedIdleDuration;
+                    float adjustedOpenCloseDuration = Mathf.Max(openDuration + holdOpenDuration + closeDuration, remainingTime * 0.7f);
+
+                    animationCoroutine = StartCoroutine(PlayTimedSequenceForRolling(adjustedIdleDuration, adjustedOpenCloseDuration));
+                }
+                else
+                {
+                    PlayIdleAnimation();
+                    currentState = DiceBoxState.Idle;
+                }
+                break;
+
+            case "result":
+                if (secondsUntilNext > 2f)
+                {
+                    float adjustedIdleDuration = Mathf.Max(0.5f, secondsUntilNext - 1f);
+                    animationCoroutine = StartCoroutine(PlayBaseSequence(
+                        idleSequence,
+                        adjustedIdleDuration,
+                        loop: true,
+                        reverse: false,
+                        startTime: 0f,
+                        onComplete: null));
+                    currentState = DiceBoxState.Idle;
+                }
+                else
+                {
+                    PlayIdleAnimation();
+                    currentState = DiceBoxState.Idle;
+                }
+                break;
+
+            case "nextround":
+                if (secondsUntilNext > 2f)
+                {
+                    float adjustedIdleDuration = Mathf.Max(0.5f, secondsUntilNext - 1f);
+                    animationCoroutine = StartCoroutine(PlayBaseSequence(
+                        idleSequence,
+                        adjustedIdleDuration,
+                        loop: true,
+                        reverse: false,
+                        startTime: 0f,
+                        onComplete: null));
+                    currentState = DiceBoxState.Idle;
+                }
+                else
+                {
+                    PlayIdleAnimation();
+                    currentState = DiceBoxState.Idle;
+                }
+                break;
+
+            default:
+                PlayIdleAnimation();
+                currentState = DiceBoxState.Idle;
+                break;
+        }
+    }
+
     internal void StartAnimationCycle()
     {
         StopAllAnimations();
@@ -352,6 +432,53 @@ public class DiceBoxAnimationController : MonoBehaviour
             duration: closeDuration,
             startTime: 0f,
             onComplete: OnClosingComplete));
+    }
+
+    private IEnumerator PlayTimedSequenceForRolling(float idleTime, float openCloseTime)
+    {
+        isAnimating = true;
+        currentState = DiceBoxState.Idle;
+
+        yield return StartCoroutine(PlayBaseSequence(
+            idleSequence,
+            idleTime,
+            loop: true,
+            reverse: false,
+            startTime: 0f,
+            onComplete: null));
+
+        currentState = DiceBoxState.ZoomingIn;
+        SetTopLayerActive(true);
+
+        float adjustedOpenDuration = openCloseTime * 0.4f;
+        float adjustedHoldDuration = openCloseTime * 0.3f;
+        float adjustedCloseDuration = openCloseTime * 0.3f;
+
+        int totalFrames = TotalOpenCloseFrames();
+        int openEndFrame = Mathf.Min(holdOnFrame, totalFrames - 1);
+
+        yield return StartCoroutine(PlayOpenCloseRange(
+            startFrame: 0,
+            endFrame: openEndFrame,
+            duration: adjustedOpenDuration,
+            startTime: 0f,
+            onComplete: null));
+
+        currentState = DiceBoxState.Open;
+        yield return new WaitForSeconds(adjustedHoldDuration);
+
+        currentState = DiceBoxState.Closing;
+        yield return StartCoroutine(PlayOpenCloseRange(
+            startFrame: openEndFrame,
+            endFrame: totalFrames - 1,
+            duration: adjustedCloseDuration,
+            startTime: 0f,
+            onComplete: null));
+
+        SetTopLayerActive(false);
+        if (diceContainer) diceContainer.SetActive(false);
+        currentState = DiceBoxState.Waiting;
+        isAnimating = false;
     }
 
     private void OnClosingComplete()
@@ -596,5 +723,5 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     #endregion
 
-   
+
 }

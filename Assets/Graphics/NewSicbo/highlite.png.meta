@@ -1,0 +1,936 @@
+fileFormatVersion: 2
+guid: d7f2f7300ebbf0546afaa2726a843c5d
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 5648946765707379332
+    second: highlite_0
+  - first:
+      213: 6647228739673195457
+    second: highlite_1
+  - first:
+      213: 7375644944134310957
+    second: highlite_2
+  - first:
+      213: 6689572999706921010
+    second: highlite_3
+  - first:
+      213: -5939902051760363930
+    second: highlite_4
+  - first:
+      213: 5774847516856778165
+    second: highlite_5
+  - first:
+      213: -6939850973553913473
+    second: highlite_6
+  - first:
+      213: 5438891635873802901
+    second: highlite_7
+  - first:
+      213: -7169502209926081677
+    second: highlite_8
+  - first:
+      213: 7107945181907319400
+    second: highlite_9
+  - first:
+      213: -3124531049625931184
+    second: highlite_10
+  - first:
+      213: 5195649086876681200
+    second: highlite_11
+  - first:
+      213: -1989581238162367097
+    second: highlite_12
+  - first:
+      213: 6185203984517478350
+    second: highlite_13
+  - first:
+      213: -5033029273846244195
+    second: highlite_14
+  - first:
+      213: -1889779779052850535
+    second: highlite_15
+  - first:
+      213: -4861957376719009464
+    second: highlite_16
+  - first:
+      213: 1602944123681723789
+    second: highlite_17
+  - first:
+      213: 2170612730507016087
+    second: highlite_18
+  - first:
+      213: 204472367527567651
+    second: highlite_19
+  - first:
+      213: 9192630916774560349
+    second: highlite_20
+  - first:
+      213: 2909595367017757963
+    second: highlite_21
+  - first:
+      213: -674882803127467593
+    second: highlite_22
+  - first:
+      213: -4811931643661477767
+    second: highlite_23
+  - first:
+      213: 5627884990794389865
+    second: highlite_24
+  - first:
+      213: -6889861002088554279
+    second: highlite_25
+  - first:
+      213: -4198146056328148666
+    second: highlite_26
+  - first:
+      213: -2333041315110717949
+    second: highlite_27
+  - first:
+      213: 6068778151542645459
+    second: highlite_28
+  - first:
+      213: -3825056270886703519
+    second: highlite_29
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: highlite_0
+      rect:
+        serializedVersion: 2
+        x: 20
+        y: 640
+        width: 241
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 482841d6727156e40800000000000000
+      internalID: 5648946765707379332
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_1
+      rect:
+        serializedVersion: 2
+        x: 314
+        y: 736
+        width: 228
+        height: 121
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1c30df8f153bf3c50800000000000000
+      internalID: 6647228739673195457
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_2
+      rect:
+        serializedVersion: 2
+        x: 581
+        y: 736
+        width: 226
+        height: 121
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d2c0884bffd8b5660800000000000000
+      internalID: 7375644944134310957
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_3
+      rect:
+        serializedVersion: 2
+        x: 861
+        y: 640
+        width: 242
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 238439a433326dc50800000000000000
+      internalID: 6689572999706921010
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_4
+      rect:
+        serializedVersion: 2
+        x: 20
+        y: 391
+        width: 241
+        height: 222
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 666a53c0e8a319da0800000000000000
+      internalID: -5939902051760363930
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_5
+      rect:
+        serializedVersion: 2
+        x: 314
+        y: 577
+        width: 228
+        height: 122
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5bd7b4a5831642050800000000000000
+      internalID: 5774847516856778165
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_6
+      rect:
+        serializedVersion: 2
+        x: 581
+        y: 577
+        width: 226
+        height: 122
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f719b27fe42b0bf90800000000000000
+      internalID: -6939850973553913473
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_7
+      rect:
+        serializedVersion: 2
+        x: 861
+        y: 391
+        width: 242
+        height: 222
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 59ae9185023da7b40800000000000000
+      internalID: 5438891635873802901
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_8
+      rect:
+        serializedVersion: 2
+        x: 314
+        y: 418
+        width: 228
+        height: 122
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3735af8c9bfc08c90800000000000000
+      internalID: -7169502209926081677
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_9
+      rect:
+        serializedVersion: 2
+        x: 581
+        y: 418
+        width: 226
+        height: 122
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 86af882cb7e74a260800000000000000
+      internalID: 7107945181907319400
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_10
+      rect:
+        serializedVersion: 2
+        x: 20
+        y: 239
+        width: 162
+        height: 131
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0523e59909f63a4d0800000000000000
+      internalID: -3124531049625931184
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_11
+      rect:
+        serializedVersion: 2
+        x: 204
+        y: 239
+        width: 162
+        height: 131
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0f30ed81157aa1840800000000000000
+      internalID: 5195649086876681200
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_12
+      rect:
+        serializedVersion: 2
+        x: 388
+        y: 239
+        width: 162
+        height: 131
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 78ddc87b7669364e0800000000000000
+      internalID: -1989581238162367097
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_13
+      rect:
+        serializedVersion: 2
+        x: 574
+        y: 239
+        width: 160
+        height: 131
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ec7be78d04246d550800000000000000
+      internalID: 6185203984517478350
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_14
+      rect:
+        serializedVersion: 2
+        x: 757
+        y: 239
+        width: 162
+        height: 131
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d9c9044aa86172ab0800000000000000
+      internalID: -5033029273846244195
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_15
+      rect:
+        serializedVersion: 2
+        x: 942
+        y: 239
+        width: 161
+        height: 131
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 992b6ddad4726c5e0800000000000000
+      internalID: -1889779779052850535
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_16
+      rect:
+        serializedVersion: 2
+        x: 20
+        y: 126
+        width: 139
+        height: 90
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 849c29f868bd68cb0800000000000000
+      internalID: -4861957376719009464
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_17
+      rect:
+        serializedVersion: 2
+        x: 177
+        y: 126
+        width: 140
+        height: 90
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d8559de003dce3610800000000000000
+      internalID: 1602944123681723789
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_18
+      rect:
+        serializedVersion: 2
+        x: 335
+        y: 126
+        width: 138
+        height: 90
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 797bfca27c09f1e10800000000000000
+      internalID: 2170612730507016087
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_19
+      rect:
+        serializedVersion: 2
+        x: 492
+        y: 126
+        width: 139
+        height: 90
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3212dd0f88e66d200800000000000000
+      internalID: 204472367527567651
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_20
+      rect:
+        serializedVersion: 2
+        x: 651
+        y: 126
+        width: 137
+        height: 90
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d520f993d19c29f70800000000000000
+      internalID: 9192630916774560349
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_21
+      rect:
+        serializedVersion: 2
+        x: 807
+        y: 126
+        width: 139
+        height: 90
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b0d37331295f06820800000000000000
+      internalID: 2909595367017757963
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_22
+      rect:
+        serializedVersion: 2
+        x: 965
+        y: 126
+        width: 138
+        height: 90
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7b1419e8aa552a6f0800000000000000
+      internalID: -674882803127467593
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_23
+      rect:
+        serializedVersion: 2
+        x: 20
+        y: 20
+        width: 139
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 97898103aa5983db0800000000000000
+      internalID: -4811931643661477767
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_24
+      rect:
+        serializedVersion: 2
+        x: 177
+        y: 20
+        width: 140
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9695d01d4934a1e40800000000000000
+      internalID: 5627884990794389865
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_25
+      rect:
+        serializedVersion: 2
+        x: 335
+        y: 20
+        width: 138
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d0e1b23ceb4260a0800000000000000
+      internalID: -6889861002088554279
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_26
+      rect:
+        serializedVersion: 2
+        x: 492
+        y: 20
+        width: 139
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6498a5d87603db5c0800000000000000
+      internalID: -4198146056328148666
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_27
+      rect:
+        serializedVersion: 2
+        x: 651
+        y: 20
+        width: 137
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 306f38ee84f5f9fd0800000000000000
+      internalID: -2333041315110717949
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_28
+      rect:
+        serializedVersion: 2
+        x: 807
+        y: 20
+        width: 139
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d2e9573391a83450800000000000000
+      internalID: 6068778151542645459
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: highlite_29
+      rect:
+        serializedVersion: 2
+        x: 965
+        y: 20
+        width: 138
+        height: 83
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 16eeaef669baaeac0800000000000000
+      internalID: -3825056270886703519
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      highlite_0: 5648946765707379332
+      highlite_1: 6647228739673195457
+      highlite_10: -3124531049625931184
+      highlite_11: 5195649086876681200
+      highlite_12: -1989581238162367097
+      highlite_13: 6185203984517478350
+      highlite_14: -5033029273846244195
+      highlite_15: -1889779779052850535
+      highlite_16: -4861957376719009464
+      highlite_17: 1602944123681723789
+      highlite_18: 2170612730507016087
+      highlite_19: 204472367527567651
+      highlite_2: 7375644944134310957
+      highlite_20: 9192630916774560349
+      highlite_21: 2909595367017757963
+      highlite_22: -674882803127467593
+      highlite_23: -4811931643661477767
+      highlite_24: 5627884990794389865
+      highlite_25: -6889861002088554279
+      highlite_26: -4198146056328148666
+      highlite_27: -2333041315110717949
+      highlite_28: 6068778151542645459
+      highlite_29: -3825056270886703519
+      highlite_3: 6689572999706921010
+      highlite_4: -5939902051760363930
+      highlite_5: 5774847516856778165
+      highlite_6: -6939850973553913473
+      highlite_7: 5438891635873802901
+      highlite_8: -7169502209926081677
+      highlite_9: 7107945181907319400
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

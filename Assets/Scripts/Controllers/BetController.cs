@@ -837,7 +837,8 @@ public class BetController : MonoBehaviour
         if (ChipSelector_BlackBG) ChipSelector_BlackBG.SetActive(true);
         isChipSelectorOpen = true;
         AudioManager.Instance?.PlayChipSelectionOpen();
-        AnimateChipsOpen();
+        if (MainChip_Button) MainChip_Button.interactable = false;
+        AnimateChipsOpen(() => { if (MainChip_Button) MainChip_Button.interactable = true; });
         AnimateMainChipUp();
     }
     private void AnimateMainChipUp()
@@ -852,11 +853,13 @@ public class BetController : MonoBehaviour
     private void CloseChipSelector()
     {
         AudioManager.Instance?.PlayChipSelectionOpen();
+        if (MainChip_Button) MainChip_Button.interactable = false;
         AnimateChipsClose(() =>
         {
             if (ChipSelector_Panel) ChipSelector_Panel.SetActive(false);
             if (ChipSelector_BlackBG) ChipSelector_BlackBG.SetActive(false);
             isChipSelectorOpen = false;
+            if (MainChip_Button) MainChip_Button.interactable = true;
         });
         AnimateMainChipDown();
     }
@@ -866,7 +869,7 @@ public class BetController : MonoBehaviour
         mainChipTween?.Kill();
         mainChipTween = MainChip_RectTransform.DOAnchorPos(mainChipOriginalPosition, MAIN_CHIP_ANIMATION_DURATION).SetEase(Ease.InQuad);
     }
-    private void AnimateChipsOpen()
+    private void AnimateChipsOpen(System.Action onComplete = null)
     {
         chipAnimationSequence?.Kill();
         chipAnimationSequence = DOTween.Sequence();
@@ -884,6 +887,7 @@ public class BetController : MonoBehaviour
             chipAnimationSequence.Join(t.DOLocalMove(targetPos, CHIP_OPEN_DURATION).SetEase(Ease.OutBack));
             chipAnimationSequence.Join(t.DOLocalRotate(new Vector3(0, 0, 0), CHIP_OPEN_DURATION, RotateMode.FastBeyond360).SetEase(Ease.OutQuad));
         }
+        if (onComplete != null) chipAnimationSequence.OnComplete(() => onComplete());
         chipAnimationSequence.Play();
     }
 

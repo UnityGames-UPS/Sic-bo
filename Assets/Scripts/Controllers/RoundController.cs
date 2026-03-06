@@ -91,10 +91,13 @@ public class RoundController : MonoBehaviour
             data.serverTime
         );
 
-        //uiController.UpdateRoundPhase("BETTING");
-
         int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
         uiController.UpdateTimer(timeRemaining);
+    }
+
+    internal void SyncAnimationToPhase(string phase, long timeUntilNext, long serverTime)
+    {
+        diceBoxAnimController?.SyncToPhaseOnJoin(phase, timeUntilNext, serverTime);
     }
 
     internal void UpdateTimer(int secondsRemaining)
@@ -127,7 +130,7 @@ public class RoundController : MonoBehaviour
     internal void ClearRoundDisplay()
     {
         if (DiceContainer) DiceContainer.SetActive(false);
-        if (ResultPanel) ResultPanel.SetActive(false);  
+        if (ResultPanel) ResultPanel.SetActive(false);
         if (SmallImage) SmallImage.SetActive(false);
         if (BigImage) BigImage.SetActive(false);
         if (OddImage) OddImage.SetActive(false);

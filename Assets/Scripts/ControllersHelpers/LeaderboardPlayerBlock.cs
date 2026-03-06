@@ -15,6 +15,51 @@ public class LeaderboardPlayerBlock : MonoBehaviour
     [Header("Crown (Separate from Badge)")]
     public GameObject CrownObject; // Assign the crown GameObject/Image here
 
+    private Vector2 nameOriginalPosition;
+    private Vector2 balanceOriginalPosition;
+    private bool positionsInitialized = false;
+
+    private void Awake()
+    {
+        InitializeOriginalPositions();
+    }
+
+    private void InitializeOriginalPositions()
+    {
+        if (positionsInitialized) return;
+
+        if (NameText != null)
+        {
+            RectTransform nameRect = NameText.GetComponent<RectTransform>();
+            if (nameRect != null)
+            {
+                nameOriginalPosition = nameRect.anchoredPosition;
+            }
+        }
+
+        if (BalanceText != null)
+        {
+            RectTransform balanceRect = BalanceText.GetComponent<RectTransform>();
+            if (balanceRect != null)
+            {
+                balanceOriginalPosition = balanceRect.anchoredPosition;
+            }
+        }
+
+        positionsInitialized = true;
+    }
+
+    internal Vector2 GetNameOriginalPosition()
+    {
+        if (!positionsInitialized) InitializeOriginalPositions();
+        return nameOriginalPosition;
+    }
+
+    internal Vector2 GetBalanceOriginalPosition()
+    {
+        if (!positionsInitialized) InitializeOriginalPositions();
+        return balanceOriginalPosition;
+    }
 
     internal void SetPlayerData(string username, double balance, Sprite avatar)
     {

@@ -119,10 +119,27 @@ public class GameManager : MonoBehaviour
                         break;
                     }
                 case "rolling":
+                    {
+                        long timeUntilNext = payload.roundState.timeRemaining > 0
+                            ? payload.roundState.timeRemaining
+                            : 5000;
+
+                        uiController.ShowBetLocked();
+                        betController.DisableBetting();
+                        roundController.SyncAnimationToPhase("rolling", timeUntilNext, payload.roundState.serverTime);
+                        break;
+                    }
                 case "result":
-                    uiController.ShowBetLocked();
-                    betController.DisableBetting();
-                    break;
+                    {
+                        long timeUntilNext = payload.roundState.timeRemaining > 0
+                            ? payload.roundState.timeRemaining
+                            : 5000;
+
+                        uiController.ShowBetLocked();
+                        betController.DisableBetting();
+                        roundController.SyncAnimationToPhase("result", timeUntilNext, payload.roundState.serverTime);
+                        break;
+                    }
                 case "nextround":
                     {
                         int secondsUntilNext = payload.roundState.timeRemaining > 0
@@ -130,8 +147,10 @@ public class GameManager : MonoBehaviour
                             : GameUtilities.CalculateTimeRemaining(
                                 payload.roundState.bettingEndTime,
                                 payload.roundState.serverTime);
+
                         uiController.ShowNextRound(secondsUntilNext);
                         betController.DisableBetting();
+                        roundController.SyncAnimationToPhase("nextround", payload.roundState.timeRemaining, payload.roundState.serverTime);
                         break;
                     }
                 default:
