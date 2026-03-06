@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -7,17 +7,14 @@ public static class GameUtilities
 {
     private const int MaxChipCombinationCount = 20;
 
-    // GC optimisation: reuse static lists across calls to FindChipCombination
     private static readonly List<double> _sortedValuesCache = new List<double>(16);
     private static readonly List<ChipCombinationItem> _chipCombResultCache = new List<ChipCombinationItem>(MaxChipCombinationCount);
 
-    // String result caching — FormatCurrency is called per chip, per frame during animations
     private static readonly Dictionary<double, string> _currencyCache = new Dictionary<double, string>(300);
     private static readonly Dictionary<double, string> _betValueCache = new Dictionary<double, string>(100);
     private static readonly Dictionary<double, string> _balanceCache = new Dictionary<double, string>(50);
     private static readonly System.Text.StringBuilder _sb = new System.Text.StringBuilder(32);
 
-    // GC optimisation: reuse buffers for CalculateStats (called every cashout)
     private static readonly int[] _statsDiceCounts = new int[6];
     private static readonly int[] _lrFloored = new int[8];
     private static readonly int[] _lrResult = new int[8];
@@ -25,7 +22,6 @@ public static class GameUtilities
     private static readonly double[] _lrExact = new double[8];
     private static readonly double[] _lrRemainders = new double[8];
 
-    /// <summary>Call when leaving or switching rooms to release cached string memory.</summary>
     internal static void ClearCaches()
     {
         if (_currencyCache.Count > 200) _currencyCache.Clear();
@@ -39,16 +35,29 @@ public static class GameUtilities
         if (_currencyCache.TryGetValue(amount, out string cached)) return cached;
 
         string result;
-        if (amount >= 1000)
+        if (amount >= 10000)
         {
-            _sb.Clear();
-            _sb.Append((amount / 1000).ToString("F1"));
-            _sb.Append("K");
-            result = _sb.ToString();
+            double kValue = amount / 1000;
+
+            if (kValue % 1 == 0)
+            {
+                _sb.Clear();
+                _sb.Append(kValue.ToString("F0"));
+                _sb.Append("k");
+                result = _sb.ToString();
+            }
+            else
+            {
+                _sb.Clear();
+                _sb.Append(kValue.ToString("0.##"));
+                _sb.Append("k");
+                result = _sb.ToString();
+            }
         }
-        else if (amount < 1) result = amount.ToString("F1");
-        else if (amount % 1 != 0) result = amount.ToString("F1");
-        else result = amount.ToString("F0");
+        else
+        {
+            result = amount % 1 == 0 ? amount.ToString("F0") : amount.ToString("0.##");
+        }
 
         if (_currencyCache.Count < 300) _currencyCache[amount] = result;
         return result;
@@ -57,7 +66,7 @@ public static class GameUtilities
     internal static string FormatBetValue(double value)
     {
         if (_betValueCache.TryGetValue(value, out string cached)) return cached;
-        string result = value % 1 == 0 ? value.ToString("F0") : value.ToString("F2");
+        string result = value % 1 == 0 ? value.ToString("F0") : value.ToString("0.##");
         if (_betValueCache.Count < 100) _betValueCache[value] = result;
         return result;
     }
@@ -65,7 +74,26 @@ public static class GameUtilities
     internal static string FormatBalance(double balance)
     {
         if (_balanceCache.TryGetValue(balance, out string cached)) return cached;
-        string result = balance.ToString("F2");
+
+        string result;
+        if (balance >= 10000)
+        {
+            double kValue = balance / 1000;
+
+            if (kValue % 1 == 0)
+            {
+                result = kValue.ToString("F0") + "k";
+            }
+            else
+            {
+                result = kValue.ToString("0.##") + "k";
+            }
+        }
+        else
+        {
+            result = balance % 1 == 0 ? balance.ToString("F0") : balance.ToString("0.##");
+        }
+
         if (_balanceCache.Count < 50) _balanceCache[balance] = result;
         return result;
     }
@@ -153,7 +181,6 @@ public static class GameUtilities
         StatsResult result = new StatsResult();
         if (rawStats == null || rawStats.Count == 0) return result;
 
-        // Clear reusable buffer
         for (int i = 0; i < 6; i++) _statsDiceCounts[i] = 0;
 
         int validRounds = 0;
@@ -174,7 +201,6 @@ public static class GameUtilities
             validRounds++;
             int computedSum = data.dice1 + data.dice2 + data.dice3;
 
-            // Accumulate dice counts directly — no per-entry array allocation
             _statsDiceCounts[data.dice1 - 1]++;
             _statsDiceCounts[data.dice2 - 1]++;
             _statsDiceCounts[data.dice3 - 1]++;
@@ -208,7 +234,6 @@ public static class GameUtilities
         return result;
     }
 
-    // Uses static shared buffers — NOT thread-safe, but Unity is single-threaded on game logic.
     private static int[] LargestRemainder(int[] counts, int n, int total, int target)
     {
         int flooredSum = 0;

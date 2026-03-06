@@ -514,6 +514,11 @@ public class OpponentChipManager : MonoBehaviour
         chipRT.DOScale(chipScale, 0.2f).SetEase(Ease.OutBack);
         yield return new WaitForSeconds(0.22f);
 
+        // IMPORTANT: Reparent to canvas root BEFORE animating to bet area
+        // This ensures the chip renders ABOVE all bet areas during flight
+        // (prevents layering issues where bet areas render on top of flying chips)
+        chipRT.SetParent(canvasRoot, worldPositionStays: true);
+
         // Use world-space position so the destination is always accurate regardless
         // of CanvasScaler matchWidthOrHeight value or device aspect ratio.
         // Scatter offsets are in canvas units, so we multiply by the canvas lossyScale

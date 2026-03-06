@@ -6,80 +6,63 @@ using UnityEngine;
 
 public class LeaderboardController : MonoBehaviour
 {
-    #region Serialized Fields
+    private const int MaxSlots = 3;
+
     [Header("Richest Blocks (Left Side)")]
-    [SerializeField] private List<LeaderboardPlayerBlock> richestBlocks = new List<LeaderboardPlayerBlock>(3);
+    [SerializeField] private List<LeaderboardPlayerBlock> richestBlocks = new List<LeaderboardPlayerBlock>(MaxSlots);
 
     [Header("Winners Blocks (Right Side)")]
-    [SerializeField] private List<LeaderboardPlayerBlock> winnersBlocks = new List<LeaderboardPlayerBlock>(3);
+    [SerializeField] private List<LeaderboardPlayerBlock> winnersBlocks = new List<LeaderboardPlayerBlock>(MaxSlots);
 
     [Header("Avatar Images (Random Selection)")]
     [SerializeField] private Sprite[] playerAvatars;
 
     [Header("Position Badges")]
-    [SerializeField] private Sprite[] richestPositionBadges = new Sprite[3]; // 1st, 2nd, 3rd
-    [SerializeField] private Sprite[] winnersPositionBadges = new Sprite[3]; // 1st, 2nd, 3rd
+    [SerializeField] private Sprite[] richestPositionBadges = new Sprite[MaxSlots];
+    [SerializeField] private Sprite[] winnersPositionBadges = new Sprite[MaxSlots];
 
     [Header("Crown (For 1st Place Only)")]
-    [SerializeField] private bool useSeparateCrown = true; // Enable if crown is separate from badges
+    [SerializeField] private bool useSeparateCrown = true;
 
     [Header("Animation Settings")]
     [SerializeField] private float nameDuration = 2f;
     [SerializeField] private float balanceDuration = 2f;
     [SerializeField] private float fadeSpeed = 0.3f;
     [SerializeField] private float loopInterval = 0f;
-    [SerializeField] private float slideDistance = 300f;
-    [SerializeField] private float slideDuration = 0.3f; // Faster from 0.5f
-    [SerializeField] private float interchangeDuration = 0.4f; // For position swaps
-    [SerializeField] private float minRandomOffset = 0f;
-    [SerializeField] private float maxRandomOffset = 2f;
-
-    [Header("Dummy / Placeholder Data")]
-    [SerializeField] private string dummyUsername = "---";
-    [SerializeField] private double dummyBalance = 0.00;
-    [SerializeField] private double dummyWins = 0.00;
+    [SerializeField] private float valueSwitchDelay = 0.12f;
+    [SerializeField] private float slideDuration = 0.35f;
+    [SerializeField] private float hiddenOffsetX = 150f;
+    [SerializeField] private float textMoveDistance = 24f;
+    [SerializeField] private float crownPulseDuration = 0.2f;
+    [SerializeField] private float crownPulseInterval = 1.6f;
 
     [Header("Parent Container (Optional)")]
     [SerializeField] private GameObject leaderboardParent;
-    #endregion
 
-    #region Private Fields
-    private Dictionary<int, LeaderboardEntry> currentRichest = new Dictionary<int, LeaderboardEntry>();
-    private Dictionary<int, LeaderboardEntry> currentWinners = new Dictionary<int, LeaderboardEntry>();
-    private Dictionary<int, List<Coroutine>> blockCoroutines = new Dictionary<int, List<Coroutine>>();
-    private string localPlayerUsername = null;
-    private Sprite localPlayerAvatar = null;
-    private bool isAnimating = false;
-    private Dictionary<RectTransform, Vector2> originalPositions = new Dictionary<RectTransform, Vector2>();
+    [Header("Debug (No Socket)")]
+    [SerializeField] private bool enableDebugKeybinds = false;
 
-    // GC optimisation: reuse lists in PadToThree — called twice per leaderboard update (once each for richest/winners)
-    private readonly List<LeaderboardEntry> _padRichestCache = new List<LeaderboardEntry>(3);
-    private readonly List<LeaderboardEntry> _padWinnersCache = new List<LeaderboardEntry>(3);
-    #endregion
+    private readonly Dictionary<int, LeaderboardEntry> currentRichest = new Dictionary<int, LeaderboardEntry>();
+    private readonly Dictionary<int, LeaderboardEntry> currentWinners = new Dictionary<int, LeaderboardEntry>();
+    private readonly Dictionary<int, LeaderboardPlayerBlock> richestSlotToBlock = new Dictionary<int, LeaderboardPlayerBlock>();
+    private readonly Dictionary<int, LeaderboardPlayerBlock> winnersSlotToBlock = new Dictionary<int, LeaderboardPlayerBlock>();
+    private readonly Dictionary<int, Vector2> richestRestPositions = new Dictionary<int, Vector2>();
+    private readonly Dictionary<int, Vector2> winnersRestPositions = new Dictionary<int, Vector2>();
+    private readonly Dictionary<int, List<Coroutine>> blockCoroutines = new Dictionary<int, List<Coroutine>>();
+    private readonly Dictionary<string, Sprite> cachedAvatars = new Dictionary<string, Sprite>();
 
-    #region Internal API — Local Player
+    private string localPlayerUsername;
+    private Sprite localPlayerAvatar;
+    private bool isAnimating;
+    private bool isInitialized;
+    private Coroutine syncedTextLoopCoroutine;
+    private Coroutine syncedCrownLoopCoroutine;
+    private Coroutine delayedLoopStartCoroutine;
+
     internal void SetLocalPlayer(string username, Sprite avatar)
     {
         localPlayerUsername = username;
         localPlayerAvatar = avatar;
-    }
-
-    internal RectTransform GetPlayerPosition(string username, bool checkWinners)
-    {
-        if (string.IsNullOrEmpty(username)) return null;
-
-        var blocks = checkWinners ? winnersBlocks : richestBlocks;
-        var currentData = checkWinners ? currentWinners : currentRichest;
-
-        for (int i = 0; i < blocks.Count; i++)
-        {
-            if (currentData.ContainsKey(i) && currentData[i].username == username)
-            {
-                return blocks[i]?.GetComponent<RectTransform>();
-            }
-        }
-
-        return null;
     }
 
     internal bool IsAnimating() => isAnimating;
@@ -91,216 +74,521 @@ public class LeaderboardController : MonoBehaviour
             yield return null;
         }
     }
-    #endregion
 
-    #region Unity Lifecycle
+    internal RectTransform GetPlayerPosition(string username, bool checkWinners)
+    {
+        if (string.IsNullOrEmpty(username)) return null;
+
+        var currentData = checkWinners ? currentWinners : currentRichest;
+        var slotToBlock = checkWinners ? winnersSlotToBlock : richestSlotToBlock;
+
+        foreach (var kv in currentData)
+        {
+            if (kv.Value.username != username) continue;
+            if (slotToBlock.TryGetValue(kv.Key, out var block) && block != null)
+            {
+                return block.GetComponent<RectTransform>();
+            }
+        }
+
+        return null;
+    }
+
     private void OnDestroy() => StopAllAnimations();
-    #endregion
 
-    #region Internal API
+    private void Start()
+    {
+        if (!enableDebugKeybinds) return;
+        Initialize();
+    }
+
+    private void Update()
+    {
+        if (!enableDebugKeybinds) return;
+
+        if (Input.GetKeyDown(KeyCode.Alpha1)) ApplyDebugScenario1();
+        if (Input.GetKeyDown(KeyCode.Alpha2)) ApplyDebugScenario2();
+        if (Input.GetKeyDown(KeyCode.Alpha3)) ApplyDebugScenario3();
+        if (Input.GetKeyDown(KeyCode.Alpha4)) ApplyDebugScenario4();
+        if (Input.GetKeyDown(KeyCode.Alpha5)) ApplyDebugScenario5();
+        if (Input.GetKeyDown(KeyCode.Alpha6)) ApplyDebugScenario6();
+        if (Input.GetKeyDown(KeyCode.Alpha7)) ApplyDebugScenario7();
+        if (Input.GetKeyDown(KeyCode.Alpha8)) ApplyDebugScenario8();
+        if (Input.GetKeyDown(KeyCode.Alpha9)) ApplyDebugScenario9();
+        if (Input.GetKeyDown(KeyCode.Alpha0)) Hide();
+    }
+
     internal void Initialize()
     {
-        foreach (var b in richestBlocks) b?.HideAll(); // HideAll() now also hides crown
-        foreach (var b in winnersBlocks) b?.HideAll(); // HideAll() now also hides crown
+        StopAllAnimations();
 
         currentRichest.Clear();
         currentWinners.Clear();
-        StopAllAnimations();
+        if (!isInitialized)
+        {
+            richestSlotToBlock.Clear();
+            winnersSlotToBlock.Clear();
+            richestRestPositions.Clear();
+            winnersRestPositions.Clear();
 
-        originalPositions.Clear();
-        foreach (var block in richestBlocks)
-        {
-            if (block != null)
-            {
-                RectTransform rt = block.GetComponent<RectTransform>();
-                if (rt != null)
-                {
-                    originalPositions[rt] = rt.anchoredPosition;
-                }
-            }
+            CachePositionsAndResetSide(richestBlocks, richestRestPositions, richestSlotToBlock, false);
+            CachePositionsAndResetSide(winnersBlocks, winnersRestPositions, winnersSlotToBlock, true);
         }
-        foreach (var block in winnersBlocks)
+        else
         {
-            if (block != null)
-            {
-                RectTransform rt = block.GetComponent<RectTransform>();
-                if (rt != null)
-                {
-                    originalPositions[rt] = rt.anchoredPosition;
-                }
-            }
+            ResetSideToHidden(richestBlocks, richestRestPositions, richestSlotToBlock, false);
+            ResetSideToHidden(winnersBlocks, winnersRestPositions, winnersSlotToBlock, true);
         }
 
-        if (leaderboardParent != null) leaderboardParent.SetActive(false);
-    }
+        if (leaderboardParent != null)
+        {
+            leaderboardParent.SetActive(false);
+        }
 
-    internal void UpdateLeaderboard(Leaderboards leaderboards)
-    {
-        isAnimating = true;
-
-        var richestData = PadToThree(leaderboards?.richest, _padRichestCache);
-        var winnersData = PadToThree(leaderboards?.winners, _padWinnersCache);
-
-        if (leaderboardParent != null && !leaderboardParent.activeSelf)
-            leaderboardParent.SetActive(true);
-        bool richestCascade = DetectCascade(currentRichest, richestData);
-        bool winnersCascade = DetectCascade(currentWinners, winnersData);
-
-        for (int i = 0; i < 3; i++)
-            UpdatePlayerBlock(richestBlocks, currentRichest, i, richestData[i], -1f, false, richestCascade);
-
-        for (int i = 0; i < 3; i++)
-            UpdatePlayerBlock(winnersBlocks, currentWinners, i, winnersData[i], 1f, true, winnersCascade);
-        StartCoroutine(MarkAnimationComplete());
-    }
-
-    private IEnumerator MarkAnimationComplete()
-    {
-        float maxDuration = Mathf.Max(interchangeDuration, slideDuration * 2) + 0.5f;
-        yield return new WaitForSeconds(maxDuration);
         isAnimating = false;
-    }
-
-    private bool DetectCascade(Dictionary<int, LeaderboardEntry> currentData, List<LeaderboardEntry> newData)
-    {
-        if (currentData.Count == 0) return false;
-
-        int positionChanges = 0;
-        for (int i = 0; i < newData.Count; i++)
-        {
-            if (currentData.ContainsKey(i) && currentData[i].username != newData[i].username)
-            {
-                positionChanges++;
-            }
-        }
-        return positionChanges > 1;
+        isInitialized = true;
     }
 
     internal void Hide()
     {
-        if (leaderboardParent != null) leaderboardParent.SetActive(false);
+        StopAllAnimations();
 
         foreach (var b in richestBlocks) b?.HideAll();
         foreach (var b in winnersBlocks) b?.HideAll();
 
         currentRichest.Clear();
         currentWinners.Clear();
-        StopAllAnimations();
+        richestSlotToBlock.Clear();
+        winnersSlotToBlock.Clear();
+
+        if (leaderboardParent != null)
+        {
+            leaderboardParent.SetActive(false);
+        }
+
+        isAnimating = false;
     }
-    #endregion
 
-    #region Dummy Data Helpers
-    private LeaderboardEntry MakeDummy(int rank) => new LeaderboardEntry
+    internal void UpdateLeaderboard(Leaderboards leaderboards)
     {
-        username = dummyUsername,
-        balance = dummyBalance,
-        totalWins = dummyWins,
-        rank = rank
-    };
+        if (!isInitialized)
+        {
+            Initialize();
+        }
+        isAnimating = true;
 
-    private List<LeaderboardEntry> PadToThree(List<LeaderboardEntry> source, List<LeaderboardEntry> cache)
-    {
-        cache.Clear();
-        if (source != null) cache.AddRange(source);
-        while (cache.Count < 3) cache.Add(MakeDummy(cache.Count + 1));
-        return cache;
+        var richestTarget = BuildTopThreeByRank(leaderboards?.richest, false);
+        var winnersTarget = BuildTopThreeByRank(leaderboards?.winners, true);
+
+        bool hasAnyData = richestTarget.Count > 0 || winnersTarget.Count > 0;
+        bool hadAnyData = currentRichest.Count > 0 || currentWinners.Count > 0;
+
+        if (!hasAnyData)
+        {
+            if (!hadAnyData)
+            {
+                Hide();
+                return;
+            }
+
+            if (leaderboardParent != null)
+            {
+                leaderboardParent.SetActive(true);
+            }
+
+            float clearRichestTime = ApplySideUpdate(richestBlocks, currentRichest, richestSlotToBlock, richestRestPositions, richestTarget, false);
+            float clearWinnersTime = ApplySideUpdate(winnersBlocks, currentWinners, winnersSlotToBlock, winnersRestPositions, winnersTarget, true);
+            float clearDelay = Mathf.Max(clearRichestTime, clearWinnersTime) + 0.05f;
+
+            StartCoroutine(HideParentAfterDelay(clearDelay));
+            StartCoroutine(MarkAnimationComplete(clearDelay));
+            return;
+        }
+
+        if (leaderboardParent != null)
+        {
+            leaderboardParent.SetActive(true);
+        }
+
+        float richestTime = ApplySideUpdate(richestBlocks, currentRichest, richestSlotToBlock, richestRestPositions, richestTarget, false);
+        float winnersTime = ApplySideUpdate(winnersBlocks, currentWinners, winnersSlotToBlock, winnersRestPositions, winnersTarget, true);
+        float settleDelay = Mathf.Max(richestTime, winnersTime) + 0.03f;
+        RestartSynchronizedLoops(settleDelay);
+        StartCoroutine(MarkAnimationComplete(settleDelay));
     }
-    #endregion
 
-    #region Block Management
-    private void UpdatePlayerBlock(
+    private IEnumerator HideParentAfterDelay(float delay)
+    {
+        if (delay > 0f)
+        {
+            yield return new WaitForSeconds(delay);
+        }
+
+        if (leaderboardParent != null)
+        {
+            leaderboardParent.SetActive(false);
+        }
+    }
+
+    private IEnumerator MarkAnimationComplete(float waitSeconds)
+    {
+        if (waitSeconds > 0f)
+        {
+            yield return new WaitForSeconds(waitSeconds);
+        }
+
+        isAnimating = false;
+    }
+
+    private void CachePositionsAndResetSide(
+        List<LeaderboardPlayerBlock> blocks,
+        Dictionary<int, Vector2> restPositions,
+        Dictionary<int, LeaderboardPlayerBlock> slotToBlock,
+        bool isWinners)
+    {
+        for (int i = 0; i < MaxSlots && i < blocks.Count; i++)
+        {
+            var block = blocks[i];
+            if (block == null) continue;
+
+            var rect = block.GetComponent<RectTransform>();
+            if (rect == null) continue;
+
+            restPositions[i] = rect.anchoredPosition;
+            slotToBlock[i] = block;
+            rect.anchoredPosition = GetHiddenPosition(restPositions[i], isWinners);
+            block.HideAll();
+            StopBlockAnimation(block);
+        }
+    }
+
+    private void ResetSideToHidden(
+        List<LeaderboardPlayerBlock> blocks,
+        Dictionary<int, Vector2> restPositions,
+        Dictionary<int, LeaderboardPlayerBlock> slotToBlock,
+        bool isWinners)
+    {
+        slotToBlock.Clear();
+
+        for (int i = 0; i < MaxSlots && i < blocks.Count; i++)
+        {
+            var block = blocks[i];
+            if (block == null) continue;
+
+            var rect = block.GetComponent<RectTransform>();
+            if (rect == null) continue;
+
+            if (!restPositions.TryGetValue(i, out var restPos))
+            {
+                restPos = rect.anchoredPosition;
+                restPositions[i] = restPos;
+            }
+
+            slotToBlock[i] = block;
+            rect.anchoredPosition = GetHiddenPosition(restPos, isWinners);
+            block.HideAll();
+            StopBlockAnimation(block);
+        }
+    }
+
+    private float ApplySideUpdate(
         List<LeaderboardPlayerBlock> blocks,
         Dictionary<int, LeaderboardEntry> currentData,
-        int index,
-        LeaderboardEntry newEntry,
-        float slideDir,
-        bool isWinners,
-        bool isCascade)
+        Dictionary<int, LeaderboardPlayerBlock> slotToBlock,
+        Dictionary<int, Vector2> restPositions,
+        Dictionary<int, LeaderboardEntry> targetData,
+        bool isWinners)
     {
-        if (index >= blocks.Count || blocks[index] == null) return;
-
-        LeaderboardPlayerBlock block = blocks[index];
-        bool isFirstTime = !currentData.ContainsKey(index);
-        bool playerChanged = !isFirstTime && currentData[index].username != newEntry.username;
-        double displayValue = isWinners ? newEntry.totalWins : newEntry.balance;
-
-        int oldPosition = FindPlayerPosition(currentData, newEntry.username);
-        bool playerMovedUp = oldPosition > index;
-
-        if (isFirstTime)
+        var currentUsernameToSlot = new Dictionary<string, int>();
+        foreach (var kv in currentData)
         {
-            StopBlockAnimation(block);
-            block.SetPlayerData(newEntry.username, displayValue, PickAvatar(newEntry.username));
-            SetPositionBadge(block, index, isWinners);
-            currentData[index] = newEntry;
-            float randomOffset = Random.Range(minRandomOffset, maxRandomOffset);
-            StartCoroutine(DelayedStartAnimation(block, randomOffset));
+            currentUsernameToSlot[kv.Value.username] = kv.Key;
         }
-        else if (playerChanged)
+
+        var targetUsernameToSlot = new Dictionary<string, int>();
+        foreach (var kv in targetData)
         {
-            if (isCascade)
+            targetUsernameToSlot[kv.Value.username] = kv.Key;
+        }
+
+        var assignedByTargetSlot = new Dictionary<int, LeaderboardPlayerBlock>();
+        var reservedBlocks = new HashSet<LeaderboardPlayerBlock>();
+        var outgoingBlocks = new List<LeaderboardPlayerBlock>();
+        var outgoingSlotsByBlock = new Dictionary<LeaderboardPlayerBlock, int>();
+
+        foreach (var kv in currentData)
+        {
+            int currentSlot = kv.Key;
+            string username = kv.Value.username;
+            if (targetUsernameToSlot.ContainsKey(username)) continue;
+
+            if (!slotToBlock.TryGetValue(currentSlot, out var block) || block == null) continue;
+            StopBlockAnimation(block);
+            outgoingBlocks.Add(block);
+            outgoingSlotsByBlock[block] = currentSlot;
+        }
+
+        foreach (var kv in targetData)
+        {
+            string username = kv.Value.username;
+            int targetSlot = kv.Key;
+            if (!currentUsernameToSlot.TryGetValue(username, out int oldSlot)) continue;
+            if (!slotToBlock.TryGetValue(oldSlot, out var block) || block == null) continue;
+            if (!currentData.TryGetValue(oldSlot, out var oldEntry) || oldEntry == null) continue;
+
+            assignedByTargetSlot[targetSlot] = block;
+            reservedBlocks.Add(block);
+
+            UpdateExistingBlock(block, oldEntry, kv.Value, oldSlot, targetSlot, isWinners);
+        }
+
+        var freeBlocks = new List<LeaderboardPlayerBlock>();
+        var outgoingSet = new HashSet<LeaderboardPlayerBlock>(outgoingBlocks);
+        for (int i = 0; i < blocks.Count; i++)
+        {
+            var block = blocks[i];
+            if (block == null || reservedBlocks.Contains(block) || outgoingSet.Contains(block)) continue;
+            freeBlocks.Add(block);
+        }
+
+        var incomingSlots = new List<int>();
+        foreach (var kv in targetData)
+        {
+            int targetSlot = kv.Key;
+            if (!assignedByTargetSlot.ContainsKey(targetSlot))
             {
-                StopBlockAnimation(block);
-                AddBlockCoroutine(block, StartCoroutine(
-                    SlideOutAndUpdate(block, newEntry, slideDir, displayValue, index, isWinners)
-                ));
+                incomingSlots.Add(targetSlot);
             }
-            else if (playerMovedUp && oldPosition != -1)
+        }
+
+        bool hasOutgoingAndIncoming = outgoingBlocks.Count > 0 && incomingSlots.Count > 0;
+        float totalTime = 0f;
+
+        foreach (var kv in targetData)
+        {
+            int targetSlot = kv.Key;
+            if (!assignedByTargetSlot.TryGetValue(targetSlot, out var block) || block == null) continue;
+
+            var rect = block.GetComponent<RectTransform>();
+            if (rect == null || !restPositions.TryGetValue(targetSlot, out var targetPos)) continue;
+
+            rect.DOKill(complete: false);
+            rect.DOAnchorPos(targetPos, slideDuration).SetEase(Ease.InOutQuad).SetDelay(valueSwitchDelay);
+            totalTime = Mathf.Max(totalTime, valueSwitchDelay + slideDuration);
+        }
+
+        foreach (var outgoingBlock in outgoingBlocks)
+        {
+            if (outgoingBlock == null || reservedBlocks.Contains(outgoingBlock)) continue;
+            if (!outgoingSlotsByBlock.TryGetValue(outgoingBlock, out int slot)) continue;
+            if (!restPositions.TryGetValue(slot, out var restPos)) continue;
+
+            var rect = outgoingBlock.GetComponent<RectTransform>();
+            if (rect == null) continue;
+
+            rect.DOKill(complete: false);
+            rect.DOAnchorPos(GetHiddenPosition(restPos, isWinners), slideDuration)
+                .SetEase(Ease.InOutQuad)
+                .OnComplete(outgoingBlock.HideAll);
+            totalTime = Mathf.Max(totalTime, slideDuration);
+        }
+
+        if (hasOutgoingAndIncoming)
+        {
+            totalTime += slideDuration;
+        }
+
+        var outgoingPool = new Queue<LeaderboardPlayerBlock>(outgoingBlocks);
+        slotToBlock.Clear();
+        foreach (var kv in assignedByTargetSlot)
+        {
+            slotToBlock[kv.Key] = kv.Value;
+        }
+
+        for (int i = 0; i < incomingSlots.Count; i++)
+        {
+            int targetSlot = incomingSlots[i];
+            if (!targetData.TryGetValue(targetSlot, out var targetEntry)) continue;
+
+            LeaderboardPlayerBlock block = null;
+            while (outgoingPool.Count > 0 && block == null)
             {
-                int newIndex = index;
-                int oldIndex = oldPosition;
-                LeaderboardPlayerBlock oldBlock = blocks[oldIndex];
-                LeaderboardEntry oldEntry = currentData[oldIndex];
+                block = outgoingPool.Dequeue();
+            }
 
-                StopBlockAnimation(block);
-                StopBlockAnimation(oldBlock);
+            if (block == null && freeBlocks.Count > 0)
+            {
+                block = freeBlocks[0];
+                freeBlocks.RemoveAt(0);
+            }
 
-                currentData[newIndex] = newEntry;
-                currentData[oldIndex] = oldEntry;
+            if (block == null) continue;
 
-                double oldDisplayValue = isWinners ? oldEntry.totalWins : oldEntry.balance;
+            StopBlockAnimation(block);
+            PrepareBlock(block, targetEntry, targetSlot, isWinners);
 
-                AddBlockCoroutine(block, StartCoroutine(
-                    InterchangeBlocks(
-                        block, oldBlock, newEntry, oldEntry, displayValue,
-                        oldDisplayValue, isWinners, newIndex, oldIndex
-                    )
-                ));
+            if (!restPositions.TryGetValue(targetSlot, out var targetPos))
+            {
+                slotToBlock[targetSlot] = block;
+                continue;
+            }
+
+            var rect = block.GetComponent<RectTransform>();
+            if (rect == null)
+            {
+                slotToBlock[targetSlot] = block;
+                continue;
+            }
+
+            rect.DOKill(complete: false);
+            rect.anchoredPosition = GetHiddenPosition(targetPos, isWinners);
+            float enterDelay = hasOutgoingAndIncoming ? slideDuration + valueSwitchDelay : valueSwitchDelay;
+
+            if (enterDelay > 0f)
+            {
+                AddBlockCoroutine(block, StartCoroutine(AnimateEnterAfterDelay(block, rect, targetPos, enterDelay)));
+                totalTime = Mathf.Max(totalTime, enterDelay + slideDuration);
             }
             else
             {
-                StopBlockAnimation(block);
-                AddBlockCoroutine(block, StartCoroutine(
-                    SlideOutAndUpdate(block, newEntry, slideDir, displayValue, index, isWinners)
-                ));
+                rect.DOAnchorPos(targetPos, slideDuration).SetEase(Ease.InOutQuad);
+                totalTime = Mathf.Max(totalTime, slideDuration);
             }
-            currentData[index] = newEntry;
+
+            slotToBlock[targetSlot] = block;
+        }
+
+        currentData.Clear();
+        foreach (var kv in targetData)
+        {
+            currentData[kv.Key] = kv.Value;
+        }
+
+        return totalTime;
+    }
+
+    private IEnumerator AnimateEnterAfterDelay(LeaderboardPlayerBlock block, RectTransform rect, Vector2 targetPos, float delay)
+    {
+        if (delay > 0f)
+        {
+            yield return new WaitForSeconds(delay);
+        }
+
+        if (block == null || rect == null) yield break;
+
+        rect.DOKill(complete: false);
+        rect.DOAnchorPos(targetPos, slideDuration).SetEase(Ease.InOutQuad);
+    }
+
+    private void PrepareBlock(LeaderboardPlayerBlock block, LeaderboardEntry entry, int targetSlot, bool isWinners)
+    {
+        double value = isWinners ? entry.totalWins : entry.balance;
+        block.SetPlayerData(entry.username, value, PickAvatar(entry.username));
+        SetPositionBadge(block, targetSlot, isWinners);
+        ResetTextState(block.NameText);
+        ResetTextState(block.BalanceText);
+        block.ShowName();
+    }
+
+    private void UpdateExistingBlock(
+        LeaderboardPlayerBlock block,
+        LeaderboardEntry oldEntry,
+        LeaderboardEntry newEntry,
+        int oldSlot,
+        int targetSlot,
+        bool isWinners)
+    {
+        bool movedSlot = oldSlot != targetSlot;
+        double oldValue = isWinners ? oldEntry.totalWins : oldEntry.balance;
+        double newValue = isWinners ? newEntry.totalWins : newEntry.balance;
+
+        if (newEntry.username != oldEntry.username)
+        {
+            PrepareBlock(block, newEntry, targetSlot, isWinners);
+            return;
+        }
+
+        if (oldValue != newValue)
+        {
+            block.UpdateBalance(newValue);
+        }
+
+        if (movedSlot)
+        {
+            SetPositionBadge(block, targetSlot, isWinners);
+            block.ShowName();
         }
         else
         {
-            if (displayValue != (isWinners ? currentData[index].totalWins : currentData[index].balance))
+            if (targetSlot == 0 && useSeparateCrown)
             {
-                block.UpdateBalance(displayValue);
-                currentData[index].balance = newEntry.balance;
-                currentData[index].totalWins = newEntry.totalWins;
+                block.SetCrownVisible(true);
+            }
+            else if (useSeparateCrown)
+            {
+                block.SetCrownVisible(false);
             }
         }
     }
 
-    private IEnumerator DelayedStartAnimation(LeaderboardPlayerBlock block, float delay)
+    private Dictionary<int, LeaderboardEntry> BuildTopThreeByRank(List<LeaderboardEntry> source, bool isWinners)
     {
-        yield return new WaitForSeconds(delay);
-        AddBlockCoroutine(block, StartCoroutine(AlternateNameBalance(block)));
-    }
+        var ranked = new List<LeaderboardEntry>();
 
-    private int FindPlayerPosition(Dictionary<int, LeaderboardEntry> currentData, string username)
-    {
-        foreach (var kvp in currentData)
+        if (source != null)
         {
-            if (kvp.Value.username == username)
-                return kvp.Key;
+            for (int i = 0; i < source.Count; i++)
+            {
+                var item = source[i];
+                if (item == null || string.IsNullOrEmpty(item.username)) continue;
+
+                ranked.Add(new LeaderboardEntry
+                {
+                    username = item.username,
+                    balance = item.balance,
+                    totalWins = item.totalWins,
+                    rank = item.rank
+                });
+            }
         }
-        return -1;
+
+        ranked.Sort((a, b) => a.rank.CompareTo(b.rank));
+
+        var result = new Dictionary<int, LeaderboardEntry>();
+        var addedUsers = new HashSet<string>();
+
+        for (int i = 0; i < ranked.Count; i++)
+        {
+            var entry = ranked[i];
+            if (addedUsers.Contains(entry.username)) continue;
+
+            int slot = Mathf.Clamp(entry.rank - 1, 0, MaxSlots - 1);
+            if (result.ContainsKey(slot))
+            {
+                for (int fallback = 0; fallback < MaxSlots; fallback++)
+                {
+                    if (!result.ContainsKey(fallback))
+                    {
+                        slot = fallback;
+                        break;
+                    }
+                }
+            }
+
+            if (result.ContainsKey(slot)) continue;
+
+            if (isWinners && entry.totalWins <= 0d)
+            {
+                // winners entries may sometimes be sent with balance only; keep value if username is valid
+            }
+
+            addedUsers.Add(entry.username);
+            result[slot] = entry;
+
+            if (result.Count >= MaxSlots) break;
+        }
+
+        return result;
     }
 
     private void SetPositionBadge(LeaderboardPlayerBlock block, int position, bool isWinners)
@@ -310,247 +598,221 @@ public class LeaderboardController : MonoBehaviour
         {
             block.SetPositionBadge(badges[position]);
         }
+        else
+        {
+            block.SetPositionBadge(null);
+        }
 
-        // Manage crown visibility - only show for 1st place (position 0)
         if (useSeparateCrown)
         {
             block.SetCrownVisible(position == 0);
         }
     }
 
-    private IEnumerator InterchangeBlocks(
-        LeaderboardPlayerBlock block1,
-        LeaderboardPlayerBlock block2,
-        LeaderboardEntry entry1,
-        LeaderboardEntry entry2,
-        double displayValue1,
-        double displayValue2,
-        bool isWinners,
-        int newIndex1,  // New position for block1 (where it's going)
-        int newIndex2)  // New position for block2 (where it's going)
+    private void RestartSynchronizedLoops(float delay)
     {
-        // STOP ALL ANIMATIONS ON BOTH BLOCKS FIRST
-        StopBlockAnimation(block1);
-        StopBlockAnimation(block2);
-
-        RectTransform rect1 = block1.GetComponent<RectTransform>();
-        RectTransform rect2 = block2.GetComponent<RectTransform>();
-
-        if (rect1 == null || rect2 == null) yield break;
-
-        // Kill any existing DOTween animations
-        rect1.DOKill(complete: true);
-        rect2.DOKill(complete: true);
-
-        Vector2 pos1 = rect1.anchoredPosition;
-        Vector2 pos2 = rect2.anchoredPosition;
-
-        // HIDE BOTH POSITION BADGES AND CROWNS BEFORE SWAP
-        block1.SetPositionBadge(null);
-        block2.SetPositionBadge(null);
-        if (useSeparateCrown)
-        {
-            block1.HideCrown();
-            block2.HideCrown();
-        }
-
-        // Reset text states to ensure clean animation
-        ResetTextState(block1.NameText);
-        ResetTextState(block1.BalanceText);
-        ResetTextState(block2.NameText);
-        ResetTextState(block2.BalanceText);
-
-        // Perform the position swap animation
-        rect1.DOAnchorPos(pos2, interchangeDuration).SetEase(Ease.InOutQuad);
-        rect2.DOAnchorPos(pos1, interchangeDuration).SetEase(Ease.InOutQuad);
-
-        yield return new WaitForSeconds(interchangeDuration);
-
-        // Swap sibling indices to maintain proper layer order
-        int siblingIndex1 = rect1.GetSiblingIndex();
-        int siblingIndex2 = rect2.GetSiblingIndex();
-        rect1.SetSiblingIndex(siblingIndex2);
-        rect2.SetSiblingIndex(siblingIndex1);
-
-        // FORCE set positions to avoid stuck blocks
-        rect1.anchoredPosition = pos2;
-        rect2.anchoredPosition = pos1;
-
-        // Update the original positions dictionary
-        if (originalPositions.ContainsKey(rect1))
-        {
-            originalPositions[rect1] = pos2;
-        }
-        if (originalPositions.ContainsKey(rect2))
-        {
-            originalPositions[rect2] = pos1;
-        }
-
-        // Reset text states again before setting data
-        ResetTextState(block1.NameText);
-        ResetTextState(block1.BalanceText);
-        ResetTextState(block2.NameText);
-        ResetTextState(block2.BalanceText);
-
-        // Update player data
-        block1.SetPlayerData(entry1.username, displayValue1, PickAvatar(entry1.username));
-        block2.SetPlayerData(entry2.username, displayValue2, PickAvatar(entry2.username));
-
-        // SET POSITION BADGES AFTER SWAP IS COMPLETE
-        // block1 is now at newIndex1 position, so it gets that position's badge
-        // block2 is now at newIndex2 position, so it gets that position's badge
-        SetPositionBadge(block1, newIndex1, isWinners);
-        SetPositionBadge(block2, newIndex2, isWinners);
-
-        // Wait a bit before starting the name/balance animation
-        float randomOffset1 = Random.Range(minRandomOffset, maxRandomOffset);
-        float randomOffset2 = Random.Range(minRandomOffset, maxRandomOffset);
-
-        yield return new WaitForSeconds(Mathf.Max(randomOffset1, randomOffset2));
-
-        // Start the alternating animation for both blocks
-        AddBlockCoroutine(block1, StartCoroutine(AlternateNameBalance(block1)));
-        AddBlockCoroutine(block2, StartCoroutine(AlternateNameBalance(block2)));
+        StopSynchronizedLoops();
+        delayedLoopStartCoroutine = StartCoroutine(StartSynchronizedLoopsAfterDelay(delay));
     }
 
-    private IEnumerator SlideOutAndUpdate(
-        LeaderboardPlayerBlock block,
-        LeaderboardEntry entry,
-        float slideDir,
-        double displayValue,
-        int index,
-        bool isWinners)
+    private IEnumerator StartSynchronizedLoopsAfterDelay(float delay)
     {
-        RectTransform blockRect = block.GetComponent<RectTransform>();
-
-        if (blockRect != null)
+        if (delay > 0f)
         {
-            // Kill any ongoing animations
-            blockRect.DOKill(complete: true);
-
-            Vector2 restPos = originalPositions.ContainsKey(blockRect)
-                ? originalPositions[blockRect]
-                : blockRect.anchoredPosition;
-
-            Vector2 offScreenPos = restPos + new Vector2(slideDir * slideDistance, 0f);
-
-            // Slide out
-            yield return blockRect.DOAnchorPos(offScreenPos, slideDuration).SetEase(Ease.InQuad).WaitForCompletion();
-
-            // Update data while off-screen
-            ResetTextState(block.NameText);
-            ResetTextState(block.BalanceText);
-            block.SetPlayerData(entry.username, displayValue, PickAvatar(entry.username));
-            SetPositionBadge(block, index, isWinners);
-
-            // Slide back in
-            yield return blockRect.DOAnchorPos(restPos, slideDuration).SetEase(Ease.OutQuad).WaitForCompletion();
-
-            // Force set position to avoid stuck blocks
-            blockRect.anchoredPosition = restPos;
-        }
-        else
-        {
-            ResetTextState(block.NameText);
-            ResetTextState(block.BalanceText);
-            block.SetPlayerData(entry.username, displayValue, PickAvatar(entry.username));
-            SetPositionBadge(block, index, isWinners);
+            yield return new WaitForSeconds(delay);
         }
 
-        float randomOffset = Random.Range(minRandomOffset, maxRandomOffset);
-        yield return new WaitForSeconds(randomOffset);
-        AddBlockCoroutine(block, StartCoroutine(AlternateNameBalance(block)));
+        var visibleBlocks = GetVisibleBlocks();
+        if (visibleBlocks.Count == 0) yield break;
+
+        for (int i = 0; i < visibleBlocks.Count; i++)
+        {
+            visibleBlocks[i].ShowName();
+        }
+
+        syncedTextLoopCoroutine = StartCoroutine(RunSynchronizedTextLoop());
+        syncedCrownLoopCoroutine = StartCoroutine(RunSynchronizedCrownLoop());
     }
 
-    private IEnumerator AlternateNameBalance(LeaderboardPlayerBlock block)
+    private void StopSynchronizedLoops()
     {
+        if (delayedLoopStartCoroutine != null)
+        {
+            StopCoroutine(delayedLoopStartCoroutine);
+            delayedLoopStartCoroutine = null;
+        }
 
-        bool firstIteration = true;
+        if (syncedTextLoopCoroutine != null)
+        {
+            StopCoroutine(syncedTextLoopCoroutine);
+            syncedTextLoopCoroutine = null;
+        }
 
+        if (syncedCrownLoopCoroutine != null)
+        {
+            StopCoroutine(syncedCrownLoopCoroutine);
+            syncedCrownLoopCoroutine = null;
+        }
+    }
+
+    private IEnumerator RunSynchronizedTextLoop()
+    {
         while (true)
         {
-            if (!firstIteration)
-            {
-
-                StartCoroutine(FadeOutUp(block.BalanceText));
-                yield return StartCoroutine(FadeInAtPosition(block.NameText));
-            }
-
+            var visibleBlocks = GetVisibleBlocks();
+            if (visibleBlocks.Count == 0) yield break;
 
             yield return new WaitForSeconds(nameDuration);
-
-            StartCoroutine(FadeOutUp(block.NameText));
-            yield return StartCoroutine(FadeInAtPosition(block.BalanceText));
-
+            yield return StartCoroutine(TransitionTextSet(visibleBlocks, showBalance: true));
 
             yield return new WaitForSeconds(balanceDuration);
+            yield return StartCoroutine(TransitionTextSet(visibleBlocks, showBalance: false));
 
-            firstIteration = false;
-
-            if (loopInterval > 0f) yield return new WaitForSeconds(loopInterval);
+            if (loopInterval > 0f)
+            {
+                yield return new WaitForSeconds(loopInterval);
+            }
         }
     }
 
-    private IEnumerator FadeOutUp(TMP_Text textComponent)
+    private IEnumerator TransitionTextSet(List<LeaderboardPlayerBlock> blocks, bool showBalance)
+    {
+        var outRoutines = new List<Coroutine>();
+        for (int i = 0; i < blocks.Count; i++)
+        {
+            var block = blocks[i];
+            if (block == null) continue;
+            TMP_Text outText = showBalance ? block.NameText : block.BalanceText;
+            outRoutines.Add(StartCoroutine(FadeOutDown(outText)));
+        }
+
+        yield return new WaitForSeconds(fadeSpeed);
+
+        var inRoutines = new List<Coroutine>();
+        for (int i = 0; i < blocks.Count; i++)
+        {
+            var block = blocks[i];
+            if (block == null) continue;
+            TMP_Text inText = showBalance ? block.BalanceText : block.NameText;
+            inRoutines.Add(StartCoroutine(FadeInUp(inText)));
+        }
+
+        yield return new WaitForSeconds(fadeSpeed);
+    }
+
+    private IEnumerator RunSynchronizedCrownLoop()
+    {
+        while (true)
+        {
+            var firstBlocks = GetCurrentFirstBlocks();
+            for (int i = 0; i < firstBlocks.Count; i++)
+            {
+                var block = firstBlocks[i];
+                if (block == null) continue;
+                block.PlayCrownPulse(crownPulseDuration);
+            }
+
+            yield return new WaitForSeconds(crownPulseInterval);
+        }
+    }
+
+    private List<LeaderboardPlayerBlock> GetVisibleBlocks()
+    {
+        var result = new List<LeaderboardPlayerBlock>(6);
+        var seen = new HashSet<int>();
+
+        foreach (var kv in richestSlotToBlock)
+        {
+            if (!currentRichest.ContainsKey(kv.Key)) continue;
+            var block = kv.Value;
+            if (block == null) continue;
+            int id = block.GetInstanceID();
+            if (seen.Add(id)) result.Add(block);
+        }
+
+        foreach (var kv in winnersSlotToBlock)
+        {
+            if (!currentWinners.ContainsKey(kv.Key)) continue;
+            var block = kv.Value;
+            if (block == null) continue;
+            int id = block.GetInstanceID();
+            if (seen.Add(id)) result.Add(block);
+        }
+
+        return result;
+    }
+
+    private List<LeaderboardPlayerBlock> GetCurrentFirstBlocks()
+    {
+        var result = new List<LeaderboardPlayerBlock>(2);
+        if (richestSlotToBlock.TryGetValue(0, out var richestFirst) && currentRichest.ContainsKey(0) && richestFirst != null)
+        {
+            result.Add(richestFirst);
+        }
+
+        if (winnersSlotToBlock.TryGetValue(0, out var winnersFirst) && currentWinners.ContainsKey(0) && winnersFirst != null)
+        {
+            result.Add(winnersFirst);
+        }
+
+        return result;
+    }
+
+    private IEnumerator FadeOutDown(TMP_Text textComponent)
     {
         if (textComponent == null) yield break;
 
         RectTransform textRect = textComponent.GetComponent<RectTransform>();
         CanvasGroup canvasGroup = GetOrAddCanvasGroup(textComponent.gameObject);
         Vector2 startPos = textRect.anchoredPosition;
-        Vector2 endPos = startPos + new Vector2(0, 30f);
+        Vector2 endPos = startPos + new Vector2(0f, -textMoveDistance);
         float elapsed = 0f;
 
         while (elapsed < fadeSpeed)
         {
             elapsed += Time.deltaTime;
             float t = Mathf.Clamp01(elapsed / fadeSpeed);
-            textRect.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
-            canvasGroup.alpha = 1f - t;
+            float eased = DOVirtual.EasedValue(0f, 1f, t, Ease.InBack);
+            textRect.anchoredPosition = Vector2.Lerp(startPos, endPos, eased);
+            canvasGroup.alpha = 1f - eased;
             yield return null;
         }
 
-        // Don't reset position here - let FadeInAtPosition handle it
+        textRect.anchoredPosition = Vector2.zero;
         canvasGroup.alpha = 0f;
         textComponent.gameObject.SetActive(false);
     }
 
-    private IEnumerator FadeInAtPosition(TMP_Text textComponent)
+    private IEnumerator FadeInUp(TMP_Text textComponent)
     {
         if (textComponent == null) yield break;
 
-        CanvasGroup canvasGroup = GetOrAddCanvasGroup(textComponent.gameObject);
-        RectTransform textRect = textComponent.GetComponent<RectTransform>();
-
+        var cg = GetOrAddCanvasGroup(textComponent.gameObject);
+        var textRect = textComponent.GetComponent<RectTransform>();
         if (textRect != null)
         {
-            // Get the original position from the block
-            LeaderboardPlayerBlock block = textComponent.GetComponentInParent<LeaderboardPlayerBlock>();
-            if (block != null)
-            {
-                Vector2 originalPos = (textComponent == block.NameText)
-                    ? block.GetNameOriginalPosition()
-                    : block.GetBalanceOriginalPosition();
-                textRect.anchoredPosition = originalPos; // Reset to ORIGINAL inspector position
-            }
-            else
-            {
-                textRect.anchoredPosition = Vector2.zero; // Fallback
-            }
+            textRect.anchoredPosition = new Vector2(0f, -textMoveDistance);
         }
 
-        canvasGroup.alpha = 0f;
+        cg.alpha = 0f;
         textComponent.gameObject.SetActive(true);
-        float elapsed = 0f;
 
+        float elapsed = 0f;
         while (elapsed < fadeSpeed)
         {
             elapsed += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Clamp01(elapsed / fadeSpeed);
+            float t = Mathf.Clamp01(elapsed / fadeSpeed);
+            float eased = DOVirtual.EasedValue(0f, 1f, t, Ease.OutBack);
+            cg.alpha = eased;
+            if (textRect != null)
+            {
+                textRect.anchoredPosition = Vector2.Lerp(new Vector2(0f, -textMoveDistance), Vector2.zero, eased);
+            }
             yield return null;
         }
 
-        canvasGroup.alpha = 1f;
+        if (textRect != null) textRect.anchoredPosition = Vector2.zero;
+        cg.alpha = 1f;
     }
 
     private void ResetTextState(TMP_Text textComponent)
@@ -560,27 +822,12 @@ public class LeaderboardController : MonoBehaviour
         RectTransform textRect = textComponent.GetComponent<RectTransform>();
         if (textRect != null)
         {
-            textRect.DOKill(complete: true);
-
-            // Reset to ORIGINAL inspector position
-            LeaderboardPlayerBlock block = textComponent.GetComponentInParent<LeaderboardPlayerBlock>();
-            if (block != null)
-            {
-                Vector2 originalPos = (textComponent == block.NameText)
-                    ? block.GetNameOriginalPosition()
-                    : block.GetBalanceOriginalPosition();
-                textRect.anchoredPosition = originalPos;
-            }
-            else
-            {
-                textRect.anchoredPosition = Vector2.zero; // Fallback
-            }
+            textRect.DOKill(complete: false);
+            textRect.anchoredPosition = Vector2.zero;
         }
 
-        var cg = textComponent.GetComponent<CanvasGroup>();
-        if (cg == null) cg = textComponent.gameObject.AddComponent<CanvasGroup>();
+        var cg = GetOrAddCanvasGroup(textComponent.gameObject);
         cg.alpha = 1f;
-
         textComponent.gameObject.SetActive(true);
     }
 
@@ -589,108 +836,121 @@ public class LeaderboardController : MonoBehaviour
         var cg = go.GetComponent<CanvasGroup>();
         return cg != null ? cg : go.AddComponent<CanvasGroup>();
     }
-    #endregion
 
-    #region Coroutine Tracking
+    private Vector2 GetHiddenPosition(Vector2 restPos, bool isWinners)
+    {
+        float offset = isWinners ? hiddenOffsetX : -hiddenOffsetX;
+        return new Vector2(restPos.x + offset, restPos.y);
+    }
+
     private void AddBlockCoroutine(LeaderboardPlayerBlock block, Coroutine coroutine)
     {
         if (block == null || coroutine == null) return;
+
         int id = block.GetInstanceID();
-        if (!blockCoroutines.ContainsKey(id)) blockCoroutines[id] = new List<Coroutine>();
+        if (!blockCoroutines.ContainsKey(id))
+        {
+            blockCoroutines[id] = new List<Coroutine>();
+        }
+
         blockCoroutines[id].Add(coroutine);
     }
 
     private void StopBlockAnimation(LeaderboardPlayerBlock block)
     {
         if (block == null) return;
-        int id = block.GetInstanceID();
+        block.StopCrownPulse();
 
-        // Stop all tracked coroutines for this block
+        int id = block.GetInstanceID();
         if (blockCoroutines.TryGetValue(id, out var coroutines))
         {
             foreach (var c in coroutines)
             {
-                if (c != null)
+                if (c == null) continue;
+                try
                 {
-                    try
-                    {
-                        StopCoroutine(c);
-                    }
-                    catch
-                    {
-                        // Coroutine might already be stopped
-                    }
+                    StopCoroutine(c);
+                }
+                catch
+                {
                 }
             }
+
             coroutines.Clear();
         }
 
-        // Kill all DOTween animations on the block
-        RectTransform blockRect = block.GetComponent<RectTransform>();
-        if (blockRect != null)
+        var rect = block.GetComponent<RectTransform>();
+        if (rect != null)
         {
-            blockRect.DOKill(complete: true);
+            rect.DOKill(complete: false);
         }
 
-        // Also kill animations on text components
         if (block.NameText != null)
         {
-            RectTransform nameRect = block.NameText.GetComponent<RectTransform>();
-            if (nameRect != null) nameRect.DOKill(complete: true);
+            block.NameText.GetComponent<RectTransform>()?.DOKill(complete: false);
         }
+
         if (block.BalanceText != null)
         {
-            RectTransform balanceRect = block.BalanceText.GetComponent<RectTransform>();
-            if (balanceRect != null) balanceRect.DOKill(complete: true);
+            block.BalanceText.GetComponent<RectTransform>()?.DOKill(complete: false);
         }
     }
 
     private void StopAllAnimations()
     {
         foreach (var kvp in blockCoroutines)
+        {
             foreach (var c in kvp.Value)
-                if (c != null)
+            {
+                if (c == null) continue;
+                try
                 {
-                    try
-                    {
-                        StopCoroutine(c);
-                    }
-                    catch
-                    {
-                        // Coroutine might already be stopped
-                    }
+                    StopCoroutine(c);
                 }
+                catch
+                {
+                }
+            }
+        }
 
         blockCoroutines.Clear();
-        DOTween.Kill(this);
+        StopSynchronizedLoops();
 
-        // Also kill animations on all blocks
         foreach (var block in richestBlocks)
         {
-            if (block != null)
-            {
-                block.GetComponent<RectTransform>()?.DOKill(complete: true);
-            }
+            StopBlockAnimation(block);
         }
+
         foreach (var block in winnersBlocks)
         {
-            if (block != null)
-            {
-                block.GetComponent<RectTransform>()?.DOKill(complete: true);
-            }
+            StopBlockAnimation(block);
         }
     }
-    #endregion
 
-    #region Helpers
     private Sprite PickAvatar(string username)
     {
-        if (!string.IsNullOrEmpty(localPlayerUsername) &&
-            localPlayerAvatar != null &&
-            username == localPlayerUsername)
-            return localPlayerAvatar;
+        if (string.IsNullOrEmpty(username))
+        {
+            return GetRandomAvatar();
+        }
 
-        return GetRandomAvatar();
+        if (!string.IsNullOrEmpty(localPlayerUsername) && localPlayerAvatar != null && username == localPlayerUsername)
+        {
+            return localPlayerAvatar;
+        }
+
+        if (cachedAvatars.TryGetValue(username, out var cached) && cached != null)
+        {
+            return cached;
+        }
+
+        var picked = GetRandomAvatar();
+        if (picked != null)
+        {
+            cachedAvatars[username] = picked;
+        }
+
+        return picked;
     }
 
     private Sprite GetRandomAvatar()
@@ -698,5 +958,232 @@ public class LeaderboardController : MonoBehaviour
         if (playerAvatars == null || playerAvatars.Length == 0) return null;
         return playerAvatars[Random.Range(0, playerAvatars.Length)];
     }
-    #endregion
+
+    private LeaderboardEntry MakeRich(string username, double balance, int rank)
+    {
+        return new LeaderboardEntry
+        {
+            username = username,
+            balance = balance,
+            totalWins = 0d,
+            rank = rank
+        };
+    }
+
+    private LeaderboardEntry MakeWin(string username, double wins, int rank)
+    {
+        return new LeaderboardEntry
+        {
+            username = username,
+            balance = 0d,
+            totalWins = wins,
+            rank = rank
+        };
+    }
+
+    private void ApplyDebugScenario1()
+    {
+        UpdateLeaderboard(new Leaderboards
+        {
+            richest = new List<LeaderboardEntry>
+      {
+        MakeRich("alpha_player", 1850, 1)
+      },
+            winners = new List<LeaderboardEntry>
+      {
+        MakeWin("winner_one", 14, 1)
+      }
+        });
+    }
+
+    private void ApplyDebugScenario2()
+    {
+        UpdateLeaderboard(new Leaderboards
+        {
+            richest = new List<LeaderboardEntry>
+      {
+        MakeRich("new_top_user", 2600, 1),
+        MakeRich("alpha_player", 1900, 2)
+      },
+            winners = new List<LeaderboardEntry>
+      {
+        MakeWin("big_winner", 22, 1),
+        MakeWin("winner_one", 15, 2)
+      }
+        });
+    }
+
+    private void ApplyDebugScenario3()
+    {
+        UpdateLeaderboard(new Leaderboards
+        {
+            richest = new List<LeaderboardEntry>
+      {
+        MakeRich("new_top_user", 2800, 1),
+        MakeRich("mid_entry", 2100, 2),
+        MakeRich("alpha_player", 1950, 3)
+      },
+            winners = new List<LeaderboardEntry>
+      {
+        MakeWin("big_winner", 24, 1),
+        MakeWin("new_winner_two", 19, 2),
+        MakeWin("winner_one", 16, 3)
+      }
+        });
+    }
+
+    private void ApplyDebugScenario4()
+    {
+        UpdateLeaderboard(new Leaderboards
+        {
+            richest = new List<LeaderboardEntry>
+      {
+        MakeRich("new_top_user", 2850, 1),
+        MakeRich("mid_entry", 2200, 2),
+        MakeRich("fresh_third", 1750, 3)
+      },
+            winners = new List<LeaderboardEntry>
+      {
+        MakeWin("big_winner", 25, 1),
+        MakeWin("new_winner_two", 20, 2),
+        MakeWin("fresh_winner_three", 12, 3)
+      }
+        });
+    }
+
+    private void ApplyDebugScenario5()
+    {
+        UpdateLeaderboard(new Leaderboards
+        {
+            richest = new List<LeaderboardEntry>
+      {
+        MakeRich("alpha_player", 3200, 1),
+        MakeRich("fresh_third", 2100, 2),
+        MakeRich("new_top_user", 2000, 3)
+      },
+            winners = new List<LeaderboardEntry>
+      {
+        MakeWin("winner_one", 30, 1),
+        MakeWin("fresh_winner_three", 18, 2),
+        MakeWin("big_winner", 17, 3)
+      }
+        });
+    }
+
+    private void ApplyDebugScenario6()
+    {
+        UpdateLeaderboard(new Leaderboards
+        {
+            richest = new List<LeaderboardEntry>(),
+            winners = new List<LeaderboardEntry>()
+        });
+    }
+
+    private void ApplyDebugScenario7()
+    {
+        UpdateLeaderboard(new Leaderboards
+        {
+            richest = BuildRandomEntries(false),
+            winners = BuildRandomEntries(true)
+        });
+    }
+
+    private void ApplyDebugScenario8()
+    {
+        UpdateLeaderboard(new Leaderboards
+        {
+            richest = ShuffleExisting(currentRichest, false),
+            winners = ShuffleExisting(currentWinners, true)
+        });
+    }
+
+    private void ApplyDebugScenario9()
+    {
+        var richest = ShuffleExisting(currentRichest, false);
+        var winners = ShuffleExisting(currentWinners, true);
+
+        if (richest.Count == 0) richest = BuildRandomEntries(false);
+        if (winners.Count == 0) winners = BuildRandomEntries(true);
+
+        if (richest.Count > 0)
+        {
+            int idx = Random.Range(0, richest.Count);
+            richest[idx].username = "r_new_" + Random.Range(10, 999);
+            richest[idx].balance = Random.Range(1200f, 5800f);
+        }
+
+        if (winners.Count > 0)
+        {
+            int idx = Random.Range(0, winners.Count);
+            winners[idx].username = "w_new_" + Random.Range(10, 999);
+            winners[idx].totalWins = Random.Range(6f, 44f);
+        }
+
+        UpdateLeaderboard(new Leaderboards
+        {
+            richest = richest,
+            winners = winners
+        });
+    }
+
+    private List<LeaderboardEntry> BuildRandomEntries(bool isWinners)
+    {
+        int count = Random.Range(1, MaxSlots + 1);
+        var entries = new List<LeaderboardEntry>(count);
+        for (int i = 0; i < count; i++)
+        {
+            int rank = i + 1;
+            if (isWinners)
+            {
+                entries.Add(MakeWin("w_" + Random.Range(100, 999), Random.Range(5f, 40f), rank));
+            }
+            else
+            {
+                entries.Add(MakeRich("r_" + Random.Range(100, 999), Random.Range(1000f, 6000f), rank));
+            }
+        }
+
+        return entries;
+    }
+
+    private List<LeaderboardEntry> ShuffleExisting(Dictionary<int, LeaderboardEntry> current, bool isWinners)
+    {
+        var existing = new List<LeaderboardEntry>();
+        foreach (var kv in current)
+        {
+            if (kv.Value == null || string.IsNullOrEmpty(kv.Value.username)) continue;
+            existing.Add(new LeaderboardEntry
+            {
+                username = kv.Value.username,
+                balance = kv.Value.balance,
+                totalWins = kv.Value.totalWins,
+                rank = kv.Value.rank
+            });
+        }
+
+        if (existing.Count == 0) return existing;
+
+        for (int i = existing.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            var temp = existing[i];
+            existing[i] = existing[j];
+            existing[j] = temp;
+        }
+
+        for (int i = 0; i < existing.Count; i++)
+        {
+            existing[i].rank = i + 1;
+            if (isWinners)
+            {
+                existing[i].totalWins = Mathf.Max(1f, (float)existing[i].totalWins + Random.Range(-2f, 3f));
+            }
+            else
+            {
+                existing[i].balance = Mathf.Max(100f, (float)existing[i].balance + Random.Range(-300f, 350f));
+            }
+        }
+
+        return existing;
+    }
 }

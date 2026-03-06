@@ -144,19 +144,10 @@ public class DiceBoxAnimationController : MonoBehaviour
                 break;
 
             case "rolling":
-                if (secondsUntilNext > 0)
-                {
-                    float adjustedIdleDuration = Mathf.Max(1f, secondsUntilNext * 0.3f);
-                    float remainingTime = secondsUntilNext - adjustedIdleDuration;
-                    float adjustedOpenCloseDuration = Mathf.Max(openDuration + holdOpenDuration + closeDuration, remainingTime * 0.7f);
-
-                    animationCoroutine = StartCoroutine(PlayTimedSequenceForRolling(adjustedIdleDuration, adjustedOpenCloseDuration));
-                }
-                else
-                {
-                    PlayIdleAnimation();
-                    currentState = DiceBoxState.Idle;
-                }
+                // When player joins after bet locked, just show idle animation until round ends
+                // No need for box open/close animation in this scenario
+                PlayIdleAnimation();
+                currentState = DiceBoxState.Idle;
                 break;
 
             case "result":

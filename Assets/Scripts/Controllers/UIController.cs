@@ -646,21 +646,23 @@ public class UIController : MonoBehaviour
         SlideInPopup(ErrorPopupParent, ErrorPopup);
     }
 
-    private void CloseErrorPopup() => SlideOutPopup(ErrorPopupParent, ErrorPopup);
+    private void CloseErrorPopup(System.Action onComplete = null) => SlideOutPopup(ErrorPopupParent, ErrorPopup, onComplete);
 
     private void OnErrorOK()
     {
-        CloseErrorPopup();
-
         if (isAnotherDeviceError)
         {
             isAnotherDeviceError = false;
-            gameManager.ExitGame();
+            CloseErrorPopup(() => gameManager.ExitGame());
         }
         else if (hasPendingDisconnect)
         {
             hasPendingDisconnect = false;
-            ShowDisconnectPopup();
+            CloseErrorPopup(() => ShowDisconnectPopup());
+        }
+        else
+        {
+            CloseErrorPopup();
         }
     }
     #endregion
@@ -696,11 +698,6 @@ public class UIController : MonoBehaviour
     #region Disconnect Popup
     internal void ShowDisconnectPopup()
     {
-        if (ErrorPopupParent && ErrorPopupParent.activeSelf)
-        {
-            hasPendingDisconnect = true;
-            return; 
-        }   
         if (ReconnectPopupParent && ReconnectPopupParent.activeSelf)
             SlideOutPopup(ReconnectPopupParent, ReconnectPopup);
 
@@ -739,7 +736,7 @@ public class UIController : MonoBehaviour
     #region Data Updates
     internal void UpdateBalance(double balance)
     {
-        string text = balance.ToString("F2");
+        string text = balance % 1 == 0 ? balance.ToString("F0") : balance.ToString("0.##");
         if (PlayerBalance_Text) PlayerBalance_Text.text = text;
         if (GameBalance_Text) GameBalance_Text.text = text;
     }
