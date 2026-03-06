@@ -237,18 +237,18 @@ public class BetLimitManager : MonoBehaviour
 
         string targetRoom = currentSelectedRoom;
 
-     
+
         if (popupCoroutine != null) StopCoroutine(popupCoroutine);
         betLimitPanel.SetActive(false);
 
-     
+
         gameManager?.SwitchRoom(targetRoom);
     }
 
     private void UpdateConfirmButton()
     {
         if (confirmButton == null) return;
-        confirmButton.interactable = currentSelectedRoom != playerCurrentRoom;
+        confirmButton.interactable = true;
     }
 
     #endregion
