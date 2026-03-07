@@ -87,6 +87,10 @@ public class UIController : MonoBehaviour
     [Header("Win Animation")]
     [SerializeField] private TMP_Text WinAmount_Text;
     [SerializeField] private GameObject WinPanel;
+    [SerializeField] private RectTransform BalanceTarget;
+    [SerializeField] private float winHoldDuration = 1.2f;
+    [SerializeField] private float winFlyDuration = 0.5f;
+    [SerializeField] private float winFlyDistance = 200f;
 
     [Header("Loading Screen")]
     [SerializeField] private GameObject LoadingScreen_Object;
@@ -177,6 +181,8 @@ public class UIController : MonoBehaviour
     private Vector2 shrinkSideMenuOriginalPosition;
     private readonly List<RectTransform> _animatingRects = new List<RectTransform>();
     private readonly List<Vector2> _animatingOrigPos = new List<Vector2>();
+    private RectTransform winPanelRT;
+    private Vector2 winPanelOriginalPos;
     private readonly List<RectTransform> _visibleRects = new List<RectTransform>();
     #endregion
 
@@ -301,7 +307,13 @@ public class UIController : MonoBehaviour
         HidePopupImmediate(ReconnectPopupParent, ReconnectPopup);
         HidePopupImmediate(DisconnectPopupParent, DisconnectPopup);
         HidePopupImmediate(QuitPopupParent, QuitPopup);
-        if (WinPanel) WinPanel.SetActive(false);
+
+        if (WinPanel)
+        {
+            winPanelRT = WinPanel.GetComponent<RectTransform>();
+            if (winPanelRT != null) winPanelOriginalPos = winPanelRT.anchoredPosition;
+            WinPanel.SetActive(false);
+        }
         if (WinAmount_Text) WinAmount_Text.gameObject.SetActive(false);
     }
 
@@ -856,20 +868,56 @@ public class UIController : MonoBehaviour
     {
         if (WinAmount_Text == null || WinPanel == null) return;
         winTween?.Kill();
+
+        // Always reset to original anchored position and scale before starting
+        if (winPanelRT != null) winPanelRT.anchoredPosition = winPanelOriginalPos;
+        WinPanel.transform.localScale = Vector3.zero;
+
+        CanvasGroup cg = WinPanel.GetComponent<CanvasGroup>();
+        if (cg == null) cg = WinPanel.AddComponent<CanvasGroup>();
+        cg.alpha = 1f;
+
         WinAmount_Text.text = $"+{winAmount:F2}";
         WinAmount_Text.gameObject.SetActive(true);
-        WinPanel.transform.localScale = Vector3.zero;
         WinPanel.SetActive(true);
 
+        // Target Y is where BalanceTarget sits; fall back to flying upward if not assigned
+        float targetY = winPanelOriginalPos.y + winFlyDistance;
+        if (BalanceTarget != null && winPanelRT != null)
+        {
+            // Convert balance world position → local anchoredPosition Y in same canvas space
+            Vector2 screenPt = RectTransformUtility.WorldToScreenPoint(null, BalanceTarget.position);
+            RectTransform canvasRT = WinPanel.transform.parent as RectTransform;
+            if (canvasRT != null &&
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRT, screenPt, null, out Vector2 localPt))
+            {
+                targetY = localPt.y;
+            }
+        }
+
         winTween = DOTween.Sequence()
-            .Append(WinPanel.transform.DOScale(1.2f, 0.3f))
-            .Append(WinPanel.transform.DOScale(1f, 0.2f))
-            .AppendInterval(2f)
-            .Append(WinPanel.transform.DOScale(0f, 0.3f))
+            // Pop in
+            .Append(WinPanel.transform.DOScale(1.2f, 0.25f).SetEase(Ease.OutBack))
+            .Append(WinPanel.transform.DOScale(1f, 0.15f).SetEase(Ease.InOutSine))
+            // Hold
+            .AppendInterval(winHoldDuration)
+            // Fly to balance Y + fade out simultaneously
+            .AppendCallback(() =>
+            {
+                if (winPanelRT != null)
+                    winPanelRT.DOAnchorPosY(targetY, winFlyDuration).SetEase(Ease.InCubic);
+                WinPanel.transform.DOScale(0.5f, winFlyDuration).SetEase(Ease.InCubic);
+                cg.DOFade(0f, winFlyDuration * 0.75f).SetEase(Ease.InQuad);
+            })
+            .AppendInterval(winFlyDuration)
             .OnComplete(() =>
             {
+                // Disable and reset everything for next use
                 WinPanel.SetActive(false);
                 if (WinAmount_Text) WinAmount_Text.gameObject.SetActive(false);
+                if (winPanelRT != null) winPanelRT.anchoredPosition = winPanelOriginalPos;
+                WinPanel.transform.localScale = Vector3.one;
+                cg.alpha = 1f;
             });
     }
     #endregion

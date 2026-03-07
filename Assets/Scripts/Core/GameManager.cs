@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using DG.Tweening;
 
 public class GameManager : MonoBehaviour
 {
@@ -19,6 +20,9 @@ public class GameManager : MonoBehaviour
 
     [Header("Socket")]
     [SerializeField] private SocketIOManager socketManager;
+
+    [Header("Timing")]
+    [SerializeField] private float diceResultHighlightDelay = 2f;
 
     [Header("Debug — disable in production builds")]
     [SerializeField] private bool showDebugLogs = false;
@@ -235,24 +239,28 @@ public class GameManager : MonoBehaviour
         uiController.ShowBetLocked();
 
         roundController.ShowDiceResult(data);
-        betController.HighlightWinningAreas(data.matchSide, data.sum);
-        betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
 
-        List<string> winningBetOptions = betController.GetWinningBetOptions();
-
-        List<string> allWinningAreas = GetAllWinningAreasFromDice(data);
-        opponentChipManager?.SetWinningBetAreas(allWinningAreas);
-
-        bonusIndicatorController?.HandleDiceResult(allWinningAreas);
-
-        if (chipWinAnimationController != null)
+        // Delay highlights, bonus hits, and win chip animations so they
+        // sync with the dice reveal animation in the dice box.
+        DOVirtual.DelayedCall(diceResultHighlightDelay, () =>
         {
-            List<WinAreaData> winAreas = betController.GetWinningAreasData();
-            if (winAreas != null && winAreas.Count > 0)
-                chipWinAnimationController.PlayDiceResultAnimation(winAreas, data);
-        }
+            betController.HighlightWinningAreas(data.matchSide, data.sum);
+            betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
 
-        opponentChipManager?.PlayOpponentWinAnimations();
+            List<string> allWinningAreas = GetAllWinningAreasFromDice(data);
+            opponentChipManager?.SetWinningBetAreas(allWinningAreas);
+
+            bonusIndicatorController?.HandleDiceResult(allWinningAreas);
+
+            if (chipWinAnimationController != null)
+            {
+                List<WinAreaData> winAreas = betController.GetWinningAreasData();
+                if (winAreas != null && winAreas.Count > 0)
+                    chipWinAnimationController.PlayDiceResultAnimation(winAreas, data);
+            }
+
+            opponentChipManager?.PlayOpponentWinAnimations();
+        });
     }
 
     private List<string> GetAllWinningAreasFromDice(DiceResultData data)
