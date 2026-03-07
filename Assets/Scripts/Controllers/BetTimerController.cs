@@ -40,9 +40,15 @@ public class BetTimerController : MonoBehaviour
         StopCountdown();
         StopLocalBettingCountdown();
         StopClockTick();
-        bettingTimer_Text?.transform.DOKill();
-        betLockedPanel?.transform.DOKill();
-        placeBetPanel?.transform.DOKill();
+
+        if (bettingTimer_Text != null && bettingTimer_Text.transform != null)
+            bettingTimer_Text.transform.DOKill();
+        if (betLockedPanel != null && betLockedPanel.transform != null)
+            betLockedPanel.transform.DOKill();
+        if (placeBetPanel != null && placeBetPanel.transform != null)
+            placeBetPanel.transform.DOKill();
+        if (nextRoundPanel != null && nextRoundPanel.transform != null)
+            nextRoundPanel.transform.DOKill();
     }
     #endregion
 

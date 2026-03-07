@@ -153,6 +153,13 @@ public class GameManager : MonoBehaviour
                         roundController.SyncAnimationToPhase("nextround", payload.roundState.timeRemaining, payload.roundState.serverTime);
                         break;
                     }
+                case "dealing":
+                    {
+                        uiController.ShowBetLocked();
+                        betController.DisableBetting();
+                        roundController.SyncAnimationToPhase("rolling", 5000, payload.roundState.serverTime);
+                        break;
+                    }
                 default:
                     uiController.ShowBetLocked();
                     betController.DisableBetting();
@@ -420,6 +427,9 @@ public class GameManager : MonoBehaviour
         betController.ClearAllWinHighlights();
         roundController.ClearRoundDisplay();
         resultPlaneController?.ClearAllResults();
+
+        AudioManager.Instance?.StopAllSounds();
+
         socketManager.ReturnHome();
         uiController.ShowHomeScreen();
         uiController.HideAllTimers();
@@ -448,6 +458,8 @@ public class GameManager : MonoBehaviour
         resultPlaneController?.ClearAllResults();
         bonusIndicatorController?.ClearAllIndicators();
         uiController.HideAllTimers();
+
+        AudioManager.Instance?.StopAllSounds();
 
         CurrentRoom = null;
         CurrentRoundId = null;

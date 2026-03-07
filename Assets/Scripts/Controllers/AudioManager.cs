@@ -432,4 +432,13 @@ public class AudioManager : MonoBehaviour
         sfxSource2?.PlayOneShot(clip, sfxVolume);
     }
     #endregion
-}   
+
+    #region Cleanup
+    internal void StopAllSounds()
+    {
+        StopClockTick();
+        if (sfxSource1 != null) sfxSource1.Stop();
+        if (sfxSource2 != null) sfxSource2.Stop();
+    }
+    #endregion
+}
