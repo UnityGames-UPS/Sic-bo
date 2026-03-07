@@ -26,6 +26,7 @@ public class MenuController : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private HistoryController historyController;
+    [SerializeField] private BonusInfoDemoController bonusInfoDemo;
 
     [Header("Animation Settings")]
     [SerializeField] private GameObject mainArea;
@@ -37,6 +38,7 @@ public class MenuController : MonoBehaviour
     private int currentInfoPage = 0;
     private const int TOTAL_INFO_PAGES = 3;
     private Coroutine popupCoroutine;
+    private bool hasPlayedBonusDemoThisSession = false;
     #endregion
 
     #region Unity Lifecycle
@@ -124,6 +126,8 @@ public class MenuController : MonoBehaviour
     {
         if (popupCoroutine != null) StopCoroutine(popupCoroutine);
         popupCoroutine = StartCoroutine(PlayPopupAnimation(false));
+        hasPlayedBonusDemoThisSession = false;
+     
     }
 
     private void HideAllPanels()
@@ -179,6 +183,7 @@ public class MenuController : MonoBehaviour
         if (!isOpening)
         {
             menuScreen?.SetActive(false);
+            bonusInfoDemo?.ResetForNextOpen();
         }
 
         popupCoroutine = null;
@@ -198,6 +203,12 @@ public class MenuController : MonoBehaviour
         HideAllPanels();
         infoPanel?.SetActive(true);
         ShowInfoPage(0);
+
+        if (!hasPlayedBonusDemoThisSession)
+        {
+            hasPlayedBonusDemoThisSession = true;
+            bonusInfoDemo?.PlayDemoOnce();
+        }
     }
     #endregion
 
