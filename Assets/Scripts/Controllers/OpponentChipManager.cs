@@ -171,9 +171,7 @@ public class OpponentChipManager : MonoBehaviour
         if (activeOpponentChips.Count == 0 && activeWinChips.Count == 0)
         {
             lockedLeaderboards = leaderboards;
-
         }
-
     }
 
     internal void LockLeaderboardsForRound()
@@ -620,6 +618,22 @@ public class OpponentChipManager : MonoBehaviour
 
         if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
+
+        foreach (var kvp in chipToOriginalBadge)
+        {
+            RectTransform chipRT = kvp.Key;
+            BadgeState originalBadge = kvp.Value;
+
+            if (chipRT != null)
+            {
+                Chip chipComponent = chipRT.GetComponent<Chip>();
+                if (chipComponent != null)
+                {
+                    chipComponent.SetLeaderboardBadge(originalBadge.isRichest, originalBadge.isWinner);
+                }
+            }
+        }
+
         _winnersByBetAreaCache.Clear();
 
         if (currentPayouts != null && currentPayouts.Count > 0)
