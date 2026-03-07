@@ -90,6 +90,8 @@ public class GameManager : MonoBehaviour
         if (payload.stats != null && payload.stats.Count > 0)
             uiController.UpdateStats(GameUtilities.CalculateStats(payload.stats));
 
+        resultPlaneController?.PopulateFromStats(payload.stats);
+
         if (payload.roundState != null && !string.IsNullOrEmpty(payload.roundState.roundId))
         {
             CurrentRoundId = payload.roundState.roundId;
@@ -108,14 +110,12 @@ public class GameManager : MonoBehaviour
                         uiController.ShowBettingPhase(timeRemaining);
                         betController.EnableBetting();
 
-                        roundController.StartRound(new RoundStartData
-                        {
-                            roundId = payload.roundState.roundId,
-                            startedAt = payload.roundState.startedAt,
-                            bettingEndTime = payload.roundState.bettingEndTime,
-                            serverTime = payload.roundState.serverTime,
-                            playerCount = payload.playerCount
-                        });
+                        roundController.JoinActiveRound(
+                            payload.roundState.roundId,
+                            payload.roundState.bettingEndTime);
+
+                        long timeUntilBettingEnd = payload.roundState.bettingEndTime - payload.roundState.serverTime;
+                        roundController.SyncAnimationToPhase("betting", timeUntilBettingEnd, payload.roundState.serverTime);
                         break;
                     }
                 case "rolling":
@@ -171,6 +171,9 @@ public class GameManager : MonoBehaviour
             CurrentRoundId = null;
             uiController.UpdateRoundId(null);
             uiController.HideAllTimers();
+            betController.DisableBetting();
+
+            roundController.SyncAnimationToPhase("waiting", 10000, 0);
         }
     }
     #endregion
@@ -197,9 +200,6 @@ public class GameManager : MonoBehaviour
 
         opponentChipManager?.LockLeaderboardsForRound();
         opponentChipManager?.SetWinningBetAreas(null);
-
-        // Force GC collection at the natural round boundary — frees accumulated garbage
-        // from the previous round (JSON deserialization objects, string allocations, etc.)
         GameUtilities.ClearCaches();
         System.GC.Collect();
         System.GC.WaitForPendingFinalizers();
@@ -257,7 +257,6 @@ public class GameManager : MonoBehaviour
 
     private List<string> GetAllWinningAreasFromDice(DiceResultData data)
     {
-        // Reuse cached collections — caller must not hold reference beyond current frame
         _winnersCache.Clear();
         _seenDiceCache.Clear();
 

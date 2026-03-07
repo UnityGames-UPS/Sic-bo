@@ -96,6 +96,9 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     internal void StartAnimationCycleWithServerSync(long roundStartTimestamp, long bettingEndTimestamp, long currentServerTime)
     {
+        // Always reset to clean state at the start of each round to prevent stuck animations
+        ForceResetToCleanState();
+
         if (currentState == DiceBoxState.Opening ||
             currentState == DiceBoxState.Open ||
             currentState == DiceBoxState.Closing ||
@@ -128,6 +131,9 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     internal void SyncToPhaseOnJoin(string phase, long timeUntilNextRound, long serverTime)
     {
+        // Always reset to clean state when joining to prevent lingering animations
+        ForceResetToCleanState();
+
         StopAllAnimations();
         ResetSoundFlags();
 
@@ -139,18 +145,22 @@ public class DiceBoxAnimationController : MonoBehaviour
         switch (phase.ToLower())
         {
             case "betting":
+                // Player joined during betting phase - play idle until bet locks
                 PlayIdleAnimation();
                 currentState = DiceBoxState.Idle;
                 break;
 
             case "rolling":
-                // When player joins after bet locked, just show idle animation until round ends
-                // No need for box open/close animation in this scenario
+            case "dealing":
+                // Player joined after bet locked but before result
+                // Just show idle animation until round ends
                 PlayIdleAnimation();
                 currentState = DiceBoxState.Idle;
                 break;
 
             case "result":
+                // Player joined after result was revealed
+                // Just show idle animation until next round
                 if (secondsUntilNext > 2f)
                 {
                     float adjustedIdleDuration = Mathf.Max(0.5f, secondsUntilNext - 1f);
@@ -171,6 +181,7 @@ public class DiceBoxAnimationController : MonoBehaviour
                 break;
 
             case "nextround":
+                // Player joined between rounds
                 if (secondsUntilNext > 2f)
                 {
                     float adjustedIdleDuration = Mathf.Max(0.5f, secondsUntilNext - 1f);
@@ -190,7 +201,15 @@ public class DiceBoxAnimationController : MonoBehaviour
                 }
                 break;
 
+            case "waiting":
+                // Player joined when roundState is null - no active round
+                // Just show idle animation indefinitely until round starts
+                PlayIdleAnimation();
+                currentState = DiceBoxState.Idle;
+                break;
+
             default:
+                // Fallback to idle for any unknown phase
                 PlayIdleAnimation();
                 currentState = DiceBoxState.Idle;
                 break;
@@ -199,6 +218,9 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     internal void StartAnimationCycle()
     {
+        // Always reset to clean state at the start of each round
+        ForceResetToCleanState();
+
         StopAllAnimations();
         ResetSoundFlags();
 
@@ -210,8 +232,16 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     internal void OnBettingLocked()
     {
+        // Only transition to zoom if we're in a normal state
+        // This prevents issues when player joins after bet is already locked
         if (currentState == DiceBoxState.Idle || currentState == DiceBoxState.Shaking)
         {
+            StopAllAnimations();
+            PlayZoomInAnimation();
+        }
+        else if (currentState == DiceBoxState.Waiting || currentState == DiceBoxState.Hidden)
+        {
+            // Player joined late - go directly to zoom
             StopAllAnimations();
             PlayZoomInAnimation();
         }
@@ -225,8 +255,18 @@ public class DiceBoxAnimationController : MonoBehaviour
             StopAllAnimations();
             PlayOpenCloseAnimation();
         }
-        else if (currentState == DiceBoxState.Idle || currentState == DiceBoxState.Shaking)
+        else if (currentState == DiceBoxState.Idle || currentState == DiceBoxState.Shaking ||
+                 currentState == DiceBoxState.Waiting)
         {
+            // Player joined late - skip to zoom then reveal
+            hasPendingReveal = true;
+            StopAllAnimations();
+            PlayZoomInAnimation();
+        }
+        else if (currentState == DiceBoxState.Hidden)
+        {
+            // Very late join - speed through zoom and open
+            playbackSpeed = fastForwardSpeed;
             hasPendingReveal = true;
             StopAllAnimations();
             PlayZoomInAnimation();
@@ -367,6 +407,8 @@ public class DiceBoxAnimationController : MonoBehaviour
         if (hasPendingReveal)
         {
             hasPendingReveal = false;
+            // Reset playback speed before revealing in case we were fast-forwarding
+            playbackSpeed = 1f;
             PlayOpenCloseAnimation();
         }
     }
@@ -710,6 +752,39 @@ public class DiceBoxAnimationController : MonoBehaviour
         hasPlayedShakeSound = false;
         hasPlayedBoxOpenSound = false;
         hasPlayedBoxCloseSound = false;
+    }
+
+    /// <summary>
+    /// Forces a complete reset of all animation state to prevent stuck animations
+    /// when player leaves and rejoins the room. This ensures a clean slate for new animations.
+    /// </summary>
+    private void ForceResetToCleanState()
+    {
+        // Stop any running animations
+        StopAllAnimations();
+
+        // Reset all flags
+        ResetSoundFlags();
+        hasPendingRound = false;
+        hasPendingReveal = false;
+        playbackSpeed = 1f;
+
+        // Reset state to waiting
+        currentState = DiceBoxState.Waiting;
+
+        // Hide all visual elements
+        if (diceContainer)
+        {
+            diceContainer.SetActive(false);
+            diceContainer.transform.localScale = Vector3.one;
+        }
+        SetTopLayerActive(false);
+
+        // Reset base image to first idle frame if available
+        if (baseImage != null && idleSequence != null && idleSequence.Count > 0)
+        {
+            baseImage.sprite = idleSequence[0];
+        }
     }
 
     #endregion

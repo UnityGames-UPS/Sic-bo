@@ -56,6 +56,7 @@ public class SocketIOManager : MonoBehaviour
 
     #region Private Fields - Room Tracking
     private string CurrentRoomId = null;
+    private bool isPendingHome = false;
     #endregion
 
     #region Private Fields - Ping/Pong
@@ -298,6 +299,15 @@ public class SocketIOManager : MonoBehaviour
         if (isBeingDestroyed) return;
         // Always log socket-level errors — these are exceptional, not high-frequency
         Debug.LogError($"[SOCKET] Error: {error.message}");
+
+        // If a HOME request was pending and the server errored instead of acking,
+        // the ACK will never arrive — recover so the loading screen is not stuck.
+        if (isPendingHome)
+        {
+            isPendingHome = false;
+            Debug.LogWarning("[SOCKET] Error received while HOME was pending — forcing leave acknowledgement to unblock loading screen.");
+            gameManager?.OnLeaveAcknowledged();
+        }
 
 #if UNITY_WEBGL && !UNITY_EDITOR
         JSManager?.SendCustomMessage("error");
@@ -569,7 +579,11 @@ public class SocketIOManager : MonoBehaviour
         EmitRequest("BET_HISTORY", new HistoryRequestPayload { page = page }, OnHistoryAck);
     }
 
-    internal void ReturnHome() => EmitSimpleRequest("HOME", OnHomeAck);
+    internal void ReturnHome()
+    {
+        isPendingHome = true;
+        EmitSimpleRequest("HOME", OnHomeAck);
+    }
 
     internal IEnumerator CloseSocket()
     {
@@ -659,6 +673,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnHomeAck(string json)
     {
         if (isBeingDestroyed) return;
+        isPendingHome = false;
         if (showDebugLogs) Debug.Log($"[ACK] HOME {json}");
 
         try

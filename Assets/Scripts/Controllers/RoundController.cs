@@ -95,6 +95,18 @@ public class RoundController : MonoBehaviour
         uiController.UpdateTimer(timeRemaining);
     }
 
+    internal void JoinActiveRound(string roundId, long bettingEndTime)
+    {
+        currentRoundId = roundId;
+        isRoundActive = true;
+        diceResultReceived = false;
+        currentDiceResult = null;
+        currentBettingEndTime = bettingEndTime;
+
+        ClearRoundDisplay();
+        betController?.ClearAllWinHighlights();
+    }
+
     internal void SyncAnimationToPhase(string phase, long timeUntilNext, long serverTime)
     {
         diceBoxAnimController?.SyncToPhaseOnJoin(phase, timeUntilNext, serverTime);
@@ -140,11 +152,6 @@ public class RoundController : MonoBehaviour
         diceResultReceived = false;
     }
 
-    /// <summary>
-    /// Called by GameManager when the server sends the <c>game:bonus</c> event,
-    /// which is the authoritative signal that the betting window has closed.
-    /// Disables betting and starts the dice-box zoom-in animation.
-    /// </summary>
     internal void OnBettingLockedByServer()
     {
         betController.DisableBetting();

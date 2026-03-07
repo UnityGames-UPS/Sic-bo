@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using DG.Tweening;
+using Newtonsoft.Json;
 
 public class ResultPlaneController : MonoBehaviour
 {
@@ -77,18 +78,17 @@ public class ResultPlaneController : MonoBehaviour
         if (rt10 != null) rt10.anchoredPosition = slotPositions[10];
     }
 
+    /// <summary>
+    /// Hides all rows on Start so no scene placeholder data is ever visible.
+    /// PopulateFromStats will show rows once real server data arrives.
+    /// </summary>
     private void InitializeDisplay()
     {
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < resultRows.Count; i++)
         {
             if (resultRows[i].rowContainer != null)
-            {
-                resultRows[i].rowContainer.SetActive(true);
-                resultRows[i].SetScaleToOne();
-            }
+                resultRows[i].rowContainer.SetActive(false);
         }
-        if (resultRows[10].rowContainer != null)
-            resultRows[10].rowContainer.SetActive(false);
     }
     #endregion
 
@@ -115,6 +115,58 @@ public class ResultPlaneController : MonoBehaviour
         animCoroutine = StartCoroutine(CR_SlideAndAnimate(r));
     }
 
+    /// <summary>
+    /// Pre-populates the result plane from the server stats list (up to 40 rounds).
+    /// Shows the most recent 10: oldest in row 0 (left), newest in row 9 (right).
+    /// If fewer than 10 exist the leftmost rows stay hidden.
+    /// No animation — instant fill on room join.
+    /// </summary>
+    internal void PopulateFromStats(List<string> rawStats)
+    {
+        // Stop any ongoing animation
+        if (animCoroutine != null) { StopCoroutine(animCoroutine); animCoroutine = null; }
+        slideSeq?.Kill();
+        scaleSeq?.Kill();
+        isAnimating = false;
+
+        // Reset all rows to canonical slot positions
+        for (int i = 0; i < resultRows.Count; i++)
+        {
+            var rt = resultRows[i].RT;
+            if (rt != null) rt.anchoredPosition = slotPositions[i];
+        }
+
+        // Always hide staging row
+        if (resultRows[10].rowContainer != null)
+            resultRows[10].rowContainer.SetActive(false);
+
+        // Parse last up to 10 entries, oldest first
+        List<ResultData> entries = ParseLast10Stats(rawStats);
+
+        // Anchor newest (index 0) to row 9, oldest (index 9) to row 0
+        int startRow = 10 - entries.Count;
+
+        for (int i = 0; i < 10; i++)
+        {
+            // entryIndex reversed: row 9 = entries[0], row 0 = entries[entries.Count-1]
+            int entryIndex = (10 - 1 - i) - startRow;
+            bool hasData = entryIndex >= 0 && entryIndex < entries.Count;
+
+            var row = resultRows[i];
+            if (row.rowContainer != null)
+                row.rowContainer.SetActive(hasData);
+
+            if (hasData)
+            {
+                row.SetData(entries[entryIndex], GetDiceSprite);
+                row.SetScaleToOne();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Clears all results and hides all rows (called when leaving the room).
+    /// </summary>
     internal void ClearAllResults()
     {
         if (animCoroutine != null) { StopCoroutine(animCoroutine); animCoroutine = null; }
@@ -126,10 +178,54 @@ public class ResultPlaneController : MonoBehaviour
         {
             var rt = resultRows[i].RT;
             if (rt != null) rt.anchoredPosition = slotPositions[i];
-            if (resultRows[i].rowContainer != null) resultRows[i].rowContainer.SetActive(i < 10);
+            if (resultRows[i].rowContainer != null)
+                resultRows[i].rowContainer.SetActive(false);
             resultRows[i].SetScaleToOne();
         }
     }
+    #endregion
+
+    #region Helpers
+    /// <summary>
+    /// Parses raw JSON stat strings, returns up to the last 10 as ResultData (oldest first).
+    /// </summary>
+    private List<ResultData> ParseLast10Stats(List<string> rawStats)
+    {
+        var results = new List<ResultData>();
+        if (rawStats == null || rawStats.Count == 0) return results;
+
+        int endIdx = Mathf.Min(rawStats.Count, 10);
+        for (int i = 0; i < endIdx; i++)
+        {
+            try
+            {
+                ResultData data = JsonConvert.DeserializeObject<ResultData>(rawStats[i]);
+                if (data == null) continue;
+                if (data.dice1 < 1 || data.dice1 > 6 ||
+                    data.dice2 < 1 || data.dice2 > 6 ||
+                    data.dice3 < 1 || data.dice3 > 6) continue;
+
+                // sum is not always present in stat entries — compute it
+                if (data.sum == 0)
+                    data.sum = data.dice1 + data.dice2 + data.dice3;
+
+                results.Add(data);
+            }
+            catch { /* skip malformed entries */ }
+        }
+        return results;
+    }
+
+    private Sprite GetDiceSprite(int v) => v switch
+    {
+        1 => dice1Sprite,
+        2 => dice2Sprite,
+        3 => dice3Sprite,
+        4 => dice4Sprite,
+        5 => dice5Sprite,
+        6 => dice6Sprite,
+        _ => null
+    };
     #endregion
 
     #region Animation
@@ -209,19 +305,6 @@ public class ResultPlaneController : MonoBehaviour
         resultRows.RemoveAt(0);
         resultRows.Add(old0);
     }
-    #endregion
-
-    #region Helpers
-    private Sprite GetDiceSprite(int v) => v switch
-    {
-        1 => dice1Sprite,
-        2 => dice2Sprite,
-        3 => dice3Sprite,
-        4 => dice4Sprite,
-        5 => dice5Sprite,
-        6 => dice6Sprite,
-        _ => null
-    };
     #endregion
 
     #region Nested Class
