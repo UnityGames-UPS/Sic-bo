@@ -6,7 +6,7 @@ using DG.Tweening;
 public class BonusIndicator : MonoBehaviour
 {
     #region Row Data Structure
-    [Serializable]
+      [Serializable]
     public class IndicatorRow
     {
         [Header("Row Images")]
@@ -148,20 +148,20 @@ public class BonusIndicator : MonoBehaviour
         if (s.Length == 1)
         {
             if (row.layoutGroup != null)
-                row.layoutGroup.spacing = totalRowCount == 3 ? -40f : totalRowCount == 2 ? -20f : 0f;
+                row.layoutGroup.spacing = totalRowCount == 3 ? -37f : totalRowCount == 2 ? -25f : 0f;
             SetDigit(row.number1Image, s[0], numberSprites);
         }
         else if (s.Length == 2)
         {
             if (row.layoutGroup != null)
-                row.layoutGroup.spacing = totalRowCount == 3 ? -30f : totalRowCount == 2 ? -10f : 0f;
+                row.layoutGroup.spacing = totalRowCount == 3 ? -24f : totalRowCount == 2 ? -10f : 0f;
             SetDigit(row.number1Image, s[0], numberSprites);
             SetDigit(row.number2Image, s[1], numberSprites);
         }
         else if (s.Length == 3)
         {
             if (row.layoutGroup != null)
-                row.layoutGroup.spacing = totalRowCount == 3 ? -20f : 0f;
+                row.layoutGroup.spacing = totalRowCount == 3 ? -15f : 0f;
             SetDigit(row.number1Image, s[0], numberSprites);
             SetDigit(row.number2Image, s[1], numberSprites);
             SetDigit(row.number3Image, s[2], numberSprites);
@@ -169,7 +169,7 @@ public class BonusIndicator : MonoBehaviour
         else
         {
             if (row.layoutGroup != null)
-                row.layoutGroup.spacing = totalRowCount == 3 ? -10f : 0f;
+                row.layoutGroup.spacing = totalRowCount == 3 ? -5f : 0f;
             SetDigit(row.number1Image, s[0], numberSprites);
             SetDigit(row.number2Image, s[1], numberSprites);
             SetDigit(row.number3Image, s[2], numberSprites);

@@ -52702,9 +52702,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   UIWrapper: {fileID: 933378803}
   CanvasScaler: {fileID: 674617747}
-  MatchWidth: 0.5
-  MatchHeight: 1
-  PortraitMatchHeight: 1
   transitionDuration: 0.2
   waitForRotation: 0.2
 --- !u!4 &911671677
