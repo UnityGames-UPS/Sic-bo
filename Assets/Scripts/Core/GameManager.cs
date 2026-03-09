@@ -45,6 +45,23 @@ public class GameManager : MonoBehaviour
     private static readonly List<string> _emptyStringList = new List<string>(0);
     #endregion
 
+    #region Uniy Lifecycle
+    private void Awake()
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        // For WebGL builds: Force 60 FPS and disable VSync
+        // VSync can cause issues in WebGL due to browser control
+        Application.targetFrameRate = 60;
+        QualitySettings.vSyncCount = 0;
+#else
+        Application.targetFrameRate = 60;
+#endif
+
+        Application.runInBackground = true;
+
+    }
+    #endregion
+
     #region Socket Callbacks - Initialization
     internal void OnInitDataReceived()
     {
