@@ -52,6 +52,7 @@ public class SocketIOManager : MonoBehaviour
     private bool hasFocus = true;
     private float focusLostTime = 0f;
     private const float maxBackgroundTime = 120f;
+    private bool hasForceDisconnected = false;
     #endregion
 
     #region Private Fields - Room Tracking
@@ -279,7 +280,7 @@ public class SocketIOManager : MonoBehaviour
 
     private void OnDisconnected()
     {
-        if (isBeingDestroyed || isExiting) return;
+        if (isBeingDestroyed || isExiting || hasForceDisconnected) return;
 
         isConnected = false;
         IsInitialized = false;
@@ -546,6 +547,11 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
         if (showDebugLogs) Debug.LogWarning("[SOCKET] Force disconnect received");
+
+        hasForceDisconnected = true;
+        isExiting = true;
+        CleanupRoutines();
+
         uiController?.ShowAnotherDevicePopup();
     }
     #endregion

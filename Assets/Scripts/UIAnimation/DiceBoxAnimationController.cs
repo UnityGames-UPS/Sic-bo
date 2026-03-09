@@ -452,7 +452,7 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     private IEnumerator HoldThenClose(float holdDuration)
     {
-        yield return new WaitForSeconds(holdDuration / Mathf.Max(playbackSpeed, 0.01f));
+        yield return new WaitForSecondsRealtime(holdDuration / Mathf.Max(playbackSpeed, 0.01f));
 
         currentState = DiceBoxState.Closing;
 
@@ -498,7 +498,7 @@ public class DiceBoxAnimationController : MonoBehaviour
             onComplete: null));
 
         currentState = DiceBoxState.Open;
-        yield return new WaitForSeconds(adjustedHoldDuration);
+        yield return new WaitForSecondsRealtime(adjustedHoldDuration);
 
         currentState = DiceBoxState.Closing;
         yield return StartCoroutine(PlayOpenCloseRange(
@@ -570,7 +570,7 @@ public class DiceBoxAnimationController : MonoBehaviour
         {
             int displayIdx = reverse ? (sequence.Count - 1 - startFrame) : startFrame;
             SetBaseFrame(sequence, displayIdx);
-            yield return new WaitForSeconds((frameDelay - timeIntoStartFrame) / Mathf.Max(playbackSpeed, 0.01f));
+            yield return new WaitForSecondsRealtime((frameDelay - timeIntoStartFrame) / Mathf.Max(playbackSpeed, 0.01f));
             startFrame++;
         }
 
@@ -583,7 +583,7 @@ public class DiceBoxAnimationController : MonoBehaviour
             for (int i = iFrom; reverse ? (i >= iTo) : (i <= iTo); i += step)
             {
                 SetBaseFrame(sequence, i);
-                yield return new WaitForSeconds(frameDelay / Mathf.Max(playbackSpeed, 0.01f));
+                yield return new WaitForSecondsRealtime(frameDelay / Mathf.Max(playbackSpeed, 0.01f));
             }
 
             startFrame = 0;
@@ -621,7 +621,7 @@ public class DiceBoxAnimationController : MonoBehaviour
         {
             SetOpenCloseFrameBothLayers(currentFrame);
             FireOpenCloseFrameTriggers(currentFrame);
-            yield return new WaitForSeconds((frameDelay - timeIntoSkipFrame) / Mathf.Max(playbackSpeed, 0.01f));
+            yield return new WaitForSecondsRealtime((frameDelay - timeIntoSkipFrame) / Mathf.Max(playbackSpeed, 0.01f));
             currentFrame++;
         }
 
@@ -629,7 +629,7 @@ public class DiceBoxAnimationController : MonoBehaviour
         {
             SetOpenCloseFrameBothLayers(frame);
             FireOpenCloseFrameTriggers(frame);
-            yield return new WaitForSeconds(frameDelay / Mathf.Max(playbackSpeed, 0.01f));
+            yield return new WaitForSecondsRealtime(frameDelay / Mathf.Max(playbackSpeed, 0.01f));
         }
 
         isAnimating = false;

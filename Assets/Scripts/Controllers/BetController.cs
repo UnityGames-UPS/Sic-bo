@@ -21,7 +21,8 @@ public class BetController : MonoBehaviour
 
     [Header("Chip Prefabs & Sprites")]
     [SerializeField] private GameObject chipSelectorPrefab;
-    [SerializeField] private Sprite[] chipSprites;
+    [Header("Level-Based Chip Sprites (6 chips each)")]
+    [SerializeField] private LevelChipSprites levelChipSprites = new LevelChipSprites();
 
     [Header("PlayerBetComponent Pool")]
     [SerializeField] private PlayerBetComponent playerBetComponentPrefab;
@@ -102,6 +103,7 @@ public class BetController : MonoBehaviour
     private Coroutine repeatPanelCoroutine;
     private Vector2 mainChipOriginalPosition;
     private Tween mainChipTween;
+    private Sprite[] currentLevelChipSprites; // Cache for current level's chip sprites
 
     // GC optimisation: reuse collections instead of allocating every call/round
     private readonly HashSet<int> _uniqueDiceCache = new HashSet<int>();
@@ -182,7 +184,7 @@ public class BetController : MonoBehaviour
         component.transform.localPosition = Vector3.zero;
         component.transform.localScale = Vector3.one;
         component.gameObject.SetActive(false);
-        component.Initialize(chipSprites, currentChipValues);
+        component.Initialize(GetCurrentLevelSprites(), currentChipValues);
         componentPool.Add(component);
         activeComponents[areaId] = component;
         return component;
@@ -319,13 +321,16 @@ public class BetController : MonoBehaviour
         wagerData = wagers;
         chipValueToSprite.Clear();
 
-        int chipCount = Mathf.Min(chipValues.Count, chipSprites.Length);
+        // Get sprites for the current level
+        currentLevelChipSprites = GetSpritesForLevel(level);
+
+        int chipCount = Mathf.Min(chipValues.Count, currentLevelChipSprites.Length);
         for (int i = 0; i < chipCount; i++)
         {
-            chipValueToSprite[chipValues[i]] = chipSprites[i];
+            chipValueToSprite[chipValues[i]] = currentLevelChipSprites[i];
             if (i < existingChips.Count)
             {
-                existingChips[i].SetData(chipSprites[i], FormatChipAmount(chipValues[i]), i);
+                existingChips[i].SetData(currentLevelChipSprites[i], FormatChipAmount(chipValues[i]), i);
                 existingChips[i].SetActive(true);
             }
         }
@@ -829,6 +834,8 @@ public class BetController : MonoBehaviour
     {
         if (!isBettingEnabled) return;
         if (isChipSelectorOpen) CloseChipSelector(); else OpenChipSelector();
+
+        AudioManager.Instance?.PlayChipSelectionOpen();
     }
 
     private void OpenChipSelector()
@@ -836,7 +843,6 @@ public class BetController : MonoBehaviour
         if (ChipSelector_Panel) ChipSelector_Panel.SetActive(true);
         if (ChipSelector_BlackBG) ChipSelector_BlackBG.SetActive(true);
         isChipSelectorOpen = true;
-        AudioManager.Instance?.PlayChipSelectionOpen();
         if (MainChip_Button) MainChip_Button.interactable = false;
         AnimateChipsOpen(() => { if (MainChip_Button) MainChip_Button.interactable = true; });
         AnimateMainChipUp();
@@ -852,7 +858,6 @@ public class BetController : MonoBehaviour
 
     private void CloseChipSelector()
     {
-        AudioManager.Instance?.PlayChipSelectionOpen();
         if (MainChip_Button) MainChip_Button.interactable = false;
         AnimateChipsClose(() =>
         {
@@ -918,8 +923,14 @@ public class BetController : MonoBehaviour
         if (MainChip_Text) MainChip_Text.text = FormatChipAmount(chipValue);
     }
 
-    private Sprite GetChipSprite(double value) =>
-        chipValueToSprite.TryGetValue(value, out var s) ? s : (chipSprites.Length > 0 ? chipSprites[0] : null);
+    private Sprite GetChipSprite(double value)
+    {
+        if (chipValueToSprite.TryGetValue(value, out var s))
+            return s;
+
+        Sprite[] sprites = GetCurrentLevelSprites();
+        return sprites.Length > 0 ? sprites[0] : null;
+    }
     #endregion
 
     #region Panel Animations
@@ -1284,7 +1295,7 @@ public class BetController : MonoBehaviour
     internal PlayerBetComponent GetPlayerBetComponent(string betOption) =>
         activeComponents.TryGetValue(betOption, out var c) ? c : GetBetAreaByOption(betOption)?.playerBetComponent;
     internal List<double> GetChipValues() => new List<double>(currentChipValues);
-    internal Sprite[] GetChipSprites() => chipSprites;
+    internal Sprite[] GetChipSprites() => GetCurrentLevelSprites();
 
     private Dictionary<string, Transform> GetOpponentBetAreaContainerMap()
     {
@@ -1309,4 +1320,54 @@ public class BetController : MonoBehaviour
         return map;
     }
     #endregion
+
+    #region Level Sprite Helpers
+    /// <summary>
+    /// Gets the chip sprites for a given level
+    /// </summary>
+    private Sprite[] GetSpritesForLevel(string level)
+    {
+        return level switch
+        {
+            "casual" => levelChipSprites.casualChips,
+            "novice" => levelChipSprites.noviceChips,
+            "expert" => levelChipSprites.expertChips,
+            "high_roller" => levelChipSprites.highRollerChips,
+            _ => levelChipSprites.casualChips // Default fallback
+        };
+    }
+
+    /// <summary>
+    /// Gets the current level's chip sprites, or defaults to casual if no level is set
+    /// </summary>
+    private Sprite[] GetCurrentLevelSprites()
+    {
+        if (currentLevelChipSprites != null && currentLevelChipSprites.Length > 0)
+            return currentLevelChipSprites;
+
+        if (!string.IsNullOrEmpty(currentLevel))
+            return GetSpritesForLevel(currentLevel);
+
+        return levelChipSprites.casualChips;
+    }
+    #endregion
+}
+
+/// <summary>
+/// Holds chip sprite arrays for each level
+/// </summary>
+[System.Serializable]
+public class LevelChipSprites
+{
+    [Header("Casual Level (6 chips)")]
+    public Sprite[] casualChips = new Sprite[6];
+
+    [Header("Novice Level (6 chips)")]
+    public Sprite[] noviceChips = new Sprite[6];
+
+    [Header("Expert Level (6 chips)")]
+    public Sprite[] expertChips = new Sprite[6];
+
+    [Header("High Roller Level (6 chips)")]
+    public Sprite[] highRollerChips = new Sprite[6];
 }
