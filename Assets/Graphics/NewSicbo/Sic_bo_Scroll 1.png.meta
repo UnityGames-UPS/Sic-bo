@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: d6af31cdaf7c74242b69f580053bab3e
+guid: 9658873ee8aaa4c41a1a0b749ed739db
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -7998947951856806381
-    second: Screenshot 2026-03-06 105640_0
+      213: 4292097711343254042
+    second: Sic_bo_Scroll_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -139,23 +139,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Screenshot 2026-03-06 105640_0
+      name: Sic_bo_Scroll_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 1
-        width: 545
-        height: 967
+        x: 2
+        y: 2
+        width: 12
+        height: 73
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 3169cb0d7370ef090800000000000000
-      internalID: -7998947951856806381
+      spriteID: a1ab1e1c028909b30800000000000000
+      internalID: 4292097711343254042
       vertices: []
       indices: 
       edges: []
@@ -164,7 +164,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 158940fb2a1dedc4fa61416e2c75e509
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +174,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Screenshot 2026-03-06 105640_0: -7998947951856806381
+      Sic_bo_Scroll_0: 4292097711343254042
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -57,6 +57,12 @@ public class BetLimitManager : MonoBehaviour
     [Header("Animation Settings")]
     [SerializeField] private float popupDuration = 0.3f;
     [SerializeField] private AnimationCurve popupCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+
+    [Header("Scroll Settings")]
+    [SerializeField] private ScrollRect scrollRect;
+    [SerializeField] private Scrollbar verticalScrollbar;
+    [SerializeField] private float scrollbarFadeDelay = 1.5f;
+    [SerializeField] private float scrollbarFadeDuration = 0.3f;
     #endregion
 
     #region Private Fields
@@ -66,13 +72,28 @@ public class BetLimitManager : MonoBehaviour
     private string currentSelectedRoom = "casual";
     private string playerCurrentRoom;
     private Coroutine popupCoroutine;
+
+    // Scrollbar visibility management
+    private CanvasGroup scrollbarCanvasGroup;
+    private Coroutine scrollbarFadeCoroutine;
+    private bool isScrolling = false;
     #endregion
 
     #region Unity Lifecycle
     private void Start()
     {
         SetupButtonListeners();
+        SetupScrollbar();
         betLimitPanel.SetActive(false);
+    }
+
+    private void OnDestroy()
+    {
+        // Clean up scroll listener
+        if (scrollRect != null)
+        {
+            scrollRect.onValueChanged.RemoveListener(OnScrollValueChanged);
+        }
     }
     #endregion
 
@@ -162,6 +183,112 @@ public class BetLimitManager : MonoBehaviour
     {
         buttonTransform.localScale = Vector3.one;
     }
+
+    private void SetupScrollbar()
+    {
+        if (verticalScrollbar == null)
+        {
+            Debug.LogWarning("BetLimitManager: Vertical scrollbar not assigned!");
+            return;
+        }
+
+        // Get or add CanvasGroup for fade animations
+        scrollbarCanvasGroup = verticalScrollbar.GetComponent<CanvasGroup>();
+        if (scrollbarCanvasGroup == null)
+        {
+            scrollbarCanvasGroup = verticalScrollbar.gameObject.AddComponent<CanvasGroup>();
+        }
+
+        // Ensure scrollbar can be interacted with
+        scrollbarCanvasGroup.interactable = true;
+        scrollbarCanvasGroup.blocksRaycasts = false; // Don't block clicks when invisible
+
+        // Initially hide the scrollbar
+        scrollbarCanvasGroup.alpha = 0f;
+
+        // Add scroll listener
+        if (scrollRect != null)
+        {
+            scrollRect.onValueChanged.AddListener(OnScrollValueChanged);
+            Debug.Log("BetLimitManager: Scrollbar setup complete. ScrollRect connected.");
+        }
+        else
+        {
+            Debug.LogWarning("BetLimitManager: ScrollRect not assigned!");
+        }
+    }
+
+    private void OnScrollValueChanged(Vector2 scrollPosition)
+    {
+        // Always show scrollbar when scrolling happens
+        ShowScrollbar();
+
+        // Mark as actively scrolling
+        isScrolling = true;
+
+        // Reset the fade timer - stop any ongoing hide animation
+        if (scrollbarFadeCoroutine != null)
+        {
+            StopCoroutine(scrollbarFadeCoroutine);
+        }
+
+        // Start new hide delay
+        scrollbarFadeCoroutine = StartCoroutine(HideScrollbarAfterDelay());
+    }
+
+    private void ShowScrollbar()
+    {
+        if (scrollbarCanvasGroup == null) return;
+
+        // Stop any ongoing fade animation
+        if (scrollbarFadeCoroutine != null)
+        {
+            StopCoroutine(scrollbarFadeCoroutine);
+        }
+
+        // Immediately show at full opacity for instant feedback
+        scrollbarCanvasGroup.alpha = 1f;
+
+        // Optional: Use fade-in for smoother appearance (comment out line above if using this)
+        // scrollbarFadeCoroutine = StartCoroutine(FadeScrollbar(1f, scrollbarFadeDuration * 0.5f));
+    }
+
+    private IEnumerator HideScrollbarAfterDelay()
+    {
+        yield return new WaitForSeconds(scrollbarFadeDelay);
+
+        isScrolling = false;
+        yield return StartCoroutine(FadeScrollbar(0f, scrollbarFadeDuration));
+    }
+
+    private IEnumerator FadeScrollbar(float targetAlpha, float duration)
+    {
+        if (scrollbarCanvasGroup == null) yield break;
+
+        // Clamp target alpha to valid range
+        targetAlpha = Mathf.Clamp01(targetAlpha);
+
+        float startAlpha = scrollbarCanvasGroup.alpha;
+        float elapsed = 0f;
+
+        // If duration is very small or zero, set immediately
+        if (duration <= 0.01f)
+        {
+            scrollbarCanvasGroup.alpha = targetAlpha;
+            yield break;
+        }
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            scrollbarCanvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, t);
+            yield return null;
+        }
+
+        // Ensure we reach exact target value
+        scrollbarCanvasGroup.alpha = targetAlpha;
+    }
     #endregion
 
     #region Public API
@@ -194,6 +321,20 @@ public class BetLimitManager : MonoBehaviour
             UpdateBetLimitDisplays();
         }
     }*/
+
+    // Debug method to test scrollbar visibility - can be called from inspector or other scripts
+    public void TestScrollbarVisibility(bool show)
+    {
+        if (scrollbarCanvasGroup != null)
+        {
+            scrollbarCanvasGroup.alpha = show ? 1f : 0f;
+            Debug.Log($"BetLimitManager: Scrollbar manually set to {(show ? "visible" : "hidden")} - Alpha: {scrollbarCanvasGroup.alpha}");
+        }
+        else
+        {
+            Debug.LogWarning("BetLimitManager: ScrollbarCanvasGroup is null!");
+        }
+    }
     #endregion
 
     #region Panel Control
@@ -212,6 +353,15 @@ public class BetLimitManager : MonoBehaviour
         UpdateBetLimitDisplays();
         UpdateConfirmButton();
 
+        // Reset scroll position and hide scrollbar
+        ResetScrollbar();
+
+        // Force canvas update to ensure scroll rect is ready
+        if (scrollRect != null)
+        {
+            Canvas.ForceUpdateCanvases();
+        }
+
         if (popupCoroutine != null)
             StopCoroutine(popupCoroutine);
         popupCoroutine = StartCoroutine(PlayPopupAnimation(true));
@@ -219,9 +369,48 @@ public class BetLimitManager : MonoBehaviour
 
     internal void ClosePanel()
     {
+        // Stop any ongoing scrollbar fade animation
+        if (scrollbarFadeCoroutine != null)
+        {
+            StopCoroutine(scrollbarFadeCoroutine);
+            scrollbarFadeCoroutine = null;
+        }
+
+        // Hide scrollbar immediately
+        if (scrollbarCanvasGroup != null)
+        {
+            scrollbarCanvasGroup.alpha = 0f;
+        }
+
+        isScrolling = false;
+
         if (popupCoroutine != null)
             StopCoroutine(popupCoroutine);
         popupCoroutine = StartCoroutine(PlayPopupAnimation(false));
+    }
+
+    private void ResetScrollbar()
+    {
+        // Reset scroll position to top
+        if (scrollRect != null)
+        {
+            scrollRect.verticalNormalizedPosition = 1f;
+        }
+
+        // Stop any ongoing fade animation
+        if (scrollbarFadeCoroutine != null)
+        {
+            StopCoroutine(scrollbarFadeCoroutine);
+            scrollbarFadeCoroutine = null;
+        }
+
+        // Hide scrollbar
+        if (scrollbarCanvasGroup != null)
+        {
+            scrollbarCanvasGroup.alpha = 0f;
+        }
+
+        isScrolling = false;
     }
     #endregion
 

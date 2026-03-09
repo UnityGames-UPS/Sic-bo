@@ -41,7 +41,7 @@ public class OpponentChipManager : MonoBehaviour
     private bool isCashoutRunning = false;
     private Coroutine cashoutCoroutine = null;
     private Leaderboards currentLeaderboards = null;
-    private Leaderboards lockedLeaderboards = null; // Locked at betting start to prevent flickering
+    private Leaderboards lockedLeaderboards = null;
     private List<Payout> currentPayouts = null;
     private string localPlayerUsername = null;
 
@@ -56,7 +56,7 @@ public class OpponentChipManager : MonoBehaviour
     private readonly Dictionary<string, HashSet<string>> _winnersByBetAreaCache = new Dictionary<string, HashSet<string>>();
 
     private readonly Queue<RectTransform> _chipPool = new Queue<RectTransform>();
-    private const int CHIP_POOL_SIZE = 50;
+    private const int CHIP_POOL_SIZE = 100;
     #endregion
 
     #region Helper Structs
@@ -512,15 +512,8 @@ public class OpponentChipManager : MonoBehaviour
         chipRT.DOScale(chipScale, 0.2f).SetEase(Ease.OutBack);
         yield return new WaitForSeconds(0.22f);
 
-        // IMPORTANT: Reparent to canvas root BEFORE animating to bet area
-        // This ensures the chip renders ABOVE all bet areas during flight
-        // (prevents layering issues where bet areas render on top of flying chips)
         chipRT.SetParent(canvasRoot, worldPositionStays: true);
 
-        // Use world-space position so the destination is always accurate regardless
-        // of CanvasScaler matchWidthOrHeight value or device aspect ratio.
-        // Scatter offsets are in canvas units, so we multiply by the canvas lossyScale
-        // to convert them into world-space units.
         float canvasScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
         Vector3 targetWorldPos = container.position + new Vector3(
             Random.Range(-betAreaScatterX, betAreaScatterX) * canvasScale,
