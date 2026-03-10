@@ -236,18 +236,53 @@ public class RoundController : MonoBehaviour
             Sum_Text.text = sum.ToString();
             Sum_Text.color = (sum % 2 != 0) ? oddSumColor : evenSumColor;
         }
+
+        // FIXED: Always clear all indicators first
         if (SmallImage) SmallImage.SetActive(false);
         if (BigImage) BigImage.SetActive(false);
         if (OddImage) OddImage.SetActive(false);
         if (EvenImage) EvenImage.SetActive(false);
 
-        if (!isTriple)
+        // FIXED: Never show big/small for triples
+        if (isTriple)
         {
-            if (sum >= 4 && sum <= 10 && SmallImage) SmallImage.SetActive(true);
-            if (sum >= 11 && sum <= 17 && BigImage) BigImage.SetActive(true);
+            // For triples, only show odd/even (though this is rare)
             if (sum % 2 != 0 && OddImage) OddImage.SetActive(true);
             else if (sum % 2 == 0 && EvenImage) EvenImage.SetActive(true);
+            return;
         }
+
+        // For non-triples, determine big/small
+        bool showBig = false;
+        bool showSmall = false;
+
+        if (!string.IsNullOrEmpty(matchSide))
+        {
+            // FIXED: Use server's matchSide if available (most reliable)
+            string side = matchSide.ToLower();
+            showBig = side == "big";
+            showSmall = side == "small";
+        }
+        else
+        {
+            // Fallback to calculation if matchSide not provided
+            showSmall = sum >= 4 && sum <= 10;
+            showBig = sum >= 11 && sum <= 17;
+        }
+
+        // FIXED: Only activate the correct indicator, never both
+        if (showSmall && SmallImage)
+        {
+            SmallImage.SetActive(true);
+        }
+        else if (showBig && BigImage)
+        {
+            BigImage.SetActive(true);
+        }
+
+        // Set odd/even
+        if (sum % 2 != 0 && OddImage) OddImage.SetActive(true);
+        else if (sum % 2 == 0 && EvenImage) EvenImage.SetActive(true);
 
         if (ResultPanel) ResultPanel.SetActive(true);
     }

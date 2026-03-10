@@ -28,6 +28,9 @@ public class ResultPlaneController : MonoBehaviour
     [SerializeField] private Sprite dice4Sprite;
     [SerializeField] private Sprite dice5Sprite;
     [SerializeField] private Sprite dice6Sprite;
+
+    [Header("Win Animation Sync")]
+    [SerializeField] private float winAnimationDelaySeconds = 0.3f; // Delay to sync with win animations
     #endregion
 
     #region Private Fields
@@ -233,6 +236,12 @@ public class ResultPlaneController : MonoBehaviour
     {
         isAnimating = true;
 
+        // Add delay to sync with win animations
+        if (winAnimationDelaySeconds > 0)
+        {
+            yield return new WaitForSeconds(winAnimationDelaySeconds);
+        }
+
         for (int i = 0; i < 11; i++)
         {
             var rt = resultRows[i].RT;
@@ -350,12 +359,38 @@ public class ResultPlaneController : MonoBehaviour
                 sumText.color = data.sum % 2 == 0 ? EvenColor : OddColor;
             }
 
+            // FIXED: Proper big/small logic with triple checking
             bool isTriple = data.dice1 == data.dice2 && data.dice2 == data.dice3;
-            bool showSmall = !isTriple && data.sum >= 4 && data.sum <= 10;
-            bool showBig = !isTriple && data.sum >= 11 && data.sum <= 17;
 
-            bigImage?.SetActive(showBig);
-            smallImage?.SetActive(showSmall);
+            // Never show big/small for triples
+            if (isTriple)
+            {
+                bigImage?.SetActive(false);
+                smallImage?.SetActive(false);
+            }
+            else
+            {
+                // Use server's matchSide if available, otherwise calculate
+                bool showBig = false;
+                bool showSmall = false;
+
+                if (!string.IsNullOrEmpty(data.matchSide))
+                {
+                    // Trust server's matchSide
+                    string side = data.matchSide.ToLower();
+                    showBig = side == "big";
+                    showSmall = side == "small";
+                }
+                else
+                {
+                    // Fallback to calculation
+                    showSmall = data.sum >= 4 && data.sum <= 10;
+                    showBig = data.sum >= 11 && data.sum <= 17;
+                }
+
+                bigImage?.SetActive(showBig);
+                smallImage?.SetActive(showSmall);
+            }
 
             if (dice1Image != null) dice1Image.sprite = getDiceSprite(data.dice1);
             if (dice2Image != null) dice2Image.sprite = getDiceSprite(data.dice2);

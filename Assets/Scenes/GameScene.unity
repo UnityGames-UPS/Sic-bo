@@ -24892,7 +24892,7 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: c9089c4a15114068a9029e91ec19a239
+  testToken: 94ebd3ff03dd496181ffa8a12477e7d1
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
   showDebugLogs: 0
@@ -44936,11 +44936,11 @@ MonoBehaviour:
     dice3Image: {fileID: 388705153}
   - rowContainer: {fileID: 1460489796}
     sumText: {fileID: 2121895782}
-    bigImage: {fileID: 210870920}
+    bigImage: {fileID: 82350547}
     smallImage: {fileID: 553262623}
-    dice1Image: {fileID: 1621981211}
-    dice2Image: {fileID: 50827735}
-    dice3Image: {fileID: 1970830457}
+    dice1Image: {fileID: 985818094}
+    dice2Image: {fileID: 991737918}
+    dice3Image: {fileID: 1333623146}
   - rowContainer: {fileID: 1486668054}
     sumText: {fileID: 289543074}
     bigImage: {fileID: 1876886824}
@@ -44994,6 +44994,7 @@ MonoBehaviour:
   dice4Sprite: {fileID: 630298429141522781, guid: e85b376c27417f345914e8bb6a162d94, type: 3}
   dice5Sprite: {fileID: 6705284938008922994, guid: e85b376c27417f345914e8bb6a162d94, type: 3}
   dice6Sprite: {fileID: 7721755928234810256, guid: e85b376c27417f345914e8bb6a162d94, type: 3}
+  winAnimationDelaySeconds: 0.95
 --- !u!4 &760194024
 Transform:
   m_ObjectHideFlags: 0
@@ -77894,6 +77895,8 @@ MonoBehaviour:
     m_RotationOrder: 4
   diceScaleResetFrameOffset: 5
   fastForwardSpeed: 4
+  targetFPS: 60
+  enableFPSAdaptation: 1
 --- !u!4 &1317873483
 Transform:
   m_ObjectHideFlags: 0
@@ -97534,7 +97537,7 @@ MonoBehaviour:
   opponentChipManager: {fileID: 1594718133}
   resultPlaneController: {fileID: 760194023}
   socketManager: {fileID: 410521236}
-  diceResultHighlightDelay: 0.95
+  diceResultHighlightDelay: 0.8
   showDebugLogs: 0
 --- !u!4 &1673436616
 Transform:

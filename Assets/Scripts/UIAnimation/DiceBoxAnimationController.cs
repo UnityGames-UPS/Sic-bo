@@ -4,14 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// MINIMAL FIX for Editor vs Platform animation speed mismatch
-/// 
-/// ONLY CHANGE: Replaced WaitForSecondsRealtime (4 places) with WaitForSecondsAccurate helper
-/// - All original logic, flow, and structure preserved
-/// - Fixes WebGL timing precision issues
-/// - Works identically to original in Unity Editor
-/// </summary>
+
 public class DiceBoxAnimationController : MonoBehaviour
 {
     #region Serialized Fields
@@ -59,6 +52,10 @@ public class DiceBoxAnimationController : MonoBehaviour
     [Header("Speed")]
     [SerializeField] private float fastForwardSpeed = 3f;
 
+    [Header("FPS Adaptation - NEW")]
+    [SerializeField] private float targetFPS = 60f;
+    [SerializeField] private bool enableFPSAdaptation = true;
+
     #endregion
 
     #region Private Fields
@@ -85,6 +82,11 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     private bool hasPendingReveal = false;
 
+    // FPS tracking - NEW
+    private float averageFPS = 60f;
+    private const int FPS_SAMPLE_SIZE = 30;
+    private Queue<float> fpsSamples = new Queue<float>();
+
     #endregion
 
     #region Unity Lifecycle
@@ -94,6 +96,15 @@ public class DiceBoxAnimationController : MonoBehaviour
 
         if (diceContainer) diceContainer.SetActive(false);
         SetTopLayerActive(false);
+    }
+
+    // NEW: FPS tracking
+    private void Update()
+    {
+        if (enableFPSAdaptation)
+        {
+            UpdateFPSTracking();
+        }
     }
 
     private void OnDestroy() => StopAllAnimations();
@@ -560,7 +571,10 @@ public class DiceBoxAnimationController : MonoBehaviour
         {
             int displayIdx = reverse ? (sequence.Count - 1 - startFrame) : startFrame;
             SetBaseFrame(sequence, displayIdx);
-            yield return WaitForSecondsAccurate((frameDelay - timeIntoStartFrame) / Mathf.Max(playbackSpeed, 0.01f));
+
+            // MODIFIED: Apply FPS multiplier
+            float fpsMultiplier = GetFPSMultiplier();
+            yield return WaitForSecondsAccurate((frameDelay - timeIntoStartFrame) * fpsMultiplier / Mathf.Max(playbackSpeed, 0.01f));
             startFrame++;
         }
 
@@ -573,7 +587,10 @@ public class DiceBoxAnimationController : MonoBehaviour
             for (int i = iFrom; reverse ? (i >= iTo) : (i <= iTo); i += step)
             {
                 SetBaseFrame(sequence, i);
-                yield return WaitForSecondsAccurate(frameDelay / Mathf.Max(playbackSpeed, 0.01f));
+
+                // MODIFIED: Apply FPS multiplier
+                float fpsMultiplier = GetFPSMultiplier();
+                yield return WaitForSecondsAccurate(frameDelay * fpsMultiplier / Mathf.Max(playbackSpeed, 0.01f));
             }
 
             startFrame = 0;
@@ -611,7 +628,9 @@ public class DiceBoxAnimationController : MonoBehaviour
         {
             SetOpenCloseFrameBothLayers(currentFrame);
             FireOpenCloseFrameTriggers(currentFrame);
-            yield return WaitForSecondsAccurate((frameDelay - timeIntoSkipFrame) / Mathf.Max(playbackSpeed, 0.01f));
+
+            float fpsMultiplier = GetFPSMultiplier();
+            yield return WaitForSecondsAccurate((frameDelay - timeIntoSkipFrame) * fpsMultiplier / Mathf.Max(playbackSpeed, 0.01f));
             currentFrame++;
         }
 
@@ -619,7 +638,8 @@ public class DiceBoxAnimationController : MonoBehaviour
         {
             SetOpenCloseFrameBothLayers(frame);
             FireOpenCloseFrameTriggers(frame);
-            yield return WaitForSecondsAccurate(frameDelay / Mathf.Max(playbackSpeed, 0.01f));
+            float fpsMultiplier = GetFPSMultiplier();
+            yield return WaitForSecondsAccurate(frameDelay * fpsMultiplier / Mathf.Max(playbackSpeed, 0.01f));
         }
 
         isAnimating = false;
@@ -758,6 +778,7 @@ public class DiceBoxAnimationController : MonoBehaviour
             baseImage.sprite = idleSequence[0];
         }
     }
+
     private IEnumerator WaitForSecondsAccurate(float seconds)
     {
         float elapsed = 0f;
@@ -766,6 +787,41 @@ public class DiceBoxAnimationController : MonoBehaviour
             elapsed += Time.unscaledDeltaTime;
             yield return null;
         }
+    }
+
+    // NEW: FPS tracking methods
+    private void UpdateFPSTracking()
+    {
+        float currentFPS = 1f / Time.unscaledDeltaTime;
+
+        fpsSamples.Enqueue(currentFPS);
+        if (fpsSamples.Count > FPS_SAMPLE_SIZE)
+        {
+            fpsSamples.Dequeue();
+        }
+
+        float sum = 0f;
+        foreach (float fps in fpsSamples)
+        {
+            sum += fps;
+        }
+        averageFPS = sum / fpsSamples.Count;
+    }
+
+    private float GetFPSMultiplier()
+    {
+        if (!enableFPSAdaptation) return 1f;
+
+        // Adjust timing to ensure smooth animation completion at any FPS
+        // At lower FPS (30): multiply delays to stretch animation, ensuring all sprites show
+        // At higher FPS (120): reduce delays to maintain visual flow
+        // Formula: targetFPS / averageFPS  
+        // - At 30 FPS: 60/30 = 2.0 (each sprite shown longer)
+        // - At 60 FPS: 60/60 = 1.0 (normal timing)
+        // - At 120 FPS: 60/120 = 0.5 (each sprite shown shorter)
+        float ratio = targetFPS / averageFPS;
+
+        return Mathf.Clamp(ratio, 0.6f, 1.8f);
     }
 
     #endregion
