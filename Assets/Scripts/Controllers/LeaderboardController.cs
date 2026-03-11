@@ -464,7 +464,11 @@ public class LeaderboardController : MonoBehaviour
             currentData[kv.Key] = kv.Value;
         }
 
+
+
         return totalTime;
+
+
     }
 
     private IEnumerator AnimateEnterAfterDelay(LeaderboardPlayerBlock block, RectTransform rect, Vector2 targetPos, float delay)

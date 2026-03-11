@@ -375,6 +375,10 @@ public class GameManager : MonoBehaviour
 
         uiController.UpdateLeaderboards(data.leaderboards);
         betController.SetLeaderboardData(data.leaderboards);
+        if (data.playerCount > 0)
+        {
+            uiController.UpdatePlayerCountInLevel(data.playerCount);
+        }
     }
 
     internal void OnHistoryReceived(List<HistoryEntry> history, HistoryMeta meta)

@@ -303,6 +303,7 @@ public class CashoutData
     public Leaderboards leaderboards;
     public List<Payout> payouts;
     public List<string> stats;
+    public int playerCount;  // ✨ NEW FIELD - Captures player count from leaderboard updates
 }
 
 [Serializable]
