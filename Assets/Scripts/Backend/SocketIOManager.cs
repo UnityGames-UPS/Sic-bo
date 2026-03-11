@@ -628,7 +628,9 @@ public class SocketIOManager : MonoBehaviour
         {
             SicBoRoot response = JsonConvert.DeserializeObject<SicBoRoot>(json);
             if (response != null && response.success && response.payload != null)
-                gameManager.OnRoomJoinedWithData(response.payload);
+                // isLevelJoin=true → playerCount goes to in-game PlayerCount_Text,
+                // NOT the home-screen TotalPlayers_Text
+                gameManager.OnRoomJoinedWithData(response.payload, true);
         }
         catch (Exception e)
         {
@@ -702,6 +704,11 @@ public class SocketIOManager : MonoBehaviour
 
                 if (response.payload.lobby != null)
                     gameManager.OnLobbyCount(new LobbyCountData { lobby = response.payload.lobby });
+
+                // HOME ack payload.playerCount = real total connected players.
+                // Update TotalPlayers_Text here directly — OnLobbyCount no longer
+                // does this because lobby_count.playerCount means "in game rooms" only.
+                uiController?.UpdateTotalPlayerCount(response.payload.playerCount);
 
                 gameManager?.OnLeaveAcknowledged();
             }

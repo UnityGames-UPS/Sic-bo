@@ -99,12 +99,19 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region Socket Callbacks - Room
-    internal void OnRoomJoinedWithData(RoomPayload payload)
+    // isLevelJoin = false  → came from room:joined (lobby room) → update home TotalPlayers_Text
+    // isLevelJoin = true   → came from JOIN_LEVEL ack (game room) → update in-game PlayerCount_Text
+    internal void OnRoomJoinedWithData(RoomPayload payload, bool isLevelJoin = false)
     {
         if (payload == null) return;
 
         uiController.HideLoadingScreen();
-        uiController.UpdateTotalPlayerCount(payload.playerCount);
+
+        if (isLevelJoin)
+            uiController.UpdatePlayerCountInLevel(payload.playerCount);
+        else
+            uiController.UpdateTotalPlayerCount(payload.playerCount);
+
         uiController.UpdateLeaderboards(payload.leaderboards);
         betController.SetLeaderboardData(payload.leaderboards);
 
@@ -365,8 +372,7 @@ public class GameManager : MonoBehaviour
             data.lobby.high_roller
         );
 
-        int total = data.lobby.casual + data.lobby.novice + data.lobby.expert + data.lobby.high_roller;
-        uiController.UpdateTotalPlayerCount(total);
+        uiController.UpdateTotalPlayerCount(data.playerCount);
     }
 
     internal void OnLeaderboardUpdate(CashoutData data)
@@ -375,10 +381,10 @@ public class GameManager : MonoBehaviour
 
         uiController.UpdateLeaderboards(data.leaderboards);
         betController.SetLeaderboardData(data.leaderboards);
-        if (data.playerCount > 0)
-        {
-            uiController.UpdatePlayerCountInLevel(data.playerCount);
-        }
+        // Always update game player count — including when playerCount drops to 0
+        // (a player just left the level). The old `> 0` guard prevented the UI
+        // from clearing the stale count and kept leaderboard blocks in the wrong state.
+        uiController.UpdatePlayerCountInLevel(data.playerCount);
     }
 
     internal void OnHistoryReceived(List<HistoryEntry> history, HistoryMeta meta)

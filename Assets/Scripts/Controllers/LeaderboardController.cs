@@ -50,6 +50,7 @@ public class LeaderboardController : MonoBehaviour
     private readonly Dictionary<int, Vector2> winnersRestPositions = new Dictionary<int, Vector2>();
     private readonly Dictionary<int, List<Coroutine>> blockCoroutines = new Dictionary<int, List<Coroutine>>();
     private readonly Dictionary<string, Sprite> cachedAvatars = new Dictionary<string, Sprite>();
+    private readonly HashSet<LeaderboardPlayerBlock> pendingHideBlocks = new HashSet<LeaderboardPlayerBlock>();
 
     private string localPlayerUsername;
     private Sprite localPlayerAvatar;
@@ -254,8 +255,10 @@ public class LeaderboardController : MonoBehaviour
             var rect = block.GetComponent<RectTransform>();
             if (rect == null) continue;
 
+            // Cache rest position but do NOT write to slotToBlock —
+            // slotToBlock must stay empty until blocks are actually assigned
+            // by UpdateLeaderboard, keeping it in sync with currentData.
             restPositions[i] = rect.anchoredPosition;
-            slotToBlock[i] = block;
             rect.anchoredPosition = GetHiddenPosition(restPositions[i], isWinners);
             block.HideAll();
             StopBlockAnimation(block);
@@ -268,6 +271,10 @@ public class LeaderboardController : MonoBehaviour
         Dictionary<int, LeaderboardPlayerBlock> slotToBlock,
         bool isWinners)
     {
+        // slotToBlock must mirror currentData (which is also cleared on Initialize).
+        // Do NOT repopulate it here — blocks will be freshly assigned when the next
+        // UpdateLeaderboard runs. Stale slotToBlock entries were causing blocks at
+        // slot 1/2 to remain visible when only 1 incoming entry arrived.
         slotToBlock.Clear();
 
         for (int i = 0; i < MaxSlots && i < blocks.Count; i++)
@@ -284,7 +291,6 @@ public class LeaderboardController : MonoBehaviour
                 restPositions[i] = restPos;
             }
 
-            slotToBlock[i] = block;
             rect.anchoredPosition = GetHiddenPosition(restPos, isWinners);
             block.HideAll();
             StopBlockAnimation(block);
@@ -386,10 +392,24 @@ public class LeaderboardController : MonoBehaviour
             var rect = outgoingBlock.GetComponent<RectTransform>();
             if (rect == null) continue;
 
+            var capturedBlock = outgoingBlock;
+            pendingHideBlocks.Add(capturedBlock);
             rect.DOKill(complete: false);
             rect.DOAnchorPos(GetHiddenPosition(restPos, isWinners), slideDuration)
                 .SetEase(Ease.InOutQuad)
-                .OnComplete(outgoingBlock.HideAll);
+                .OnComplete(() =>
+                {
+                    capturedBlock.HideAll();
+                    pendingHideBlocks.Remove(capturedBlock);
+                })
+                .OnKill(() =>
+                {
+                    if (pendingHideBlocks.Contains(capturedBlock))
+                    {
+                        capturedBlock.HideAll();
+                        pendingHideBlocks.Remove(capturedBlock);
+                    }
+                });
             totalTime = Mathf.Max(totalTime, slideDuration);
         }
 
@@ -864,6 +884,10 @@ public class LeaderboardController : MonoBehaviour
     {
         if (block == null) return;
         block.StopCrownPulse();
+
+        // If this block was pending a hide (outgoing slide-out), cancel that — the
+        // caller is about to repurpose it, so we must NOT call HideAll via OnKill.
+        pendingHideBlocks.Remove(block);
 
         int id = block.GetInstanceID();
         if (blockCoroutines.TryGetValue(id, out var coroutines))
