@@ -24930,7 +24930,7 @@ MonoBehaviour:
   testToken: eec0156c91134e038eeea17602b4dd1b
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
-  showDebugLogs: 1
+  showDebugLogs: 0
 --- !u!4 &410521237
 Transform:
   m_ObjectHideFlags: 0
@@ -97575,7 +97575,7 @@ MonoBehaviour:
   resultPlaneController: {fileID: 760194023}
   socketManager: {fileID: 410521236}
   diceResultHighlightDelay: 0.8
-  showDebugLogs: 1
+  showDebugLogs: 0
 --- !u!4 &1673436616
 Transform:
   m_ObjectHideFlags: 0
