@@ -65,10 +65,19 @@ public class BetTimerController : MonoBehaviour
         if (placeBetPanel)
         {
             placeBetPanel.SetActive(true);
+            placeBetPanel.transform.localScale = Vector3.one; // RESET SCALE
             PlayPopAnimation(placeBetPanel.transform);
         }
-        if (betLockedPanel) betLockedPanel.SetActive(false);
-        if (nextRoundPanel) nextRoundPanel.SetActive(false);
+        if (betLockedPanel)
+        {
+            betLockedPanel.SetActive(false);
+            betLockedPanel.transform.localScale = Vector3.one; // RESET SCALE
+        }
+        if (nextRoundPanel)
+        {
+            nextRoundPanel.SetActive(false);
+            nextRoundPanel.transform.localScale = Vector3.one; // RESET SCALE
+        }
         if (bettingTimer_Text) bettingTimer_Text.transform.localScale = Vector3.one;
 
         ApplyBettingTimerDisplay(secondsRemaining);
@@ -94,13 +103,18 @@ public class BetTimerController : MonoBehaviour
 
         currentState = BetTimerState.Locked;
 
-        if (placeBetPanel) placeBetPanel.SetActive(false);
+        if (placeBetPanel)
+        {
+            placeBetPanel.SetActive(false);
+            placeBetPanel.transform.localScale = Vector3.one; // RESET SCALE
+        }
         if (betLockedPanel)
         {
             // Only play animation if it wasn't already active
             bool wasAlreadyActive = isBetLockedActive;
 
             betLockedPanel.SetActive(true);
+            betLockedPanel.transform.localScale = Vector3.one; // RESET SCALE BEFORE ANIMATION
 
             if (!wasAlreadyActive)
             {
@@ -108,7 +122,11 @@ public class BetTimerController : MonoBehaviour
                 isBetLockedActive = true;
             }
         }
-        if (nextRoundPanel) nextRoundPanel.SetActive(false);
+        if (nextRoundPanel)
+        {
+            nextRoundPanel.SetActive(false);
+            nextRoundPanel.transform.localScale = Vector3.one; // RESET SCALE
+        }
         if (last5SecIndicator) last5SecIndicator.SetActive(false);
     }
 
@@ -122,8 +140,16 @@ public class BetTimerController : MonoBehaviour
         currentSeconds = secondsUntilNextRound;
         isBetLockedActive = false; // Reset bet locked flag
 
-        if (placeBetPanel) placeBetPanel.SetActive(false);
-        if (betLockedPanel) betLockedPanel.SetActive(false);
+        if (placeBetPanel)
+        {
+            placeBetPanel.SetActive(false);
+            placeBetPanel.transform.localScale = Vector3.one; // RESET SCALE
+        }
+        if (betLockedPanel)
+        {
+            betLockedPanel.SetActive(false);
+            betLockedPanel.transform.localScale = Vector3.one; // RESET SCALE
+        }
         if (nextRoundPanel) nextRoundPanel.SetActive(true);
         if (last5SecIndicator) last5SecIndicator.SetActive(false);
 
@@ -146,9 +172,21 @@ public class BetTimerController : MonoBehaviour
         currentState = BetTimerState.Hidden;
         isBetLockedActive = false; // Reset bet locked flag
 
-        if (placeBetPanel) placeBetPanel.SetActive(false);
-        if (betLockedPanel) betLockedPanel.SetActive(false);
-        if (nextRoundPanel) nextRoundPanel.SetActive(false);
+        if (placeBetPanel)
+        {
+            placeBetPanel.SetActive(false);
+            placeBetPanel.transform.localScale = Vector3.one; // RESET SCALE
+        }
+        if (betLockedPanel)
+        {
+            betLockedPanel.SetActive(false);
+            betLockedPanel.transform.localScale = Vector3.one; // RESET SCALE
+        }
+        if (nextRoundPanel)
+        {
+            nextRoundPanel.SetActive(false);
+            nextRoundPanel.transform.localScale = Vector3.one; // RESET SCALE
+        }
         if (last5SecIndicator) last5SecIndicator.SetActive(false);
     }
 

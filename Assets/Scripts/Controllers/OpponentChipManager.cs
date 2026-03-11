@@ -27,6 +27,7 @@ public class OpponentChipManager : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private Canvas targetCanvas;
+    [SerializeField] private RectTransform chipContainer; // NEW: Container for opponent chips (stays below popups)
     [SerializeField] private LeaderboardController leaderboardController;
     #endregion
 
@@ -99,9 +100,12 @@ public class OpponentChipManager : MonoBehaviour
     {
         if (chipPrefab == null || opponentDealerArea == null) return;
 
+        // Use chipContainer if available, otherwise use opponentDealerArea
+        Transform poolParent = chipContainer != null ? chipContainer : opponentDealerArea;
+
         for (int i = 0; i < CHIP_POOL_SIZE; i++)
         {
-            GameObject chipObj = Instantiate(chipPrefab, opponentDealerArea);
+            GameObject chipObj = Instantiate(chipPrefab, poolParent);
             RectTransform chipRT = chipObj.GetComponent<RectTransform>();
             chipObj.SetActive(false);
             _chipPool.Enqueue(chipRT);
@@ -117,7 +121,10 @@ public class OpponentChipManager : MonoBehaviour
             chipRT.gameObject.SetActive(true);
             return chipRT;
         }
-        GameObject chipObj = Instantiate(chipPrefab, opponentDealerArea);
+
+        // Create new chip - use chipContainer if available, otherwise use opponentDealerArea
+        Transform parent = chipContainer != null ? chipContainer : opponentDealerArea;
+        GameObject chipObj = Instantiate(chipPrefab, parent);
         return chipObj.GetComponent<RectTransform>();
     }
 
@@ -127,7 +134,10 @@ public class OpponentChipManager : MonoBehaviour
         chipRT.DOKill();
         chipRT.gameObject.SetActive(false);
         chipRT.localScale = Vector3.one;
-        chipRT.SetParent(opponentDealerArea, false);
+
+        // Return to chipContainer if available, otherwise opponentDealerArea
+        Transform parent = chipContainer != null ? chipContainer : opponentDealerArea;
+        chipRT.SetParent(parent, false);
 
         if (_chipPool.Count < CHIP_POOL_SIZE * 2)
             _chipPool.Enqueue(chipRT);

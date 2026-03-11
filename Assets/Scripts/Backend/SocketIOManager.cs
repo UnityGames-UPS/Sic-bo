@@ -419,6 +419,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnBettingTimer(string json)
     {
         if (isBeingDestroyed) return;
+        if (showDebugLogs) Debug.Log($"[RESPONSE] game:betting_timer {json}");
         TryDeserializeAndForward<TimerData>(json, gameManager.OnBettingTimer, "betting_timer");
     }
 
@@ -440,6 +441,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnBetPlaced(string json)
     {
         if (isBeingDestroyed) return;
+        if (showDebugLogs) Debug.Log($"[RESPONSE] game:bet_placed {json}");
         TryDeserializeAndForward<BetPlacedData>(json, gameManager.OnBetPlaced, "bet_placed");
     }
 
@@ -461,6 +463,7 @@ public class SocketIOManager : MonoBehaviour
     private void OnLobbyCount(string json)
     {
         if (isBeingDestroyed) return;
+        if (showDebugLogs) Debug.Log($"[RESPONSE] game:lobby_count {json}");
         TryDeserializeAndForward<LobbyCountData>(json, gameManager.OnLobbyCount, "lobby_count");
     }
 

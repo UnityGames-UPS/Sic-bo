@@ -801,7 +801,7 @@ public class BetController : MonoBehaviour
     #region Bet Area Click Handlers
     private void OnBetAreaClicked(string betOption)
     {
-        if (!isBettingEnabled) { uiController?.ShowInGamePopup("Betting is locked. Wait for next round."); return; }
+        if (!isBettingEnabled) { uiController?.ShowInGamePopup("This Round is already closed. Please wait for next round"); return; }
         if (currentChipValues.Count == 0) return;
         pendingBetOption = betOption;
         gameManager.PlaceBet(betOption, selectedChipIndex);
@@ -810,7 +810,7 @@ public class BetController : MonoBehaviour
 
     private void OnTripleDiceAreaClicked(int diceNum)
     {
-        if (!isBettingEnabled) { uiController?.ShowInGamePopup("Betting is locked. Wait for next round."); return; }
+        if (!isBettingEnabled) { uiController?.ShowInGamePopup("This Round is already closed. Please wait for next round"); return; }
         if (currentChipValues.Count == 0) return;
         string betOption = $"specific_3_{diceNum}";
         pendingBetOption = betOption;
@@ -820,7 +820,7 @@ public class BetController : MonoBehaviour
 
     private void OnSingleDiceAreaClicked(int diceNum)
     {
-        if (!isBettingEnabled) { uiController?.ShowInGamePopup("Betting is locked. Wait for next round."); return; }
+        if (!isBettingEnabled) { uiController?.ShowInGamePopup("This Round is already closed. Please wait for next round"); return; }
         if (currentChipValues.Count == 0) return;
         string betOption = $"single_{diceNum}";
         pendingBetOption = betOption;
@@ -1111,14 +1111,17 @@ public class BetController : MonoBehaviour
 
     private string FormatBetOptionName(string betOption)
     {
-        if (betOption == "small") return "SMALL";
-        if (betOption == "big") return "BIG";
-        if (betOption == "odd") return "ODD";
-        if (betOption == "even") return "EVEN";
-        if (betOption.StartsWith("single_")) return "SINGLE " + betOption.Substring(7);
-        if (betOption.StartsWith("specific_3_")) return "TRIPLE " + betOption.Substring(11);
-        if (betOption.StartsWith("sum_")) return "SUM " + betOption.Substring(4);
-        return betOption.ToUpper();
+        // Changed from ALL CAPS to proper case
+        if (betOption == "small") return "Small";
+        if (betOption == "big") return "Big";
+        if (betOption == "odd") return "Odd";
+        if (betOption == "even") return "Even";
+        if (betOption.StartsWith("single_")) return "Single " + betOption.Substring(7);
+        if (betOption.StartsWith("specific_3_")) return "Triple " + betOption.Substring(11);
+        if (betOption.StartsWith("sum_")) return "Sum " + betOption.Substring(4);
+
+        // For any other bet options, use proper case instead of uppercase
+        return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(betOption.Replace("_", " "));
     }
 
     private int GetChipIndexForAmount(double amount)
