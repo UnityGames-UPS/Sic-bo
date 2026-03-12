@@ -67,6 +67,7 @@ public class UIController : MonoBehaviour
     [SerializeField] private TMP_Text ErrorTitle_Text;
     [SerializeField] private TMP_Text ErrorMessage_Text;
     [SerializeField] private Button ErrorOK_Button;
+    [SerializeField] private TMP_Text ErrorOKButton_Text;
 
     [Header("In-Game Popup")]
     [SerializeField] private GameObject InGamePopupParent;
@@ -647,10 +648,9 @@ public class UIController : MonoBehaviour
         {
             HidePopupImmediate(DisconnectPopupParent, DisconnectPopup);
         }
-        if (showDisconnectAfter)
-        {
-            hasPendingDisconnect = true;
-        }
+
+        hasPendingDisconnect = showDisconnectAfter;
+        if (ErrorOKButton_Text) ErrorOKButton_Text.text = showDisconnectAfter ? "Exit" : "OK";
 
         if (ErrorTitle_Text) ErrorTitle_Text.text = title;
         if (ErrorMessage_Text) ErrorMessage_Text.text = message;
@@ -670,7 +670,8 @@ public class UIController : MonoBehaviour
         else if (hasPendingDisconnect)
         {
             hasPendingDisconnect = false;
-            CloseErrorPopup(() => ShowDisconnectPopup());
+            if (ErrorOKButton_Text) ErrorOKButton_Text.text = "OK";
+            CloseErrorPopup(() => gameManager.ExitGame());
         }
         else
         {
@@ -936,7 +937,7 @@ public class UIController : MonoBehaviour
     }
     #endregion
 
-    #region Avatar
+    #region Avatar  
     private void UpdatePlayerAvatars()
     {
         if (playerAvatarSprites == null || selectedAvatarIndex >= playerAvatarSprites.Length) return;

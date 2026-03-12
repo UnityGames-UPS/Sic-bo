@@ -372,7 +372,9 @@ public class GameManager : MonoBehaviour
             data.lobby.high_roller
         );
 
-        uiController.UpdateTotalPlayerCount(data.playerCount);
+        //sum for all players 
+        int totalPlayers = data.lobby.casual + data.lobby.novice + data.lobby.expert + data.lobby.high_roller + data.playerCount;
+        uiController.UpdateTotalPlayerCount(totalPlayers);
     }
 
     internal void OnLeaderboardUpdate(CashoutData data)
