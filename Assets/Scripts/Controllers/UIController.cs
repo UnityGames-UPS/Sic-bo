@@ -161,6 +161,26 @@ public class UIController : MonoBehaviour
     [Header("Expand / Shrink – Side Menu")]
     [SerializeField] private Button ExpandSideMenu_Button;
     [SerializeField] private Button ShrinkSideMenu_Button;
+
+    [Header("Lobby Hot Indicators")]
+    [SerializeField] private GameObject CasualHot_Object;
+    [SerializeField] private GameObject NoviceHot_Object;
+    [SerializeField] private GameObject ExpertHot_Object;
+    [SerializeField] private GameObject HighRollerHot_Object;
+
+    [Header("Lobby Player Count Backgrounds")]
+    [SerializeField] private GameObject CasualCountBg_Object;
+    [SerializeField] private GameObject NoviceCountBg_Object;
+    [SerializeField] private GameObject ExpertCountBg_Object;
+    [SerializeField] private GameObject HighRollerCountBg_Object;
+    [SerializeField] private Image CasualCountBg_Image;
+    [SerializeField] private Image NoviceCountBg_Image;
+    [SerializeField] private Image ExpertCountBg_Image;
+    [SerializeField] private Image HighRollerCountBg_Image;
+    [SerializeField] private Sprite normalCountBgSprite;
+    [SerializeField] private Sprite hotCountBgSprite;
+
+
     #endregion
 
     #region Private Fields
@@ -773,6 +793,64 @@ public class UIController : MonoBehaviour
         if (NoviceCount_Text) NoviceCount_Text.text = $"{novice} ";
         if (ExpertCount_Text) ExpertCount_Text.text = $"{expert} ";
         if (HighRollerCount_Text) HighRollerCount_Text.text = $"{highRoller} ";
+
+        // Update hot indicators and backgrounds for each lobby
+        UpdateLobbyHotIndicators(casual, novice, expert, highRoller);
+    }
+
+    /// <summary>
+    /// Updates the "hot" indicators and player count backgrounds based on which lobby has the highest player count.
+    /// Also updates friend/status images based on whether each lobby has players.
+    /// </summary>
+    internal void UpdateLobbyHotIndicators(int casual = 0, int novice = 0, int expert = 0, int highRoller = 0)
+    {
+        // Find the maximum count
+        int maxCount = Mathf.Max(casual, novice, expert, highRoller);
+
+        // Determine which lobby has the hot status
+        bool casualIsHot = maxCount > 0 && casual == maxCount;
+        bool noviceIsHot = maxCount > 0 && novice == maxCount;
+        bool expertIsHot = maxCount > 0 && expert == maxCount;
+        bool highRollerIsHot = maxCount > 0 && highRoller == maxCount;
+
+        // Update hot indicators and backgrounds for each level
+        UpdateLobbyLevelUI("Casual", casual, casualIsHot, CasualHot_Object, CasualCountBg_Object, CasualCountBg_Image);
+        UpdateLobbyLevelUI("Novice", novice, noviceIsHot, NoviceHot_Object, NoviceCountBg_Object, NoviceCountBg_Image);
+        UpdateLobbyLevelUI("Expert", expert, expertIsHot, ExpertHot_Object, ExpertCountBg_Object, ExpertCountBg_Image);
+        UpdateLobbyLevelUI("HighRoller", highRoller, highRollerIsHot, HighRollerHot_Object, HighRollerCountBg_Object, HighRollerCountBg_Image);
+    }
+
+    /// <summary>
+    /// Updates UI elements for a specific lobby level.
+    /// </summary>
+    private void UpdateLobbyLevelUI(string levelName, int playerCount, bool isHot, GameObject hotObject, GameObject countBgObject, Image countBgImage)
+    {
+        // Update hot indicator - only show if lobby has players and is the highest
+        if (hotObject != null)
+            hotObject.SetActive(isHot && playerCount > 0);
+
+        // Update player count background GameObject - disable entire object when no players
+        if (countBgObject != null)
+        {
+            if (playerCount > 0)
+            {
+                countBgObject.SetActive(true);
+                
+                // Update sprite based on hot status
+                if (countBgImage != null)
+                {
+                    if (isHot)
+                        countBgImage.sprite = hotCountBgSprite;
+                    else
+                        countBgImage.sprite = normalCountBgSprite;
+                }
+            }
+            else
+            {
+                // Disable entire background GameObject when no players
+                countBgObject.SetActive(false);
+            }
+        }
     }
 
     internal void UpdateLeaderboards(Leaderboards leaderboards) => leaderboardController?.UpdateLeaderboard(leaderboards);
@@ -852,8 +930,8 @@ public class UIController : MonoBehaviour
         if (chips == null || chips.Count == 0) return;
         double min = chips[0];
         double max = gameWagers.main_bets?.small?.GetMaxBet(room) ?? 0;
-        if (minText) minText.text = $"{min:F2}";
-        if (maxText) maxText.text = $"{max:F2}";
+        if (minText) minText.text = GameUtilities.FormatBetValue(min);
+        if (maxText) maxText.text = GameUtilities.FormatBetValue(max);
     }
     #endregion
 

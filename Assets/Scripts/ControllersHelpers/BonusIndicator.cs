@@ -50,6 +50,7 @@ public class BonusIndicator : MonoBehaviour
     internal string betOption;
     internal bool isWon;
     private IndicatorRow[] allRows;
+    private float? originalNumberHolderHeight = null;
     #endregion
 
     #region Unity Lifecycle
@@ -67,6 +68,8 @@ public class BonusIndicator : MonoBehaviour
         if (numberHolder != null) numberHolder.transform.localScale = Vector3.one;
 
         int rowCount = Mathf.Min(multipliers.Length, 3);
+        AdjustNumberHolderHeight(rowCount);
+        
         for (int i = 0; i < rowCount; i++)
             SetupRow(allRows[i], multipliers[i], numberSprites, multiplierSprite, isWonState, rowCount);
     }
@@ -81,6 +84,8 @@ public class BonusIndicator : MonoBehaviour
         if (numberHolder != null) numberHolder.transform.localScale = Vector3.one;
 
         int rowCount = Mathf.Min(multipliers.Length, 3);
+        AdjustNumberHolderHeight(rowCount);
+        
         for (int i = 0; i < rowCount; i++)
             SetupRowSmart(allRows[i], multipliers[i], numberSprites, multiplierSprite,
                 brownDotSprite, greenDotSprite, isWonState, rowCount);
@@ -128,6 +133,37 @@ public class BonusIndicator : MonoBehaviour
     }
     #endregion
 
+    #region Height Adjustment
+    private void CaptureOriginalHeight()
+    {
+        if (originalNumberHolderHeight == null && numberHolder != null)
+        {
+            RectTransform rectTransform = numberHolder.GetComponent<RectTransform>();
+            if (rectTransform != null)
+                originalNumberHolderHeight = rectTransform.sizeDelta.y;
+        }
+    }
+
+    private void AdjustNumberHolderHeight(int rowCount)
+    {
+        CaptureOriginalHeight();
+        if (originalNumberHolderHeight == null || numberHolder == null) return;
+
+        RectTransform rectTransform = numberHolder.GetComponent<RectTransform>();
+        if (rectTransform == null) return;
+
+        float heightAdjustment = 0f;
+        if (rowCount == 2)
+            heightAdjustment = -5f;
+        else if (rowCount == 1)
+            heightAdjustment = -10f;
+
+        Vector2 newSizeDelta = rectTransform.sizeDelta;
+        newSizeDelta.y = originalNumberHolderHeight.Value + heightAdjustment;
+        rectTransform.sizeDelta = newSizeDelta;
+    }
+    #endregion
+
     #region Setup Helpers
     private void EnsureInitialized()
     {
@@ -143,18 +179,24 @@ public class BonusIndicator : MonoBehaviour
         HideRowImages(row);
         SetImage(row.multiplierImage, multiplierSprite);
 
+        // Position multiplier: first position for 2-3 rows, last position for 1 row
+        if (totalRowCount <= 1 && row.multiplierImage != null)
+            row.multiplierImage.transform.SetAsLastSibling();
+        else if (row.multiplierImage != null)
+            row.multiplierImage.transform.SetAsFirstSibling();
+
         string s = multiplier.ToString();
 
         if (s.Length == 1)
         {
             if (row.layoutGroup != null)
-                row.layoutGroup.spacing = totalRowCount == 3 ? -37f : totalRowCount == 2 ? -25f : 0f;
+                row.layoutGroup.spacing = totalRowCount == 3 ? -37f : totalRowCount == 2 ? -25f : -5f;
             SetDigit(row.number1Image, s[0], numberSprites);
         }
         else if (s.Length == 2)
         {
             if (row.layoutGroup != null)
-                row.layoutGroup.spacing = totalRowCount == 3 ? -24f : totalRowCount == 2 ? -10f : 0f;
+                row.layoutGroup.spacing = totalRowCount == 3 ? -24f : totalRowCount == 2 ? -10f : -5f;
             SetDigit(row.number1Image, s[0], numberSprites);
             SetDigit(row.number2Image, s[1], numberSprites);
         }
@@ -192,6 +234,12 @@ public class BonusIndicator : MonoBehaviour
         row.Show();
         HideRowImages(row);
         SetImage(row.multiplierImage, multiplierSprite);
+
+        // Position multiplier: first position for 2-3 rows, last position for 1 row
+        if (totalRowCount <= 1 && row.multiplierImage != null)
+            row.multiplierImage.transform.SetAsLastSibling();
+        else if (row.multiplierImage != null)
+            row.multiplierImage.transform.SetAsFirstSibling();
 
         Sprite dotSprite = isWonState ? greenDotSprite : brownDotSprite;
         string formatted = multiplier.ToString("F1");

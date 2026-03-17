@@ -31,6 +31,7 @@ public class SocketIOManager : MonoBehaviour
     internal SicBoGameData InitialData { get; private set; }
     internal Player PlayerData { get; private set; }
     internal bool IsInitialized { get; private set; }
+    internal RoomPayload CurrentRoomPayload { get; private set; } // Cache for stats reconciliation on focus gain
     #endregion
 
     #region Private Fields - Connection
@@ -130,6 +131,12 @@ public class SocketIOManager : MonoBehaviour
             {
                 StopCoroutine(focusCheckRoutine);
                 focusCheckRoutine = null;
+            }
+
+            // Reconcile results when tab regains focus to prevent blank rows
+            if (isConnected && gameManager != null)
+            {
+                gameManager.ReconcileResultsOnFocusGain();
             }
         }
     }
@@ -328,6 +335,9 @@ public class SocketIOManager : MonoBehaviour
 
             if (!string.IsNullOrEmpty(payload?.roomId))
                 CurrentRoomId = payload.roomId;
+
+            // Cache payload for stats reconciliation on focus gain
+            CurrentRoomPayload = payload;
 
             gameManager.OnRoomJoinedWithData(payload);
         }

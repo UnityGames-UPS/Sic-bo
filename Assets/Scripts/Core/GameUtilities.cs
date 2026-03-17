@@ -66,7 +66,25 @@ public static class GameUtilities
     internal static string FormatBetValue(double value)
     {
         if (_betValueCache.TryGetValue(value, out string cached)) return cached;
-        string result = value % 1 == 0 ? value.ToString("F0") : value.ToString("0.##");
+
+        string result;
+        if (value >= 10000)
+        {
+            double kValue = value / 1000;
+            if (kValue % 1 == 0)
+            {
+                result = kValue.ToString("F0") + "K";
+            }
+            else
+            {
+                result = kValue.ToString("0.##") + "K";
+            }
+        }
+        else
+        {
+            result = value % 1 == 0 ? value.ToString("F0") : value.ToString("0.##");
+        }
+
         if (_betValueCache.Count < 100) _betValueCache[value] = result;
         return result;
     }

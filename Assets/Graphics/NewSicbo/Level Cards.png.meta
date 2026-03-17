@@ -1,7 +1,19 @@
 fileFormatVersion: 2
-guid: 8f40614bfe7ae6f43927dbb6dc3196f6
+guid: bd84283d4de6949cc9704fca00a642f4
 TextureImporter:
-  internalIDToNameTable: []
+  internalIDToNameTable:
+  - first:
+      213: -9189581745920481349
+    second: Level Cards_0
+  - first:
+      213: 3908419985784678223
+    second: Level Cards_1
+  - first:
+      213: -8847033140514397550
+    second: Level Cards_2
+  - first:
+      213: -1853206279908167275
+    second: Level Cards_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -136,45 +148,89 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Glossy Bar_0
+      name: Level Cards_0
       rect:
         serializedVersion: 2
-        x: 62
-        y: 138
-        width: 388
-        height: 108
+        x: 77
+        y: 1859
+        width: 440
+        height: 556
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: fd7ffb6d23d0efe478ce9822384d6c4f
-      internalID: 1707968993
+      spriteID: bb7eeff271c087080800000000000000
+      internalID: -9189581745920481349
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Glossy Bar_1
+      name: Level Cards_1
       rect:
         serializedVersion: 2
-        x: 62
-        y: 10
-        width: 388
-        height: 108
+        x: 99
+        y: 1306
+        width: 397
+        height: 510
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: 14af7454af108944195080ca8729337a
-      internalID: 1042776426
+      spriteID: f47abb5f44f7d3630800000000000000
+      internalID: 3908419985784678223
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Level Cards_2
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 698
+        width: 440
+        height: 556
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 292e7877b36093580800000000000000
+      internalID: -8847033140514397550
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Level Cards_3
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 72
+        width: 440
+        height: 556
+      alignment: 0
+      pivot: {x: 0.5, y: 0.5}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 591fc8605b61846e0800000000000000
+      internalID: -1853206279908167275
       vertices: []
       indices: 
       edges: []
@@ -183,7 +239,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: a7f9d2f8115f144948020b4aa7d40a9f
     internalID: 0
     vertices: []
     indices: 
@@ -193,8 +249,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Glossy Bar_0: 1707968993
-      Glossy Bar_1: 1042776426
+      Level Cards_0: -9189581745920481349
+      Level Cards_1: 3908419985784678223
+      Level Cards_2: -8847033140514397550
+      Level Cards_3: -1853206279908167275
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

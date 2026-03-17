@@ -49,7 +49,7 @@ internal class BonusIndicatorController : MonoBehaviour
     #region Private Fields
     private readonly Dictionary<string, BonusIndicator> indicatorPool = new Dictionary<string, BonusIndicator>();
     private readonly HashSet<string> activeBonusOptions = new HashSet<string>();
-    private readonly Dictionary<string, List<int>> currentMultipliers = new Dictionary<string, List<int>>();
+    private readonly Dictionary<string, List<double>> currentMultipliers = new Dictionary<string, List<double>>();
     private bool isPoolInitialized = false;
 
     // GC optimisation: reuse HashSet for HandleDiceResult (called every dice result)
@@ -111,7 +111,7 @@ internal class BonusIndicatorController : MonoBehaviour
 
     #region Public API – called by GameManager
 
-    internal void ShowBonusAnnouncements(Dictionary<string, List<int>> bonuses)
+    internal void ShowBonusAnnouncements(Dictionary<string, List<double>> bonuses)
     {
         HideAllActiveIndicators();
         activeBonusOptions.Clear();
@@ -121,7 +121,7 @@ internal class BonusIndicatorController : MonoBehaviour
         foreach (var kvp in bonuses)
         {
             string betOption = kvp.Key;
-            List<int> multipliers = kvp.Value;
+            List<double> multipliers = kvp.Value;
 
             if (multipliers == null || multipliers.Count == 0) continue;
 
@@ -204,7 +204,7 @@ internal class BonusIndicatorController : MonoBehaviour
 
     #region Private – Display Helpers
 
-    private void ShowBonus(string betOption, List<int> multipliers, int staggerIndex = 0)
+    private void ShowBonus(string betOption, List<double> multipliers, int staggerIndex = 0)
     {
         if (!indicatorPool.TryGetValue(betOption, out BonusIndicator indicator))
         {
@@ -212,9 +212,9 @@ internal class BonusIndicatorController : MonoBehaviour
                 Debug.LogWarning($"[BonusIndicator] No pooled indicator for '{betOption}'");
             return;
         }
-        if (!currentMultipliers.TryGetValue(betOption, out List<int> cachedList))
+        if (!currentMultipliers.TryGetValue(betOption, out List<double> cachedList))
         {
-            cachedList = new List<int>(multipliers.Count);
+            cachedList = new List<double>(multipliers.Count);
             currentMultipliers[betOption] = cachedList;
         }
         else
@@ -223,7 +223,7 @@ internal class BonusIndicatorController : MonoBehaviour
         }
         cachedList.AddRange(multipliers);
 
-        int[] multipliersArray = multipliers.ToArray();
+        double[] multipliersArray = multipliers.ToArray();
 
         if (supportDecimalMultipliers)
         {
@@ -233,7 +233,8 @@ internal class BonusIndicatorController : MonoBehaviour
         }
         else
         {
-            indicator.Setup(multipliersArray, brownNumberSprites, brownMultiplierSprite,
+            int[] intArray = System.Array.ConvertAll(multipliersArray, x => (int)x);
+            indicator.Setup(intArray, brownNumberSprites, brownMultiplierSprite,
                 brownBackgroundSprite, brownDotSprite, false);
         }
 
@@ -268,6 +269,7 @@ internal class BonusIndicatorController : MonoBehaviour
                 vibrato: 1,
                 elasticity: 0.5f
             );
+
         });
 
         string fallSeqKey = $"fall_{betOption}";
@@ -311,7 +313,7 @@ internal class BonusIndicatorController : MonoBehaviour
     private void AnimateIndicatorToGreen(BonusIndicator indicator, string betOption)
     {
         if (indicator == null || indicator.isWon) return;
-        if (!currentMultipliers.TryGetValue(betOption, out List<int> multipliers)) return;
+        if (!currentMultipliers.TryGetValue(betOption, out List<double> multipliers)) return;
 
         indicator.isWon = true;
         if (AudioManager.Instance != null)

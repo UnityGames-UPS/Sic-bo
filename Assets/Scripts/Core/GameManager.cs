@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
@@ -107,10 +107,16 @@ public class GameManager : MonoBehaviour
 
         uiController.HideLoadingScreen();
 
-        if (isLevelJoin)
-            uiController.UpdatePlayerCountInLevel(payload.playerCount);
-        else
-            uiController.UpdateTotalPlayerCount(payload.playerCount);
+        // If we have lobby data (player joined lobby room), update hot indicators
+        if (!isLevelJoin && payload.lobby != null)
+        {
+            uiController.UpdateLobbyHotIndicators(
+                payload.lobby.casual,
+                payload.lobby.novice,
+                payload.lobby.expert,
+                payload.lobby.high_roller
+            );
+        }
 
         uiController.UpdateLeaderboards(payload.leaderboards);
         betController.SetLeaderboardData(payload.leaderboards);
@@ -206,6 +212,23 @@ public class GameManager : MonoBehaviour
     }
     #endregion
 
+    #region Focus & Reconnection Recovery
+    /// <summary>
+    /// Called when the app regains focus to reconcile the result plane from cached stats.
+    /// Prevents blank rows when returning from tab suspension or background.
+    /// </summary>
+    internal void ReconcileResultsOnFocusGain()
+    {
+        if (socketManager == null || socketManager.CurrentRoomPayload == null) return;
+        
+        var stats = socketManager.CurrentRoomPayload.stats;
+        if (stats != null && stats.Count > 0)
+        {
+            resultPlaneController?.ReconcileFromStats(stats);
+        }
+    }
+    #endregion
+
     #region Socket Callbacks - Round Events
     internal void OnRoundStart(RoundStartData data)
     {
@@ -215,7 +238,6 @@ public class GameManager : MonoBehaviour
 
         int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
-        uiController.UpdatePlayerCountInLevel(data.playerCount);
         uiController.UpdateRoundId(data.roundId);
         uiController.ShowBettingPhase(timeRemaining);
 
@@ -372,9 +394,7 @@ public class GameManager : MonoBehaviour
             data.lobby.high_roller
         );
 
-        //sum for all players 
-        int totalPlayers = data.lobby.casual + data.lobby.novice + data.lobby.expert + data.lobby.high_roller + data.playerCount;
-        uiController.UpdateTotalPlayerCount(totalPlayers);
+        uiController.UpdateTotalPlayerCount(data.totalCount);
     }
 
     internal void OnLeaderboardUpdate(CashoutData data)
@@ -383,9 +403,6 @@ public class GameManager : MonoBehaviour
 
         uiController.UpdateLeaderboards(data.leaderboards);
         betController.SetLeaderboardData(data.leaderboards);
-        // Always update game player count — including when playerCount drops to 0
-        // (a player just left the level). The old `> 0` guard prevented the UI
-        // from clearing the stale count and kept leaderboard blocks in the wrong state.
         uiController.UpdatePlayerCountInLevel(data.playerCount);
     }
 

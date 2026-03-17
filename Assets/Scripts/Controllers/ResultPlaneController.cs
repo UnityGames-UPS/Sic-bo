@@ -119,10 +119,27 @@ public class ResultPlaneController : MonoBehaviour
     }
 
     /// <summary>
+    /// Reconciles the result plane from stats when tab regains focus or after reconnection.
+    /// Prevents blank rows by reloading data from the latest stats.
+    /// </summary>
+    internal void ReconcileFromStats(List<string> rawStats)
+    {
+        if (rawStats == null || rawStats.Count == 0) return;
+
+        // Check if any rows are currently blank/inactive
+        int blankRowCount = CountBlankRows();
+        if (blankRowCount == 0) return; // All rows have data, no need to reconcile
+
+        // Reload from stats to fill blank rows
+        PopulateFromStats(rawStats);
+    }
+
+    /// <summary>
     /// Pre-populates the result plane from the server stats list (up to 40 rounds).
     /// Shows the most recent 10: oldest in row 0 (left), newest in row 9 (right).
     /// If fewer than 10 exist the leftmost rows stay hidden.
     /// No animation — instant fill on room join.
+    /// Includes validation to ensure all displayed data is proper and non-blank.
     /// </summary>
     internal void PopulateFromStats(List<string> rawStats)
     {
@@ -146,6 +163,17 @@ public class ResultPlaneController : MonoBehaviour
         // Parse last up to 10 entries, oldest first
         List<ResultData> entries = ParseLast10Stats(rawStats);
 
+        if (entries.Count == 0)
+        {
+            // No valid data found — hide all rows
+            for (int i = 0; i < 10; i++)
+            {
+                if (resultRows[i].rowContainer != null)
+                    resultRows[i].rowContainer.SetActive(false);
+            }
+            return;
+        }
+
         // Anchor newest (index 0) to row 9, oldest (index 9) to row 0
         int startRow = 10 - entries.Count;
 
@@ -156,13 +184,19 @@ public class ResultPlaneController : MonoBehaviour
             bool hasData = entryIndex >= 0 && entryIndex < entries.Count;
 
             var row = resultRows[i];
-            if (row.rowContainer != null)
-                row.rowContainer.SetActive(hasData);
-
+            
             if (hasData)
             {
+                // Ensure row is properly set before showing
                 row.SetData(entries[entryIndex], GetDiceSprite);
-                row.SetScaleToOne();
+                row.SetScaleToOne(); // Ensure scale is reset
+                if (row.rowContainer != null)
+                    row.rowContainer.SetActive(true);
+            }
+            else
+            {
+                if (row.rowContainer != null)
+                    row.rowContainer.SetActive(false);
             }
         }
     }
@@ -190,7 +224,22 @@ public class ResultPlaneController : MonoBehaviour
 
     #region Helpers
     /// <summary>
+    /// Counts how many rows are currently blank/inactive.
+    /// </summary>
+    private int CountBlankRows()
+    {
+        int blankCount = 0;
+        for (int i = 0; i < 10; i++)
+        {
+            if (resultRows[i].rowContainer != null && !resultRows[i].rowContainer.activeSelf)
+                blankCount++;
+        }
+        return blankCount;
+    }
+
+    /// <summary>
     /// Parses raw JSON stat strings, returns up to the last 10 as ResultData (oldest first).
+    /// Includes enhanced validation to ensure data integrity.
     /// </summary>
     private List<ResultData> ParseLast10Stats(List<string> rawStats)
     {
@@ -204,17 +253,37 @@ public class ResultPlaneController : MonoBehaviour
             {
                 ResultData data = JsonConvert.DeserializeObject<ResultData>(rawStats[i]);
                 if (data == null) continue;
+
+                // Validate dice values
                 if (data.dice1 < 1 || data.dice1 > 6 ||
                     data.dice2 < 1 || data.dice2 > 6 ||
-                    data.dice3 < 1 || data.dice3 > 6) continue;
+                    data.dice3 < 1 || data.dice3 > 6)
+                {
+                    continue;
+                }
 
-                // sum is not always present in stat entries — compute it
-                if (data.sum == 0)
+                // Compute sum if not present or invalid
+                if (data.sum == 0 || data.sum < 3 || data.sum > 18)
                     data.sum = data.dice1 + data.dice2 + data.dice3;
+
+                // Validate matchSide if present
+                if (!string.IsNullOrEmpty(data.matchSide))
+                {
+                    string side = data.matchSide.ToLower();
+                    if (side != "big" && side != "small" && side != "triple")
+                    {
+                        data.matchSide = null; // Clear invalid matchSide
+                    }
+                }
 
                 results.Add(data);
             }
-            catch { /* skip malformed entries */ }
+            catch
+            {
+                // Skip malformed entries and log them for debugging
+                if (Debug.isDebugBuild)
+                    Debug.LogWarning($"[ResultPlaneController] Failed to parse stat entry {i}: {rawStats[i]}");
+            }
         }
         return results;
     }
@@ -353,13 +422,18 @@ public class ResultPlaneController : MonoBehaviour
 
         public void SetData(ResultData data, System.Func<int, Sprite> getDiceSprite)
         {
+            if (data == null) return;
+
+            // Validate and set sum with color
             if (sumText != null)
             {
-                sumText.text = data.sum.ToString();
-                sumText.color = data.sum % 2 == 0 ? EvenColor : OddColor;
+                // Ensure sum is valid (3-18 for dice)
+                int displaySum = data.sum > 0 ? data.sum : 0;
+                sumText.text = displaySum > 0 ? displaySum.ToString() : "–";
+                sumText.color = displaySum > 0 && displaySum % 2 == 0 ? EvenColor : OddColor;
             }
 
-            // FIXED: Proper big/small logic with triple checking
+            // FIXED: Proper big/small logic with triple checking and validation
             bool isTriple = data.dice1 == data.dice2 && data.dice2 == data.dice3;
 
             // Never show big/small for triples
@@ -370,31 +444,45 @@ public class ResultPlaneController : MonoBehaviour
             }
             else
             {
-                // Use server's matchSide if available, otherwise calculate
+                // Use server's matchSide if available and valid, otherwise calculate
                 bool showBig = false;
                 bool showSmall = false;
+                int sum = data.sum > 0 ? data.sum : (data.dice1 + data.dice2 + data.dice3);
 
                 if (!string.IsNullOrEmpty(data.matchSide))
                 {
-                    // Trust server's matchSide
+                    // Validate and trust server's matchSide
                     string side = data.matchSide.ToLower();
-                    showBig = side == "big";
-                    showSmall = side == "small";
+                    if (side == "big")
+                    {
+                        showBig = true;
+                    }
+                    else if (side == "small")
+                    {
+                        showSmall = true;
+                    }
+                    // If side is something else or "triple", show neither
                 }
                 else
                 {
-                    // Fallback to calculation
-                    showSmall = data.sum >= 4 && data.sum <= 10;
-                    showBig = data.sum >= 11 && data.sum <= 17;
+                    // Fallback to calculation if matchSide not provided
+                    showSmall = sum >= 4 && sum <= 10;
+                    showBig = sum >= 11 && sum <= 17;
                 }
 
                 bigImage?.SetActive(showBig);
                 smallImage?.SetActive(showSmall);
             }
 
-            if (dice1Image != null) dice1Image.sprite = getDiceSprite(data.dice1);
-            if (dice2Image != null) dice2Image.sprite = getDiceSprite(data.dice2);
-            if (dice3Image != null) dice3Image.sprite = getDiceSprite(data.dice3);
+            // Set dice sprites with null checking
+            if (dice1Image != null && data.dice1 >= 1 && data.dice1 <= 6)
+                dice1Image.sprite = getDiceSprite(data.dice1);
+            
+            if (dice2Image != null && data.dice2 >= 1 && data.dice2 <= 6)
+                dice2Image.sprite = getDiceSprite(data.dice2);
+            
+            if (dice3Image != null && data.dice3 >= 1 && data.dice3 <= 6)
+                dice3Image.sprite = getDiceSprite(data.dice3);
         }
 
         public void SetScaleToOne()

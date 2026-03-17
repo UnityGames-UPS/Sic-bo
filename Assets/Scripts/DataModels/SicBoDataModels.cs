@@ -181,10 +181,10 @@ public class BetWager
 [Serializable]
 public class MaxBetLimit
 {
-    public int casual;
-    public int novice;
-    public int expert;
-    public int high_roller;
+    public double casual;
+    public double novice;
+    public double expert;
+    public double high_roller;
 }
 #endregion
 
@@ -259,20 +259,20 @@ public class BonusData
 {
     public string roundId;
     public int bonusPlayer;
-    public int bonusMultiplier;
+    public double bonusMultiplier;
 
-    public Dictionary<string, List<int>> bonus;
+    public Dictionary<string, List<double>> bonus;
 
     public bool HasBonusDictionary()
     {
         return bonus != null && bonus.Count > 0;
     }
 
-    public List<int> GetMultipliers(string betOption)
+    public List<double> GetMultipliers(string betOption)
     {
-        if (bonus != null && bonus.TryGetValue(betOption, out List<int> multipliers))
+        if (bonus != null && bonus.TryGetValue(betOption, out List<double> multipliers))
             return multipliers;
-        return new List<int>();
+        return new List<double>();
     }
 }
 
@@ -319,7 +319,7 @@ public class Payout
 public class LobbyCountData
 {
     public Lobby lobby;
-    public int playerCount;
+    public int totalCount;
 }
 
 [Serializable]

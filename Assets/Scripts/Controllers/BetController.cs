@@ -1103,10 +1103,22 @@ public class BetController : MonoBehaviour
 
     private string FormatChipAmount(double amount)
     {
-        if (amount >= 1000) return $"{amount / 1000}K";
-        if (amount < 1) return amount.ToString("F1");
-        if (amount % 1 != 0) return amount.ToString("F1");
-        return amount.ToString("F0");
+        if (amount >= 10000)
+        {
+            double kValue = amount / 1000;
+            if (kValue % 1 == 0)
+            {
+                return kValue.ToString("F0") + "K";
+            }
+            else
+            {
+                return kValue.ToString("0.##") + "K";
+            }
+        }
+        else
+        {
+            return amount % 1 == 0 ? amount.ToString("F0") : amount.ToString("0.##");
+        }
     }
 
     private string FormatBetOptionName(string betOption)
