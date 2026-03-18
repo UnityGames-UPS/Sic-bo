@@ -62,7 +62,7 @@ Material:
     m_Ints: []
     m_Floats:
     - _BeamLength: 0.844
-    - _BeamWidth: 0.304
+    - _BeamWidth: 0.3
     - _BumpScale: 1
     - _CircleBrightness: 0.37
     - _CircleIntensity: 1.49
@@ -80,7 +80,7 @@ Material:
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _LightIntensity: 0.69
+    - _LightIntensity: 0.31
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1
@@ -100,16 +100,16 @@ Material:
     - _StencilOp: 0
     - _StencilReadMask: 255
     - _StencilWriteMask: 255
-    - _SweepSpeed: 0.7
+    - _SweepSpeed: 0.4
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _LightColor: {r: 1, g: 0.27406728, b: 0.118867874, a: 0}
-    - _LightColor1: {r: 0.52156866, g: 0.3731249, b: 0.31359914, a: 0.27450982}
-    - _LightColor2: {r: 0.52156866, g: 0.37254903, b: 0.3137255, a: 0.3529412}
-    - _LightColor3: {r: 0.52156866, g: 0.37254903, b: 0.3137255, a: 1}
-    - _LightColor4: {r: 0.52156866, g: 0.37254903, b: 0.3137255, a: 1}
+    - _LightColor1: {r: 0.754717, g: 0.7107026, b: 0.64705884, a: 0.02745098}
+    - _LightColor2: {r: 0.7529412, g: 0.70980394, b: 0.64705884, a: 0.3529412}
+    - _LightColor3: {r: 0.7529412, g: 0.70980394, b: 0.64705884, a: 1}
+    - _LightColor4: {r: 0.7529412, g: 0.70980394, b: 0.64705884, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
