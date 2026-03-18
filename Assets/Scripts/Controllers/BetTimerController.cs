@@ -28,7 +28,7 @@ public class BetTimerController : MonoBehaviour
     #region Private Fields
     private BetTimerState currentState = BetTimerState.Hidden;
     private int currentSeconds = 0;
-    private Coroutine countdownCoroutine;
+    private Coroutine localNextRoundCountdownCoroutine;
     private Coroutine localBettingCountdownCoroutine;
     private bool isClockTickActive = false;
     private bool isBetLockedActive = false; // Track if bet locked is already showing
@@ -37,7 +37,7 @@ public class BetTimerController : MonoBehaviour
     #region Unity Lifecycle
     private void OnDestroy()
     {
-        StopCountdown();
+        StopLocalNextRoundCountdown();
         StopLocalBettingCountdown();
         StopClockTick();
 
@@ -55,7 +55,7 @@ public class BetTimerController : MonoBehaviour
     #region Internal API
     internal void ShowBettingPhase(int secondsRemaining)
     {
-        StopCountdown();
+        StopLocalNextRoundCountdown();
         StopLocalBettingCountdown();
 
         currentState = BetTimerState.Betting;
@@ -97,7 +97,7 @@ public class BetTimerController : MonoBehaviour
 
     internal void ShowBetLocked()
     {
-        StopCountdown();
+        StopLocalNextRoundCountdown();
         StopLocalBettingCountdown();
         StopClockTick();
 
@@ -132,7 +132,7 @@ public class BetTimerController : MonoBehaviour
 
     internal void ShowNextRound(int secondsUntilNextRound)
     {
-        StopCountdown();
+        StopLocalNextRoundCountdown();
         StopLocalBettingCountdown();
         StopClockTick();
 
@@ -153,19 +153,39 @@ public class BetTimerController : MonoBehaviour
         if (nextRoundPanel) nextRoundPanel.SetActive(true);
         if (last5SecIndicator) last5SecIndicator.SetActive(false);
 
-        UpdateNextRoundTimer(secondsUntilNextRound);
-        countdownCoroutine = StartCoroutine(NextRoundCountdown());
+        ApplyNextRoundDisplay(secondsUntilNextRound);
+        localNextRoundCountdownCoroutine = StartCoroutine(LocalNextRoundCountdown());
     }
 
-    internal void UpdateNextRoundTimer(int seconds)
+    /// <summary>
+    /// Server correction for the next-round countdown — mirrors UpdateBettingTimer.
+    /// Called on every game:cashout_timer tick; snaps the display to the authoritative
+    /// server value and restarts the local coroutine to stay phase-locked.
+    /// Only acts when the NextRound panel is already visible (guards late arrivals
+    /// where round_end has not been processed yet — server will send it first).
+    /// </summary>
+    internal void UpdateNextRoundTimer(int secondsRemaining)
     {
-        currentSeconds = seconds;
-        if (nextRoundTimer_Text) nextRoundTimer_Text.text = seconds.ToString();
+        // If ShowNextRound hasn't fired yet (e.g. player joined mid-cashout and
+        // round_end arrived but was processed after cashout_timer), initialise now.
+        if (currentState != BetTimerState.NextRound)
+        {
+            ShowNextRound(secondsRemaining);
+            return;
+        }
+
+        // Server correction: snap to authoritative value and restart local countdown
+        StopLocalNextRoundCountdown();
+        currentSeconds = secondsRemaining;
+        ApplyNextRoundDisplay(secondsRemaining);
+
+        if (secondsRemaining > 0)
+            localNextRoundCountdownCoroutine = StartCoroutine(LocalNextRoundCountdown());
     }
 
     internal void HideAll()
     {
-        StopCountdown();
+        StopLocalNextRoundCountdown();
         StopLocalBettingCountdown();
         StopClockTick();
 
@@ -222,24 +242,45 @@ public class BetTimerController : MonoBehaviour
         }
     }
 
-    private IEnumerator NextRoundCountdown()
+    /// <summary>
+    /// Runs a local 1-second tick between server corrections so the next-round
+    /// display counts down smoothly without waiting for the next cashout_timer packet.
+    /// Each server update calls UpdateNextRoundTimer which restarts this coroutine,
+    /// keeping it phase-locked to the server — identical pattern to LocalBettingCountdown.
+    /// </summary>
+    private IEnumerator LocalNextRoundCountdown()
     {
         while (currentSeconds > 0 && currentState == BetTimerState.NextRound)
         {
             yield return new WaitForSeconds(1f);
+            if (currentState != BetTimerState.NextRound) break;
             currentSeconds--;
-            UpdateNextRoundTimer(currentSeconds);
+            ApplyNextRoundDisplay(currentSeconds);
         }
-        countdownCoroutine = null;
+        localNextRoundCountdownCoroutine = null;
     }
 
-    private void StopCountdown()
+    private void StopLocalNextRoundCountdown()
     {
-        if (countdownCoroutine != null) { StopCoroutine(countdownCoroutine); countdownCoroutine = null; }
+        if (localNextRoundCountdownCoroutine != null)
+        {
+            StopCoroutine(localNextRoundCountdownCoroutine);
+            localNextRoundCountdownCoroutine = null;
+        }
     }
     #endregion
 
     #region Animation
+    /// <summary>
+    /// Updates the visible next-round timer display. Called both from server corrections
+    /// (UpdateNextRoundTimer) and from the local countdown coroutine (LocalNextRoundCountdown).
+    /// Mirrors ApplyBettingTimerDisplay in purpose.
+    /// </summary>
+    private void ApplyNextRoundDisplay(int seconds)
+    {
+        if (nextRoundTimer_Text) nextRoundTimer_Text.text = seconds.ToString();
+    }
+
     /// <summary>
     /// Updates the visible betting timer display. Called both from server corrections
     /// (UpdateBettingTimer) and from the local countdown coroutine (LocalBettingCountdown).

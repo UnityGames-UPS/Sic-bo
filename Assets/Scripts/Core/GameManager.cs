@@ -383,6 +383,18 @@ public class GameManager : MonoBehaviour
         betController.OnRoundEnd();
     }
 
+    /// <summary>
+    /// Server correction for the next-round countdown — mirrors OnBettingTimer.
+    /// Fires every second during the cashout window; snaps the display to the
+    /// authoritative server value and phase-locks the local countdown coroutine.
+    /// </summary>
+    internal void OnCashoutTimer(CashoutTimerData data)
+    {
+        if (data == null) return;
+        int seconds = GameUtilities.CalculateTimeRemaining(data.cashoutEndTime, data.serverTime);
+        uiController.UpdateNextRoundTimer(seconds);
+    }
+
     internal void OnLobbyCount(LobbyCountData data)
     {
         if (data?.lobby == null) return;

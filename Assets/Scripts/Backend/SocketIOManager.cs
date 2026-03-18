@@ -247,6 +247,7 @@ public class SocketIOManager : MonoBehaviour
         gameSocket.On<string>("game:bet_placed", OnBetPlaced);
         gameSocket.On<string>("game:cashout", OnCashout);
         gameSocket.On<string>("game:round_end", OnRoundEnd);
+        gameSocket.On<string>("game:cashout_timer", OnCashoutTimer);
         gameSocket.On<string>("game:lobby_count", OnLobbyCount);
         gameSocket.On<string>("game:leaderboard_update", OnLeaderboardUpdate);
         gameSocket.On<string>("room:joined", OnRoomJoined);
@@ -467,6 +468,14 @@ public class SocketIOManager : MonoBehaviour
         if (isBeingDestroyed) return;
         if (showDebugLogs) Debug.Log($"[RESPONSE] game:round_end {json}");
         TryDeserializeAndForward<RoundEndPayload>(json, gameManager.OnRoundEnd, "round_end");
+    }
+
+    // High-frequency: fires every second during cashout window — never log raw JSON in production
+    private void OnCashoutTimer(string json)
+    {
+        if (isBeingDestroyed) return;
+        if (showDebugLogs) Debug.Log($"[RESPONSE] game:cashout_timer {json}");
+        TryDeserializeAndForward<CashoutTimerData>(json, gameManager.OnCashoutTimer, "cashout_timer");
     }
 
     // High-frequency: fires regularly — never log raw JSON in production

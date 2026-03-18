@@ -940,6 +940,12 @@ public class UIController : MonoBehaviour
     internal void ShowBetLocked() => betTimerController?.ShowBetLocked();
     internal void ShowNextRound(int seconds) => betTimerController?.ShowNextRound(seconds);
     internal void HideAllTimers() => betTimerController?.HideAll();
+
+    /// <summary>
+    /// Server correction for the next-round countdown — mirrors UpdateTimer for betting phase.
+    /// Called on every game:cashout_timer tick to keep the display phase-locked to the server.
+    /// </summary>
+    internal void UpdateNextRoundTimer(int seconds) => betTimerController?.UpdateNextRoundTimer(seconds);
     #endregion
 
     #region Win Animation

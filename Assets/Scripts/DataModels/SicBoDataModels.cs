@@ -330,6 +330,15 @@ public class RoundEndPayload
     public long nextRoundStartTime;
     public long serverTime;
 }
+
+[Serializable]
+public class CashoutTimerData
+{
+    public string roundId;
+    public long serverTime;
+    public long cashoutEndTime;   // = nextRoundStartTime from round_end
+    public int timeRemaining;     // milliseconds remaining until next round
+}
 #endregion
 
 #region History
