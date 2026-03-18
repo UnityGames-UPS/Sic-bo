@@ -9380,7 +9380,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 50
+  m_text: 0.5
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 4798d52b1769d3d46ac2770b53683c90, type: 2}
   m_sharedMaterial: {fileID: 4903756846252883850, guid: 4798d52b1769d3d46ac2770b53683c90, type: 2}
@@ -9407,12 +9407,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 76
+  m_fontSize: 72
   m_fontSizeBase: 66
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
-  m_fontSizeMax: 76
+  m_fontSizeMax: 72
   m_fontStyle: 1
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 4096
@@ -75408,7 +75408,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   diceScaleResetFrameOffset: 5
-  fastForwardSpeed: 4
+  fastForwardSpeed: 1.5
   targetFPS: 60
   enableFPSAdaptation: 1
 --- !u!4 &1317873483

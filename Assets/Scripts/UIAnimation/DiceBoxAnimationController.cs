@@ -113,39 +113,45 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     #region Internal API
 
-    internal void StartAnimationCycleWithServerSync(long roundStartTimestamp, long bettingEndTimestamp, long currentServerTime)
+   internal void StartAnimationCycleWithServerSync(long roundStartTimestamp, long bettingEndTimestamp, long currentServerTime)
+{
+    // ✅ FIX: Save the current state BEFORE resetting
+    DiceBoxState previousState = currentState;
+    
+    ForceResetToCleanState();
+ 
+    // ✅ Check the PREVIOUS state (before reset), not the current state (after reset)
+    if (previousState == DiceBoxState.Opening ||
+        previousState == DiceBoxState.Open ||
+        previousState == DiceBoxState.Closing ||
+        previousState == DiceBoxState.ZoomingOut)
     {
-        ForceResetToCleanState();
-
-        if (currentState == DiceBoxState.Opening ||
-            currentState == DiceBoxState.Open ||
-            currentState == DiceBoxState.Closing ||
-            currentState == DiceBoxState.ZoomingOut)
-        {
-            playbackSpeed = fastForwardSpeed;
-            hasPendingRound = true;
-            pendingRoundStartTimestamp = roundStartTimestamp;
-            pendingBettingEndTimestamp = bettingEndTimestamp;
-            pendingServerTime = currentServerTime;
-            return;
-        }
-
-        playbackSpeed = 1f;
-        hasPendingRound = false;
-        hasPendingReveal = false;
-
-        StopAllAnimations();
-        ResetSoundFlags();
-
-        serverTimeOffset = currentServerTime - (long)(Time.realtimeSinceStartup * 1000);
-
-        float elapsedSeconds = (currentServerTime - roundStartTimestamp) / 1000f;
-
-        if (diceContainer) diceContainer.SetActive(false);
-        SetTopLayerActive(false);
-
-        JumpToCorrectPhase(elapsedSeconds);
+        // New round started while previous animation still playing - use fast-forward
+        playbackSpeed = fastForwardSpeed;
+        hasPendingRound = true;
+        pendingRoundStartTimestamp = roundStartTimestamp;
+        pendingBettingEndTimestamp = bettingEndTimestamp;
+        pendingServerTime = currentServerTime;
+        return;
     }
+ 
+    playbackSpeed = 1f;
+    hasPendingRound = false;
+    hasPendingReveal = false;
+ 
+    StopAllAnimations();
+    ResetSoundFlags();
+ 
+    serverTimeOffset = currentServerTime - (long)(Time.realtimeSinceStartup * 1000);
+ 
+    float elapsedSeconds = (currentServerTime - roundStartTimestamp) / 1000f;
+ 
+    if (diceContainer) diceContainer.SetActive(false);
+    SetTopLayerActive(false);
+ 
+    JumpToCorrectPhase(elapsedSeconds);
+}
+ 
 
     internal void SyncToPhaseOnJoin(string phase, long timeUntilNextRound, long serverTime)
     {
