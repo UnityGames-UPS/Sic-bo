@@ -18,9 +18,9 @@ public class HistoryController : MonoBehaviour
     [SerializeField] private Button Next5Page_Button;
     //[SerializeField] private Button Close_Button;
 
-    [Header("Loading UI")]
+    /*[Header("Loading UI")]
     [SerializeField] private GameObject LoadingPanel;
-    [SerializeField] private TMP_Text LoadingText;
+    [SerializeField] private TMP_Text LoadingText;*/
 
     [Header("References")]
     [SerializeField] private GameManager gameManager;
@@ -33,7 +33,7 @@ public class HistoryController : MonoBehaviour
     private List<HistoryEntry> currentHistoryData = new List<HistoryEntry>();
     private bool isWaitingForData = false;
     private Coroutine loadingCoroutine = null;
-    private const float MIN_LOADING_TIME = 0.5f;
+    private const float MIN_LOADING_TIME = 0.0f;
     #endregion
 
     #region Unity Lifecycle
@@ -41,7 +41,7 @@ public class HistoryController : MonoBehaviour
     {
         SetupButtons();
         InitializeRows();
-        HideLoadingPanel();
+       // HideLoadingPanel();
         HideHistoryPanel();
     }
 
@@ -108,7 +108,7 @@ public class HistoryController : MonoBehaviour
             row?.gameObject.SetActive(false);
     }
 
-    private void ShowLoadingPanel()
+   /* private void ShowLoadingPanel()
     {
         if (LoadingPanel) LoadingPanel.SetActive(true);
         if (LoadingText) LoadingText.text = "Loading history...";
@@ -117,7 +117,7 @@ public class HistoryController : MonoBehaviour
     private void HideLoadingPanel()
     {
         if (LoadingPanel) LoadingPanel.SetActive(false);
-    }
+    }*/
     #endregion
 
     #region Internal API
@@ -128,7 +128,7 @@ public class HistoryController : MonoBehaviour
         totalPages = 1;
         
         // Show loading immediately when opening
-        ShowLoadingPanel();
+      //  ShowLoadingPanel();
         
         RequestPage(1);
     }
@@ -144,7 +144,7 @@ public class HistoryController : MonoBehaviour
             loadingCoroutine = null;
         }
         
-        HideLoadingPanel();
+        //HideLoadingPanel();
         isWaitingForData = false;
     }
 
@@ -153,7 +153,7 @@ public class HistoryController : MonoBehaviour
         if (history == null || meta == null) 
         { 
             isWaitingForData = false;
-            HideLoadingPanel();
+            //HideLoadingPanel();
             return; 
         }
 
@@ -163,7 +163,7 @@ public class HistoryController : MonoBehaviour
         totalPages = meta.pages;
 
         // Hide loading and show data
-        HideLoadingPanel();
+        //HideLoadingPanel();
         UpdateRows();
         UpdatePageInfo();
         UpdateNavigationButtons();
@@ -193,7 +193,7 @@ public class HistoryController : MonoBehaviour
         float startTime = Time.time;
         
         // Show loading immediately
-        ShowLoadingPanel();
+       // ShowLoadingPanel();
         
         // Wait minimum time before making the request (gives UI time to update)
         yield return new WaitForSeconds(MIN_LOADING_TIME);

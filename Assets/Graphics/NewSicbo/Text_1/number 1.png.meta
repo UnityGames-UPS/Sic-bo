@@ -211,9 +211,9 @@ TextureImporter:
       name: number 1_0
       rect:
         serializedVersion: 2
-        x: 11
+        x: 14
         y: 22
-        width: 48
+        width: 32
         height: 65
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
@@ -431,9 +431,9 @@ TextureImporter:
       name: number 1_10
       rect:
         serializedVersion: 2
-        x: 832
+        x: 843
         y: 149
-        width: 49
+        width: 24
         height: 65
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
@@ -475,9 +475,9 @@ TextureImporter:
       name: number 1_12
       rect:
         serializedVersion: 2
-        x: 11
+        x: 14
         y: 149
-        width: 48
+        width: 32
         height: 65
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
@@ -695,9 +695,9 @@ TextureImporter:
       name: number 1_22
       rect:
         serializedVersion: 2
-        x: 832
+        x: 843
         y: 22
-        width: 49
+        width: 24
         height: 65
       alignment: 0
       pivot: {x: 0.5, y: 0.5}

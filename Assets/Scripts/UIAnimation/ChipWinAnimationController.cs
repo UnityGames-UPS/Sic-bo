@@ -84,10 +84,10 @@ internal class ChipWinAnimationController : MonoBehaviour
         cashoutCoroutine = StartCoroutine(CR_Cashout());
     }
 
-    internal void PlayRefundAnimation(List<string> betOptions, double refundAmount)
+    internal void PlayRefundAnimation(Dictionary<string, double> refundBets)
     {
-        if (betOptions == null || betOptions.Count == 0) return;
-        StartCoroutine(CR_RefundChips(betOptions, refundAmount));
+        if (refundBets == null || refundBets.Count == 0) return;
+        StartCoroutine(CR_RefundChips(refundBets));
     }
 
     internal void ResetAll()
@@ -278,9 +278,9 @@ internal class ChipWinAnimationController : MonoBehaviour
             Transform chipParent = playerBetComp.transform;
             AudioManager.Instance?.PlayChipAdd();
 
-            bool spawnWinChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
-            if (spawnWinChips)
-            {
+            //bool spawnWinChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
+            //if (spawnWinChips)
+           // {
                 var combination = BuildCombination(area.winAmount, chipValues, chipSprites);
                 int count = Mathf.Clamp(combination.Count, minChipsPerWin, maxChipsPerWin);
 
@@ -305,7 +305,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                     assignments.Add((rt, chipParent, localPos));
                     activeWinChips.Add(rt);
                 }
-            }
+            //}
 
             int stakeCount = CalculateStakeReturnChipCount(area.winRatio, area.betAmount);
             var stakeCombination = BuildCombination(area.betAmount, chipValues, chipSprites);
@@ -502,7 +502,7 @@ internal class ChipWinAnimationController : MonoBehaviour
         cashoutCoroutine = null;
     }
 
-    private IEnumerator CR_RefundChips(List<string> betOptions, double refundAmount)
+    private IEnumerator CR_RefundChips(Dictionary<string, double> refundBets)
     {
         if (playerNameTarget == null || betController == null)
         {
@@ -510,28 +510,24 @@ internal class ChipWinAnimationController : MonoBehaviour
             yield break;
         }
 
-        Debug.Log($"[ChipWinAnim] CR_RefundChips called with {betOptions.Count} bet options, refundAmount: {refundAmount}");
-
-        // Distribute refund amount across bet areas
-        double amountPerArea = betOptions.Count > 0 ? refundAmount / betOptions.Count : refundAmount;
-        Debug.Log($"[ChipWinAnim] Amount per area: {amountPerArea}");
+        Debug.Log($"[ChipWinAnim] CR_RefundChips called with {refundBets.Count} bet areas");
 
         List<(PlayerBetComponent component, Transform betArea, double amount)> refundData = new List<(PlayerBetComponent, Transform, double)>();
         
-        // Collect component data BEFORE clearing
-        foreach (string betOption in betOptions)
+        // Collect component data for each bet area with its exact amount
+        foreach (var kvp in refundBets)
         {
-            Debug.Log($"[ChipWinAnim] Checking betOption: {betOption}");
+            string betOption = kvp.Key;
+            double betAmount = kvp.Value;
+            
+            Debug.Log($"[ChipWinAnim] Processing betOption: {betOption}, exact amount: {betAmount}");
             PlayerBetComponent comp = betController.GetPlayerBetComponent(betOption);
             
             if (comp != null)
             {
                 Transform betArea = comp.transform;
                 
-                // Use the distributed refund amount instead of reading from component
-                double betAmount = amountPerArea;
-                
-                Debug.Log($"[ChipWinAnim] Found component for {betOption}, using refund amount: {betAmount}");
+                Debug.Log($"[ChipWinAnim] Found component for {betOption}, will spawn chips for: {betAmount}");
                 
                 // Ensure minimum amount for visual feedback
                 if (betAmount <= 0) betAmount = 50;
@@ -565,7 +561,7 @@ internal class ChipWinAnimationController : MonoBehaviour
         List<RectTransform> chipsToAnimate = new List<RectTransform>();
         int poolIdx = 0;
 
-        // Spawn new chips from pool at bet area positions
+        // Spawn chips from pool at bet area positions using proper chip combinations
         foreach (var (component, betArea, betAmount) in refundData)
         {
             if (betArea == null)
@@ -574,8 +570,10 @@ internal class ChipWinAnimationController : MonoBehaviour
                 continue;
             }
 
-            // Calculate how many chips to spawn (2-4 chips per bet area)
-            int chipCount = Mathf.Clamp(Mathf.CeilToInt((float)betAmount / 100f), 2, 4);
+            // Build chip combination that matches the exact bet amount
+            List<ChipCombinationItem> combination = BuildCombination(betAmount, chipValues, chipSprites);
+            int chipCount = combination.Count;
+            
             Debug.Log($"[ChipWinAnim] Spawning {chipCount} chips for area (amount: {betAmount})");
 
             for (int i = 0; i < chipCount && poolIdx < dealerPool.Count; i++, poolIdx++)
@@ -596,15 +594,8 @@ internal class ChipWinAnimationController : MonoBehaviour
                     Random.Range(-betAreaScatterX, betAreaScatterX),
                     Random.Range(-betAreaScatterY, betAreaScatterY));
 
-                // Set chip visual
-                int chipIdx = chipValues.Count > 0 ? Random.Range(0, Mathf.Min(chipValues.Count, chipSprites.Length)) : 0;
-                if (chipSprites != null && chipSprites.Length > 0 && chipIdx < chipSprites.Length)
-                {
-                    chipComponent.SetData(
-                        chipSprites[chipIdx],
-                        GameUtilities.FormatCurrency(betAmount / chipCount),
-                        chipIdx);
-                }
+                // Apply chip visual from combination
+                ApplyChipVisual(chipComponent, combination, i, chipSprites);
 
                 chipComponent.SetActive(true);
                 chipRT.localScale = Vector3.one * chipWorkingScale;

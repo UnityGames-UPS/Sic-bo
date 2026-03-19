@@ -34,7 +34,7 @@ public class HistoryRowView : MonoBehaviour
         if (WinAmount_Text)
         {
             WinAmount_Text.text = GameUtilities.FormatCurrency(entry.win_amount);
-            WinAmount_Text.color = entry.win_amount > 0 ? Color.green : Color.white;
+         //   WinAmount_Text.color = entry.win_amount > 0 ? Color.green : Color.white;
         }
 
         if (ProfitLoss_Text)

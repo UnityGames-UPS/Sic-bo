@@ -762,16 +762,14 @@ public class BetController : MonoBehaviour
                 // Use the stored bet data (captured before broadcasts cleared it)
                 if (chipWinAnimationController != null && pendingCancelBets.Count > 0)
                 {
-                    List<string> betOptionsToRefund = new List<string>(pendingCancelBets.Keys);
-                    double refundAmount = response.payload.refundAmount > 0 ? response.payload.refundAmount : currentTotalBet;
-                    
-                    Debug.Log($"[BetController] Calling PlayRefundAnimation: {betOptionsToRefund.Count} areas, refund: {refundAmount}");
-                    foreach (string opt in betOptionsToRefund)
+                    Debug.Log($"[BetController] Calling PlayRefundAnimation with {pendingCancelBets.Count} bet areas:");
+                    foreach (var kvp in pendingCancelBets)
                     {
-                        Debug.Log($"[BetController]   - {opt}");
+                        Debug.Log($"[BetController]   - {kvp.Key}: {kvp.Value}");
                     }
                     
-                    chipWinAnimationController.PlayRefundAnimation(betOptionsToRefund, refundAmount);
+                    // Pass exact amounts for each bet area
+                    chipWinAnimationController.PlayRefundAnimation(pendingCancelBets);
                 }
                 else
                 {
@@ -785,12 +783,6 @@ public class BetController : MonoBehaviour
                 betHistory.Clear();
                 currentTotalBet = 0;
                 UpdateTotalBet();
-                
-                // Update balance with animation if available
-                if (response.payload.balance > 0)
-                {
-                    uiController?.UpdateBalance(response.payload.balance);
-                }
                 break;
 
             case "UNDO":
@@ -816,14 +808,22 @@ public class BetController : MonoBehaviour
                     Debug.LogWarning("[BetController] UNDO - No bet info available!");
                 }
                 
+                // Use refundAmount from server if available, otherwise use stored amount
+                if (response.payload.refundAmount > 0)
+                {
+                    undoBetAmount = response.payload.refundAmount;
+                }
+                
                 // Trigger animation if we have a bet to refund
                 if (chipWinAnimationController != null && !string.IsNullOrEmpty(undoBetOption))
                 {
-                    List<string> betOptionsToRefund = new List<string> { undoBetOption };
-                    double refundAmount = response.payload.refundAmount > 0 ? response.payload.refundAmount : undoBetAmount;
+                    Dictionary<string, double> refundBets = new Dictionary<string, double>
+                    {
+                        { undoBetOption, undoBetAmount }
+                    };
                     
-                    Debug.Log($"[BetController] Calling PlayRefundAnimation for UNDO: {undoBetOption}, refund: {refundAmount}");
-                    chipWinAnimationController.PlayRefundAnimation(betOptionsToRefund, refundAmount);
+                    Debug.Log($"[BetController] Calling PlayRefundAnimation for UNDO: {undoBetOption}, amount: {undoBetAmount}");
+                    chipWinAnimationController.PlayRefundAnimation(refundBets);
                 }
                 else
                 {
@@ -838,12 +838,6 @@ public class BetController : MonoBehaviour
                 {
                     currentTotalBet = response.payload.totalBet;
                     UpdateTotalBet();
-                }
-                
-                // Update balance with animation if available
-                if (response.payload.balance > 0)
-                {
-                    uiController?.UpdateBalance(response.payload.balance);
                 }
                 break;
         }
