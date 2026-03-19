@@ -190,20 +190,20 @@ public class BonusIndicator : MonoBehaviour
         if (s.Length == 1)
         {
             if (row.layoutGroup != null)
-                row.layoutGroup.spacing = totalRowCount == 3 ? -37f : totalRowCount == 2 ? -25f : -5f;
+                row.layoutGroup.spacing = totalRowCount == 3 ? -47f : totalRowCount == 2 ? -40f : -15f;
             SetDigit(row.number1Image, s[0], numberSprites);
         }
         else if (s.Length == 2)
         {
             if (row.layoutGroup != null)
-                row.layoutGroup.spacing = totalRowCount == 3 ? -24f : totalRowCount == 2 ? -10f : -5f;
+                row.layoutGroup.spacing = totalRowCount == 3 ? -37f : totalRowCount == 2 ? -20f : -1.5f;
             SetDigit(row.number1Image, s[0], numberSprites);
             SetDigit(row.number2Image, s[1], numberSprites);
         }
         else if (s.Length == 3)
         {
             if (row.layoutGroup != null)
-                row.layoutGroup.spacing = totalRowCount == 3 ? -15f : 0f;
+                row.layoutGroup.spacing = totalRowCount == 3 ? -25f :  totalRowCount == 2 ? -10f : -1.5f;
             SetDigit(row.number1Image, s[0], numberSprites);
             SetDigit(row.number2Image, s[1], numberSprites);
             SetDigit(row.number3Image, s[2], numberSprites);
@@ -211,11 +211,11 @@ public class BonusIndicator : MonoBehaviour
         else
         {
             if (row.layoutGroup != null)
-                row.layoutGroup.spacing = totalRowCount == 3 ? -5f : 0f;
+                row.layoutGroup.spacing = totalRowCount == 3 ? -10f :  totalRowCount == 2 ? -1f : 0f;;
             SetDigit(row.number1Image, s[0], numberSprites);
             SetDigit(row.number2Image, s[1], numberSprites);
             SetDigit(row.number3Image, s[2], numberSprites);
-            SetDigit(row.number4Image, s[3], numberSprites);
+            SetDigit(row.number4Image, s[3], numberSprites);    
         }
     }
 

@@ -8538,8 +8538,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -100.99, y: -1.53}
-  m_SizeDelta: {x: 55.88, y: 282.49}
+  m_AnchoredPosition: {x: -99.9, y: -6.45}
+  m_SizeDelta: {x: 51.96, y: 276.39}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &166931258
 MonoBehaviour:
@@ -8561,9 +8561,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 480ddeacd8ced41b5ae81973b156aabd, type: 3}
+  m_Sprite: {fileID: 5560776881285777849, guid: 9136190afc45f42b294650f990c049d1, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -23902,7 +23902,7 @@ MonoBehaviour:
   testToken: a4eb62f368854fbbb31b597294039778
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
-  showDebugLogs: 0
+  showDebugLogs: 1
 --- !u!4 &410521237
 Transform:
   m_ObjectHideFlags: 0
@@ -25801,7 +25801,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 371.7, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 1080, y: 1920}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &448067927
@@ -25824,7 +25824,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 1825732331087661682, guid: cc7e0d96181738c458d6197eec4fd79d, type: 3}
+  m_Sprite: {fileID: -2580531756435671722, guid: eb01770bbf075724988d02902671f93e, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -42938,8 +42938,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 98.01, y: 10.19}
-  m_SizeDelta: {x: 62.49, y: 393.38}
+  m_AnchoredPosition: {x: 93.755, y: 2.5}
+  m_SizeDelta: {x: 62.49, y: 387.81}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &758145884
 MonoBehaviour:
@@ -42961,9 +42961,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 7efa0932cbe894aa18c44d050922fa8c, type: 3}
+  m_Sprite: {fileID: -6575643709715404429, guid: 89ea2f51bce17466ea9865e1f5234fcc, type: 3}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -46161,7 +46161,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -27.8, y: -74.4}
+  m_AnchoredPosition: {x: -27.2, y: -73.6}
   m_SizeDelta: {x: 140, y: 35}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &811553779
@@ -46211,17 +46211,17 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25.65
-  m_fontSizeBase: 36
+  m_fontSize: 26
+  m_fontSizeBase: 26
   m_fontWeight: 400
-  m_enableAutoSizing: 1
+  m_enableAutoSizing: 0
   m_fontSizeMin: 1
   m_fontSizeMax: 30
   m_fontStyle: 1
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 512
   m_textAlignment: 65535
-  m_characterSpacing: -9
+  m_characterSpacing: -9.7
   m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
@@ -94188,7 +94188,7 @@ MonoBehaviour:
   resultPlaneController: {fileID: 760194023}
   socketManager: {fileID: 410521236}
   diceResultHighlightDelay: 0.8
-  showDebugLogs: 0
+  showDebugLogs: 1
 --- !u!4 &1673436616
 Transform:
   m_ObjectHideFlags: 0
