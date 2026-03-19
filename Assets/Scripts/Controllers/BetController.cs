@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -68,6 +68,7 @@ public class BetController : MonoBehaviour
     [SerializeField] private UIController uiController;
     [SerializeField] private BonusIndicatorController bonusIndicatorController;
     [SerializeField] private OpponentChipManager opponentChipManager;
+    [SerializeField] private ChipWinAnimationController chipWinAnimationController;
     #endregion
 
     #region Private Fields - Pool
@@ -104,6 +105,11 @@ public class BetController : MonoBehaviour
     private Vector2 mainChipOriginalPosition;
     private Tween mainChipTween;
     private Sprite[] currentLevelChipSprites; // Cache for current level's chip sprites
+
+    // Store bet data for refund animations (before broadcasts clear them)
+    private Dictionary<string, double> pendingCancelBets = new Dictionary<string, double>();
+    private string pendingUndoBetOption = "";
+    private double pendingUndoBetAmount = 0;
 
     // GC optimisation: reuse collections instead of allocating every call/round
     private readonly HashSet<int> _uniqueDiceCache = new HashSet<int>();
@@ -388,7 +394,10 @@ public class BetController : MonoBehaviour
     private void UpdateAllComponentChipValues()
     {
         foreach (var kvp in activeComponents)
-            kvp.Value?.UpdateChipValues(currentChipValues);
+        {
+            // Update both chip values AND sprites for the current level
+            kvp.Value?.Initialize(GetCurrentLevelSprites(), currentChipValues);
+        }
     }
 
     private void SetupWinRatios()
@@ -748,17 +757,93 @@ public class BetController : MonoBehaviour
                 break;
 
             case "CANCEL":
+                Debug.Log($"[BetController] CANCEL - pendingCancelBets.Count: {pendingCancelBets.Count}, chipWinAnimationController: {(chipWinAnimationController != null ? "assigned" : "NULL")}");
+               
+                // Use the stored bet data (captured before broadcasts cleared it)
+                if (chipWinAnimationController != null && pendingCancelBets.Count > 0)
+                {
+                    List<string> betOptionsToRefund = new List<string>(pendingCancelBets.Keys);
+                    double refundAmount = response.payload.refundAmount > 0 ? response.payload.refundAmount : currentTotalBet;
+                    
+                    Debug.Log($"[BetController] Calling PlayRefundAnimation: {betOptionsToRefund.Count} areas, refund: {refundAmount}");
+                    foreach (string opt in betOptionsToRefund)
+                    {
+                        Debug.Log($"[BetController]   - {opt}");
+                    }
+                    
+                    chipWinAnimationController.PlayRefundAnimation(betOptionsToRefund, refundAmount);
+                }
+                else
+                {
+                    Debug.LogWarning($"[BetController] NOT calling PlayRefundAnimation! pendingCancelBets: {pendingCancelBets.Count}");
+                }
+                
+                // Clear the stored data
+                pendingCancelBets.Clear();
+                
                 areaBets.Clear();
                 betHistory.Clear();
                 currentTotalBet = 0;
                 UpdateTotalBet();
+                
+                // Update balance with animation if available
+                if (response.payload.balance > 0)
+                {
+                    uiController?.UpdateBalance(response.payload.balance);
+                }
                 break;
 
             case "UNDO":
+                Debug.Log($"[BetController] UNDO - chipWinAnimationController: {(chipWinAnimationController != null ? "assigned" : "NULL")}");
+                
+                // Use stored bet data (captured BEFORE the action was sent)
+                string undoBetOption = pendingUndoBetOption;
+                double undoBetAmount = pendingUndoBetAmount;
+                
+                // Fallback to server response if stored data is missing
+                if (string.IsNullOrEmpty(undoBetOption) && response.payload.bet != null && !string.IsNullOrEmpty(response.payload.bet.betOption))
+                {
+                    undoBetOption = response.payload.bet.betOption;
+                    undoBetAmount = response.payload.bet.amount;
+                    Debug.Log($"[BetController] UNDO using server response: {undoBetOption}, amount: {undoBetAmount}");
+                }
+                else if (!string.IsNullOrEmpty(undoBetOption))
+                {
+                    Debug.Log($"[BetController] UNDO using stored data: {undoBetOption}, amount: {undoBetAmount}");
+                }
+                else
+                {
+                    Debug.LogWarning("[BetController] UNDO - No bet info available!");
+                }
+                
+                // Trigger animation if we have a bet to refund
+                if (chipWinAnimationController != null && !string.IsNullOrEmpty(undoBetOption))
+                {
+                    List<string> betOptionsToRefund = new List<string> { undoBetOption };
+                    double refundAmount = response.payload.refundAmount > 0 ? response.payload.refundAmount : undoBetAmount;
+                    
+                    Debug.Log($"[BetController] Calling PlayRefundAnimation for UNDO: {undoBetOption}, refund: {refundAmount}");
+                    chipWinAnimationController.PlayRefundAnimation(betOptionsToRefund, refundAmount);
+                }
+                else
+                {
+                    Debug.LogWarning($"[BetController] NOT calling PlayRefundAnimation for UNDO!");
+                }
+                
+                // Clear stored data
+                pendingUndoBetOption = "";
+                pendingUndoBetAmount = 0;
+                
                 if (response.payload.totalBet >= 0)
                 {
                     currentTotalBet = response.payload.totalBet;
                     UpdateTotalBet();
+                }
+                
+                // Update balance with animation if available
+                if (response.payload.balance > 0)
+                {
+                    uiController?.UpdateBalance(response.payload.balance);
                 }
                 break;
         }
@@ -1024,6 +1109,19 @@ public class BetController : MonoBehaviour
     {
         if (!isBettingEnabled || isProcessingBetAction) { uiController?.ShowInGamePopup("Please wait..."); return; }
         AudioManager.Instance?.PlayButtonClick();
+        
+        // Store the last bet data BEFORE it gets cleared by broadcasts
+        pendingUndoBetOption = "";
+        pendingUndoBetAmount = 0;
+        
+        if (betHistory.Count > 0)
+        {
+            BetAction lastBet = betHistory[betHistory.Count - 1];
+            pendingUndoBetOption = lastBet.betOption;
+            pendingUndoBetAmount = lastBet.amount;
+            Debug.Log($"[BetController] Stored undo data: {pendingUndoBetOption}, amount: {pendingUndoBetAmount}");
+        }
+        
         isProcessingBetAction = true;
         currentBetAction = "UNDO";
         receivedBroadcastCount = 0;
@@ -1034,6 +1132,15 @@ public class BetController : MonoBehaviour
     {
         if (!isBettingEnabled || isProcessingBetAction) { uiController?.ShowInGamePopup("Please wait..."); return; }
         AudioManager.Instance?.PlayButtonClick();
+        
+        // Store ALL current bet data BEFORE it gets cleared by broadcasts
+        pendingCancelBets.Clear();
+        foreach (var kvp in areaBets)
+        {
+            pendingCancelBets[kvp.Key] = kvp.Value;
+        }
+        Debug.Log($"[BetController] Stored cancel data: {pendingCancelBets.Count} bet areas");
+        
         isProcessingBetAction = true;
         currentBetAction = "CANCEL";
         receivedBroadcastCount = 0;

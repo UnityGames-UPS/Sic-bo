@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
+using System.Collections;
 
 public class HistoryController : MonoBehaviour
 {
@@ -17,6 +18,10 @@ public class HistoryController : MonoBehaviour
     [SerializeField] private Button Next5Page_Button;
     //[SerializeField] private Button Close_Button;
 
+    [Header("Loading UI")]
+    [SerializeField] private GameObject LoadingPanel;
+    [SerializeField] private TMP_Text LoadingText;
+
     [Header("References")]
     [SerializeField] private GameManager gameManager;
     [SerializeField] private UIController uiController;
@@ -27,6 +32,8 @@ public class HistoryController : MonoBehaviour
     private int totalPages = 1;
     private List<HistoryEntry> currentHistoryData = new List<HistoryEntry>();
     private bool isWaitingForData = false;
+    private Coroutine loadingCoroutine = null;
+    private const float MIN_LOADING_TIME = 0.5f;
     #endregion
 
     #region Unity Lifecycle
@@ -34,7 +41,17 @@ public class HistoryController : MonoBehaviour
     {
         SetupButtons();
         InitializeRows();
+        HideLoadingPanel();
         HideHistoryPanel();
+    }
+
+    private void OnDestroy()
+    {
+        if (loadingCoroutine != null)
+        {
+            StopCoroutine(loadingCoroutine);
+            loadingCoroutine = null;
+        }
     }
     #endregion
 
@@ -90,6 +107,17 @@ public class HistoryController : MonoBehaviour
         foreach (var row in HistoryRows)
             row?.gameObject.SetActive(false);
     }
+
+    private void ShowLoadingPanel()
+    {
+        if (LoadingPanel) LoadingPanel.SetActive(true);
+        if (LoadingText) LoadingText.text = "Loading history...";
+    }
+
+    private void HideLoadingPanel()
+    {
+        if (LoadingPanel) LoadingPanel.SetActive(false);
+    }
     #endregion
 
     #region Internal API
@@ -98,24 +126,44 @@ public class HistoryController : MonoBehaviour
         if (HistoryPanel) HistoryPanel.SetActive(true);
         currentPage = 1;
         totalPages = 1;
+        
+        // Show loading immediately when opening
+        ShowLoadingPanel();
+        
         RequestPage(1);
     }
 
     internal void HideHistoryPanel()
     {
         if (HistoryPanel) HistoryPanel.SetActive(false);
+        
+        // Clean up loading coroutine
+        if (loadingCoroutine != null)
+        {
+            StopCoroutine(loadingCoroutine);
+            loadingCoroutine = null;
+        }
+        
+        HideLoadingPanel();
         isWaitingForData = false;
     }
 
     internal void UpdateHistoryData(List<HistoryEntry> history, HistoryMeta meta)
     {
-        if (history == null || meta == null) { isWaitingForData = false; return; }
+        if (history == null || meta == null) 
+        { 
+            isWaitingForData = false;
+            HideLoadingPanel();
+            return; 
+        }
 
         isWaitingForData = false;
         currentHistoryData = history;
         currentPage = meta.page;
         totalPages = meta.pages;
 
+        // Hide loading and show data
+        HideLoadingPanel();
         UpdateRows();
         UpdatePageInfo();
         UpdateNavigationButtons();
@@ -134,9 +182,28 @@ public class HistoryController : MonoBehaviour
         }
 
         isWaitingForData = true;
-        gameManager.RequestHistory(page);
+        
+        // Start loading coroutine with minimum display time
+        if (loadingCoroutine != null) StopCoroutine(loadingCoroutine);
+        loadingCoroutine = StartCoroutine(ShowLoadingWithMinTime(page));
     }
 
+    private IEnumerator ShowLoadingWithMinTime(int page)
+    {
+        float startTime = Time.time;
+        
+        // Show loading immediately
+        ShowLoadingPanel();
+        
+        // Wait minimum time before making the request (gives UI time to update)
+        yield return new WaitForSeconds(MIN_LOADING_TIME);
+        
+        // Now make the actual request
+        gameManager.RequestHistory(page);
+        
+        loadingCoroutine = null;
+    }
+    
     private void OnPrevPageClicked()
     {
         if (currentPage > 1) RequestPage(currentPage - 1);

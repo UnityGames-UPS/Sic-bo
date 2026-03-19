@@ -181,6 +181,16 @@ public static class GameUtilities
             if (_chipCombResultCache.Count >= MaxChipCombinationCount) break;
         }
 
+        // If there's a remainder and we have at least one chip, add the remainder to the last chip
+        // This ensures the displayed bet amount matches the actual bet amount
+        if (remaining > tolerance && _chipCombResultCache.Count > 0)
+        {
+            int lastIndex = _chipCombResultCache.Count - 1;
+            ChipCombinationItem lastChip = _chipCombResultCache[lastIndex];
+            lastChip.amount += remaining;
+            _chipCombResultCache[lastIndex] = lastChip;
+        }
+
         return _chipCombResultCache;
     }
     #endregion

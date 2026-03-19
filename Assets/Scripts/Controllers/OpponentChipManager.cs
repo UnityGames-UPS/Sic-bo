@@ -378,6 +378,7 @@ public class OpponentChipManager : MonoBehaviour
                 int winChipCount = UnityEngine.Random.Range(2, 4);
                 double estimatedWinPerChip = totalBetAmount > 0 ? totalBetAmount * 2.0 / winChipCount : 0;
 
+                // Spawn all win chips at once (classic casino style)
                 for (int i = 0; i < winChipCount; i++)
                 {
                     RectTransform winChipRT = GetPooledChip();
@@ -410,22 +411,15 @@ public class OpponentChipManager : MonoBehaviour
                         Random.Range(-dealerScatterX, dealerScatterX),
                         Random.Range(-dealerScatterY, dealerScatterY), 0f);
                     winChipRT.localScale = Vector3.zero;
-                    winChipRT.DOScale(chipScale * 0.9f, 0.18f).SetEase(Ease.OutBack);
-                    yield return new WaitForSeconds(0.04f);
-                    winChipRT.SetParent(canvasRoot, worldPositionStays: true);
-
-                    // Use world-space position – reliable across all resolutions/ratios.
-                    float winCanvasScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
-                    Vector3 winTargetWorldPos = targetContainer.position + new Vector3(
-                        Random.Range(-betAreaScatterX, betAreaScatterX) * winCanvasScale,
-                        Random.Range(-betAreaScatterY, betAreaScatterY) * winCanvasScale,
-                        0f);
-
-                    winChipRT.DOMove(winTargetWorldPos, dealerToBetDuration * 0.8f).SetEase(Ease.OutQuad);
+                    
+                    // Add slight random delay for more natural appearance (but much faster than before)
+                    float quickDelay = i * 0.01f;
+                    winChipRT.DOScale(chipScale * 0.9f, 0.18f).SetEase(Ease.OutBack).SetDelay(quickDelay);
+                    
+                    // Start moving to target immediately without waiting
+                    StartCoroutine(CR_AnimateWinChipToTarget(winChipRT, targetContainer, canvasRoot, quickDelay));
 
                     activeWinChips.Add(winChipRT);
-
-                    yield return new WaitForSeconds(chipStaggerDelay);
                 }
             }
         }
@@ -433,6 +427,26 @@ public class OpponentChipManager : MonoBehaviour
         yield return new WaitForSeconds(dealerToBetDuration * 0.8f);
 
         winAnimationCoroutine = null;
+    }
+    
+    // Helper coroutine to animate individual win chips without blocking the main loop
+    private IEnumerator CR_AnimateWinChipToTarget(RectTransform winChipRT, RectTransform targetContainer, Transform canvasRoot, float initialDelay)
+    {
+        if (initialDelay > 0)
+            yield return new WaitForSeconds(initialDelay);
+            
+        yield return new WaitForSeconds(0.18f); // Wait for scale animation
+        
+        winChipRT.SetParent(canvasRoot, worldPositionStays: true);
+
+        // Use world-space position – reliable across all resolutions/ratios.
+        float winCanvasScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
+        Vector3 winTargetWorldPos = targetContainer.position + new Vector3(
+            Random.Range(-betAreaScatterX, betAreaScatterX) * winCanvasScale,
+            Random.Range(-betAreaScatterY, betAreaScatterY) * winCanvasScale,
+            0f);
+
+        winChipRT.DOMove(winTargetWorldPos, dealerToBetDuration * 0.8f).SetEase(Ease.OutQuad);
     }
     private double ParseFormattedCurrency(string formatted)
     {
