@@ -1019,8 +1019,8 @@ public class UIController : MonoBehaviour
             {
                 if (winPanelRT != null)
                     winPanelRT.DOAnchorPosY(targetY, winFlyDuration).SetEase(Ease.OutCubic);
-                // Scale UP to 1.5x for cloud/smoke dissipation effect
-                WinPanel.transform.DOScale(1.5f, winFlyDuration).SetEase(Ease.OutCubic);
+                // Scale UP to 1.3x for cloud/smoke dissipation effect
+                WinPanel.transform.DOScale(1.3f, winFlyDuration).SetEase(Ease.OutCubic);
                 cg.DOFade(0f, winFlyDuration * 0.8f).SetEase(Ease.InQuad);
             })
             .AppendInterval(winFlyDuration)
