@@ -268,6 +268,9 @@ public class UIController : MonoBehaviour
         Bind(ExpandSideMenu_Button, () => { AudioManager.Instance?.PlayButtonClick(); OnExpand(); });
         Bind(ShrinkSideMenu_Button, () => { AudioManager.Instance?.PlayButtonClick(); OnShrink(); });
 
+        // Setup background panel click to close side menu
+        SetupMenuPanelBackgroundClick();
+
         AddButtonPressAnimation(CasualRoom_Button, 0.95f);
         AddButtonPressAnimation(NoviceRoom_Button, 0.95f);
         AddButtonPressAnimation(ExpertRoom_Button, 0.95f);
@@ -319,6 +322,42 @@ public class UIController : MonoBehaviour
     private void OnButtonReleased(Transform buttonTransform)
     {
         buttonTransform.localScale = Vector3.one;
+    }
+
+    private void SetupMenuPanelBackgroundClick()
+    {
+        if (MenuPanel_Object == null) return;
+
+        // Ensure MenuPanel has a Button component to detect clicks
+        Button bgButton = MenuPanel_Object.GetComponent<Button>();
+        if (bgButton == null)
+            bgButton = MenuPanel_Object.AddComponent<Button>();
+
+        // Ensure MenuPanel has an Image component for raycast target
+        Image bgImage = MenuPanel_Object.GetComponent<Image>();
+        if (bgImage == null)
+        {
+            bgImage = MenuPanel_Object.AddComponent<Image>();
+            bgImage.color = new Color(0, 0, 0, 0.01f); // Nearly transparent but still clickable
+        }
+
+        // Remove any existing listeners and add close menu action
+        bgButton.onClick.RemoveAllListeners();
+        bgButton.onClick.AddListener(() =>
+        {
+            AudioManager.Instance?.PlayButtonClick();
+            CloseSideMenu();
+        });
+
+        // Make sure MenuPanelContainer blocks raycasts so clicks inside the menu don't close it
+        if (MenuPanelContainer_Object != null)
+        {
+            CanvasGroup containerGroup = MenuPanelContainer_Object.GetComponent<CanvasGroup>();
+            if (containerGroup == null)
+                containerGroup = MenuPanelContainer_Object.AddComponent<CanvasGroup>();
+
+            containerGroup.blocksRaycasts = true; // Block clicks from reaching the background
+        }
     }
 
     private void InitializePopups()
@@ -966,33 +1005,23 @@ public class UIController : MonoBehaviour
         WinAmount_Text.gameObject.SetActive(true);
         WinPanel.SetActive(true);
 
-        // Target Y is where BalanceTarget sits; fall back to flying upward if not assigned
+        // Simply fly upward by winFlyDistance (ignore BalanceTarget)
         float targetY = winPanelOriginalPos.y + winFlyDistance;
-        if (BalanceTarget != null && winPanelRT != null)
-        {
-            // Convert balance world position → local anchoredPosition Y in same canvas space
-            Vector2 screenPt = RectTransformUtility.WorldToScreenPoint(null, BalanceTarget.position);
-            RectTransform canvasRT = WinPanel.transform.parent as RectTransform;
-            if (canvasRT != null &&
-                RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRT, screenPt, null, out Vector2 localPt))
-            {
-                targetY = localPt.y;
-            }
-        }
 
         winTween = DOTween.Sequence()
-            // Pop in
+            // Pop in at original position
             .Append(WinPanel.transform.DOScale(1.2f, 0.25f).SetEase(Ease.OutBack))
             .Append(WinPanel.transform.DOScale(1f, 0.15f).SetEase(Ease.InOutSine))
             // Hold
             .AppendInterval(winHoldDuration)
-            // Fly to balance Y + fade out simultaneously
+            // Fly upward + scale UP (cloud dissipation effect) + fade out simultaneously
             .AppendCallback(() =>
             {
                 if (winPanelRT != null)
-                    winPanelRT.DOAnchorPosY(targetY, winFlyDuration).SetEase(Ease.InCubic);
-                WinPanel.transform.DOScale(0.5f, winFlyDuration).SetEase(Ease.InCubic);
-                cg.DOFade(0f, winFlyDuration * 0.75f).SetEase(Ease.InQuad);
+                    winPanelRT.DOAnchorPosY(targetY, winFlyDuration).SetEase(Ease.OutCubic);
+                // Scale UP to 1.5x for cloud/smoke dissipation effect
+                WinPanel.transform.DOScale(1.5f, winFlyDuration).SetEase(Ease.OutCubic);
+                cg.DOFade(0f, winFlyDuration * 0.8f).SetEase(Ease.InQuad);
             })
             .AppendInterval(winFlyDuration)
             .OnComplete(() =>

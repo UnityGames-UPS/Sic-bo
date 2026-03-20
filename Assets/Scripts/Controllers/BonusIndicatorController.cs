@@ -30,9 +30,13 @@ internal class BonusIndicatorController : MonoBehaviour
     [SerializeField] private float fallStartScale = 3.5f;
     [SerializeField] private float fallDuration = 0.45f;
     [SerializeField] private Ease fallEase = Ease.OutBounce;
-    [SerializeField] private float landingPunchScale = 0.25f;
     [SerializeField] private float landingPunchDuration = 0.3f;
     [SerializeField] private float fallStaggerDelay = 0.06f;
+    
+    [Header("Earthquake Landing Effect")]
+    [SerializeField] private float earthquakeStrength = 15f;
+    [SerializeField] private int earthquakeVibrato = 20;
+    [SerializeField] private float earthquakeRandomness = 90f;
 
     [Header("Win-Exit Animation")]
     [SerializeField] private float winHoldDuration = 1.5f;
@@ -263,13 +267,48 @@ internal class BonusIndicatorController : MonoBehaviour
 
         fallSeq.AppendCallback(() =>
         {
-            indicator.transform.DOPunchScale(
-                Vector3.one * landingPunchScale,
-                landingPunchDuration,
-                vibrato: 1,
-                elasticity: 0.5f
+            // Earthquake shake effect - chain multiple shakes for 2-3 tremors
+            float shakeDuration = landingPunchDuration / 3f; // Split duration across shakes
+            
+            Sequence shakeSeq = DOTween.Sequence();
+            
+            // First shake - strongest
+            shakeSeq.Append(
+                indicator.transform.DOShakePosition(
+                    shakeDuration,
+                    strength: earthquakeStrength,
+                    vibrato: earthquakeVibrato,
+                    randomness: earthquakeRandomness,
+                    snapping: false,
+                    fadeOut: false
+                )
             );
-
+            
+            // Second shake - medium
+            shakeSeq.Append(
+                indicator.transform.DOShakePosition(
+                    shakeDuration,
+                    strength: earthquakeStrength * 0.7f,
+                    vibrato: earthquakeVibrato,
+                    randomness: earthquakeRandomness,
+                    snapping: false,
+                    fadeOut: false
+                )
+            );
+            
+            // Third shake - weakest (aftershock)
+            shakeSeq.Append(
+                indicator.transform.DOShakePosition(
+                    shakeDuration,
+                    strength: earthquakeStrength * 0.4f,
+                    vibrato: earthquakeVibrato / 2,
+                    randomness: earthquakeRandomness,
+                    snapping: false,
+                    fadeOut: true
+                )
+            );
+            
+            shakeSeq.Play();
         });
 
         string fallSeqKey = $"fall_{betOption}";
