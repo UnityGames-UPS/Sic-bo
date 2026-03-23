@@ -290,7 +290,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -5716732395296434633, guid: 8386ea0eb3363504a98457645faaefd1, type: 3}
+  m_Sprite: {fileID: -4944119168006809502, guid: cd8cd18764c2c46909c86d810026f27a, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -313,43 +313,32 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   textureArray:
-  - {fileID: -5716732395296434633, guid: 8386ea0eb3363504a98457645faaefd1, type: 3}
-  - {fileID: 5113620267372208275, guid: 7d70f049fb94956489a2fd44b86ae91a, type: 3}
-  - {fileID: -2230701352378122133, guid: 2c01a8ed8b575354f91feff7cc87dbe4, type: 3}
-  - {fileID: 3460556175308210049, guid: c40877609a7b46c4d8cd13c45a845172, type: 3}
-  - {fileID: -3514462321555895238, guid: a688971229ddb6742a6c596ccd9556d5, type: 3}
-  - {fileID: 2665774727634501340, guid: b8df720fb531c674e96ec2d8610106ea, type: 3}
-  - {fileID: -6575750059336120436, guid: 750226f4093aaa141bf2f07f17c7359c, type: 3}
-  - {fileID: 8039302323241543503, guid: 47bbf1f6b7e38bb4fbb5488f3aa35e7e, type: 3}
-  - {fileID: -9029088984261421148, guid: 6581d30e77d535b4988e2bfa178e463a, type: 3}
-  - {fileID: 4594069239825094588, guid: 29ef76d8cd012bc47b07c1cf7793d824, type: 3}
-  - {fileID: -4723441525104152190, guid: a3c47e07abc5a0d4a997bd32b29681f5, type: 3}
-  - {fileID: -353324042517839907, guid: 3600554ff75838c46a4c35322540231a, type: 3}
-  - {fileID: -9134652243033967326, guid: 68185fdeb8006fb45a7be35f7a0f66a1, type: 3}
-  - {fileID: 639112550453032271, guid: 288a3b47d53f55343b9f6e37bcd546bd, type: 3}
-  - {fileID: 2304712970378855796, guid: a9b48072af8f8e84fb8847831ea78421, type: 3}
-  - {fileID: 4920183505232102172, guid: 27a3cdc91296dcf40862231fdbe9b189, type: 3}
-  - {fileID: 5906846915192301138, guid: 50f3d5d1d41f1ae45bbada2067e9b163, type: 3}
-  - {fileID: 2365275978398875958, guid: 714da14b0f0093d41bd84e36a80d313a, type: 3}
-  - {fileID: 2489905288437332012, guid: 08d9c5ad31607634c91ce4128d5f8d41, type: 3}
-  - {fileID: -2064407535384197688, guid: 401f27735421a0e4a8972a83d0e27cf4, type: 3}
-  - {fileID: 6697190846267279503, guid: 67c1763032a439e4d88947e794ded035, type: 3}
-  - {fileID: 6008536215942137386, guid: a971cb5e22c5f094188f6d563665c518, type: 3}
-  - {fileID: 7338710758115004555, guid: e6f319c622acd184d9561c9214e1567c, type: 3}
-  - {fileID: 1315778021564193202, guid: 32be7d22978db6e46b6c8cb54c140d8b, type: 3}
-  - {fileID: -5915418750296807736, guid: 84a05796439fbff4b95ca1f8c9b06dfd, type: 3}
-  - {fileID: 6333524538212323519, guid: ff17a4c6d3606344d83868dd6b2cd816, type: 3}
-  - {fileID: 1962113987263464859, guid: 7412e8c00b59d594c95bc8ccdf5274cc, type: 3}
-  - {fileID: 4803432369813922911, guid: bcf2ec490f0b44147a167f99fcc34ac1, type: 3}
-  - {fileID: -7593763941809945571, guid: b92ab95be40c0ab4580dfbed209befba, type: 3}
-  - {fileID: 7298112461742240035, guid: 1b0570d9b8b18dd45ae3d133eebc31df, type: 3}
+  - {fileID: -4944119168006809502, guid: cd8cd18764c2c46909c86d810026f27a, type: 3}
+  - {fileID: -1396718539606803394, guid: e750ce3cb1dbd48ce9f1103283672615, type: 3}
+  - {fileID: 1186625987488397238, guid: cefd3aa43d0464ef8b0f45d83977e257, type: 3}
+  - {fileID: 8302593659867938798, guid: 18d18be29e85946d1a40419da5cca52e, type: 3}
+  - {fileID: 600604335486194120, guid: bd462a147d9724c89aa205e13e70b393, type: 3}
+  - {fileID: -7880341866740099988, guid: e2f55bc48b24345d58dc7b04c2ba9f2c, type: 3}
+  - {fileID: -4117537811599148744, guid: ebcf886f6b2544f4db51aaf94b059f0c, type: 3}
+  - {fileID: 4841682102314937730, guid: 3b2c9b44371a04e59b3bf4059b2f1d80, type: 3}
+  - {fileID: 3835129041993412522, guid: 0a3602958861c4b57a79d90fb0cd4bf2, type: 3}
+  - {fileID: 1023520083578683943, guid: 267ed916841524779b2f9280d30c3389, type: 3}
+  - {fileID: 8725598057594687939, guid: 788b30036e8b4432c88c9c8a6e6ef38c, type: 3}
+  - {fileID: 7452804639324697687, guid: 74877756229254197bcbcc71aecad4a1, type: 3}
+  - {fileID: 4820769761189363744, guid: 96d621503d78c402bae85d0e83b7f222, type: 3}
+  - {fileID: -1059333556949846313, guid: c105bcab1a6a74a0b96a40e3ddc99bfa, type: 3}
+  - {fileID: 7408066529111198375, guid: f9b59960461194641afd209d902aad50, type: 3}
+  - {fileID: 699930414921709648, guid: a8962e76e90fe42b5a53cecf04195bbe, type: 3}
+  - {fileID: 7676407386787572526, guid: 0eb3bcbced8b64fd0b359f3571209639, type: 3}
+  - {fileID: 1888052674571961645, guid: 2306f2e6125dd4dd7b8fdfc8899ad352, type: 3}
+  - {fileID: -3635008819409705835, guid: 1ba307d0673264698bd732b6b37bf9e4, type: 3}
   rendererDelegate: {fileID: 1400663636270121034}
   useSharedMaterial: 1
   doLoopAnimation: 1
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
-  AnimationSpeed: 30
+  AnimationSpeed: 18
   delayBetweenLoop: 0
 --- !u!1 &6814881221705434442
 GameObject:

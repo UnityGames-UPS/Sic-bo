@@ -827,10 +827,9 @@ public class DiceBoxAnimationController : MonoBehaviour
         // - At 120 FPS: 60/120 = 0.5 (each sprite shown shorter)
         float ratio = targetFPS / averageFPS;
 
-        return Mathf.Clamp(ratio, 0.6f, 1.8f);
+        return Mathf.Clamp(ratio, 0.8f, 1.2f);
     }
 
     #endregion
 
-
-}
+}   
