@@ -278,9 +278,9 @@ internal class ChipWinAnimationController : MonoBehaviour
             Transform chipParent = playerBetComp.transform;
             AudioManager.Instance?.PlayChipAdd();
 
-            //bool spawnWinChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
-            //if (spawnWinChips)
-           // {
+            bool spawnWinChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
+            if (spawnWinChips)
+            {
                 var combination = BuildCombination(area.winAmount, chipValues, chipSprites);
                 int count = Mathf.Clamp(combination.Count, minChipsPerWin, maxChipsPerWin);
 
@@ -305,7 +305,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                     assignments.Add((rt, chipParent, localPos));
                     activeWinChips.Add(rt);
                 }
-            //}
+            }
 
             int stakeCount = CalculateStakeReturnChipCount(area.winRatio, area.betAmount);
             var stakeCombination = BuildCombination(area.betAmount, chipValues, chipSprites);
@@ -513,25 +513,25 @@ internal class ChipWinAnimationController : MonoBehaviour
         Debug.Log($"[ChipWinAnim] CR_RefundChips called with {refundBets.Count} bet areas");
 
         List<(PlayerBetComponent component, Transform betArea, double amount)> refundData = new List<(PlayerBetComponent, Transform, double)>();
-        
+
         // Collect component data for each bet area with its exact amount
         foreach (var kvp in refundBets)
         {
             string betOption = kvp.Key;
             double betAmount = kvp.Value;
-            
+
             Debug.Log($"[ChipWinAnim] Processing betOption: {betOption}, exact amount: {betAmount}");
             PlayerBetComponent comp = betController.GetPlayerBetComponent(betOption);
-            
+
             if (comp != null)
             {
                 Transform betArea = comp.transform;
-                
+
                 Debug.Log($"[ChipWinAnim] Found component for {betOption}, will spawn chips for: {betAmount}");
-                
+
                 // Ensure minimum amount for visual feedback
                 if (betAmount <= 0) betAmount = 50;
-                
+
                 refundData.Add((comp, betArea, betAmount));
             }
             else
@@ -573,7 +573,7 @@ internal class ChipWinAnimationController : MonoBehaviour
             // Build chip combination that matches the exact bet amount
             List<ChipCombinationItem> combination = BuildCombination(betAmount, chipValues, chipSprites);
             int chipCount = combination.Count;
-            
+
             Debug.Log($"[ChipWinAnim] Spawning {chipCount} chips for area (amount: {betAmount})");
 
             for (int i = 0; i < chipCount && poolIdx < dealerPool.Count; i++, poolIdx++)
@@ -588,7 +588,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                 // Position chip at bet area location
                 chipRT.SetParent(targetCanvas.transform, worldPositionStays: false);
                 Vector2 betAreaCanvasPos = GetCanvasPosition(betArea as RectTransform);
-                
+
                 // Add random scatter
                 chipRT.anchoredPosition = betAreaCanvasPos + new Vector2(
                     Random.Range(-betAreaScatterX, betAreaScatterX),
@@ -652,7 +652,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                 {
                     if (chipRT == null) return;
                     AudioManager.Instance?.PlayChipAdd();
-                    
+
                     // Return chip to pool
                     chipRT.gameObject.SetActive(false);
                     chipRT.SetParent(dealerSpawnPoint, worldPositionStays: false);
@@ -693,7 +693,7 @@ internal class ChipWinAnimationController : MonoBehaviour
     {
         if (chip == null || sprites == null || sprites.Length == 0 || combination.Count == 0) return;
 
-        
+
         ChipCombinationItem item = combination[i % combination.Count];
         int safeIdx = Mathf.Clamp(item.chipIndex, 0, sprites.Length - 1);
 
