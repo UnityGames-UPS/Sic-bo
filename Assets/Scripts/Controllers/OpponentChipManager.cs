@@ -135,14 +135,14 @@ public class OpponentChipManager : MonoBehaviour
     {
         if (chipRT == null) return;
         chipRT.DOKill();
-        
+
         // Clear badge before returning to pool
         Chip chipComponent = chipRT.GetComponent<Chip>();
         if (chipComponent != null)
         {
             chipComponent.ClearLeaderboardBadge();
         }
-        
+
         chipRT.gameObject.SetActive(false);
         chipRT.localScale = Vector3.one;
 
@@ -188,16 +188,16 @@ public class OpponentChipManager : MonoBehaviour
     internal void SetLeaderboardData(Leaderboards leaderboards)
     {
         currentLeaderboards = leaderboards;
-
-        if (activeOpponentChips.Count == 0 && activeWinChips.Count == 0)
-        {
-            lockedLeaderboards = leaderboards;
-        }
+        // Don't automatically lock here - only lock via LockLeaderboardsForRound
+        // This prevents using stale locked data from previous rounds
     }
 
     internal void LockLeaderboardsForRound()
     {
+        // Lock the current leaderboards for this round
+        // All chips spawned during this round will use this snapshot
         lockedLeaderboards = currentLeaderboards;
+        Debug.Log("[OpponentChipManager] Leaderboards locked for round");
     }
 
     internal void SetCashoutData(List<Payout> payouts) => currentPayouts = payouts;
@@ -258,6 +258,8 @@ public class OpponentChipManager : MonoBehaviour
         chipToSpawnPosition.Clear();
         chipToOriginalBadge.Clear();
         winningBetAreas.Clear();
+
+        // Clear locked leaderboards to prevent stale badge data from previous round
         lockedLeaderboards = null;
 
         foreach (var container in opponentContainers.Values)
@@ -420,11 +422,11 @@ public class OpponentChipManager : MonoBehaviour
                         Random.Range(-dealerScatterX, dealerScatterX),
                         Random.Range(-dealerScatterY, dealerScatterY), 0f);
                     winChipRT.localScale = Vector3.zero;
-                    
+
                     // Add slight random delay for more natural appearance (but much faster than before)
                     float quickDelay = i * 0.01f;
                     winChipRT.DOScale(chipScale * 0.9f, 0.18f).SetEase(Ease.OutBack).SetDelay(quickDelay);
-                    
+
                     // Start moving to target immediately without waiting
                     StartCoroutine(CR_AnimateWinChipToTarget(winChipRT, targetContainer, canvasRoot, quickDelay));
 
@@ -437,15 +439,15 @@ public class OpponentChipManager : MonoBehaviour
 
         winAnimationCoroutine = null;
     }
-    
+
     // Helper coroutine to animate individual win chips without blocking the main loop
     private IEnumerator CR_AnimateWinChipToTarget(RectTransform winChipRT, RectTransform targetContainer, Transform canvasRoot, float initialDelay)
     {
         if (initialDelay > 0)
             yield return new WaitForSeconds(initialDelay);
-            
+
         yield return new WaitForSeconds(0.18f); // Wait for scale animation
-        
+
         winChipRT.SetParent(canvasRoot, worldPositionStays: true);
 
         // Use world-space position – reliable across all resolutions/ratios.
@@ -502,22 +504,42 @@ public class OpponentChipManager : MonoBehaviour
         chip.SetSprite(grayChipSprite);
         chip.SetAmount(GameUtilities.FormatCurrency(amount));
         chip.SetActive(true);
-        
-        // BADGE FIX: Only use locked leaderboards (not current), and only if locked exists.
-        // This prevents badge jitter during cashout/round end when leaderboards update.
+
         bool showRichestBadge = false;
         bool showWinnerBadge = false;
-        
-        if (lockedLeaderboards != null)
-        {
-            showRichestBadge = spawnedFromRichest && IsPlayerInFirst(username, lockedLeaderboards.richest);
-            showWinnerBadge = spawnedFromWinners && IsPlayerInFirst(username, lockedLeaderboards.winners);
 
-            // If player is in both, prioritize winner badge
+        if (lockedLeaderboards != null && !string.IsNullOrEmpty(username))
+        {
+            // FIX 3: Only show badge if THIS specific username (opponent) is in 1st place
+            // NOT if the local player is in 1st place
+            bool opponentIsFirstRichest = IsPlayerInFirst(username, lockedLeaderboards.richest);
+            bool opponentIsFirstWinner = IsPlayerInFirst(username, lockedLeaderboards.winners);
+
+            // Only show badge if the opponent spawned from the appropriate leaderboard block
+            // AND they are actually in 1st place for that leaderboard
+            showRichestBadge = spawnedFromRichest && opponentIsFirstRichest;
+            showWinnerBadge = spawnedFromWinners && opponentIsFirstWinner;
+
+            // If opponent is in both 1st positions, prioritize winner badge
             if (showRichestBadge && showWinnerBadge)
             {
                 showRichestBadge = false;
             }
+
+            // FIX 3: Additional validation - ensure this is not the local player
+            // Local player chips should be handled by PlayerBetComponent, not OpponentChipManager
+            if (username == localPlayerUsername)
+            {
+                showRichestBadge = false;
+                showWinnerBadge = false;
+            }
+        }
+        else
+        {
+            if (lockedLeaderboards == null)
+                Debug.LogWarning($"[OpponentChipManager] lockedLeaderboards is null - no badges for {username}");
+            if (string.IsNullOrEmpty(username))
+                Debug.LogWarning($"[OpponentChipManager] Empty username - no badges");
         }
 
         chip.SetLeaderboardBadge(showRichestBadge, showWinnerBadge);
@@ -527,13 +549,6 @@ public class OpponentChipManager : MonoBehaviour
             isRichest = showRichestBadge,
             isWinner = showWinnerBadge
         };
-
-        if (spawnPosition == opponentDealerArea)
-        {
-        }
-        else
-        {
-        }
 
         float scatterX = dealerScatterX;
         float scatterY = dealerScatterY;
@@ -680,7 +695,7 @@ public class OpponentChipManager : MonoBehaviour
         }
 
         // ── Collect chips into losing / winning buckets ───────────────────────
-        var losingChips  = new List<RectTransform>();
+        var losingChips = new List<RectTransform>();
         var winningChips = new List<RectTransform>();
 
         foreach (var kvp in chipsByBetArea)
@@ -770,23 +785,23 @@ public class OpponentChipManager : MonoBehaviour
             winChip.SetParent(canvasRoot, worldPositionStays: true);
 
             float winCashoutScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
-            
+
             // Calculate start position, mid-point (arc peak), and target
             Vector3 startPos = winChip.position;
             Vector3 winCashoutTarget = opponentDealerArea.position + new Vector3(
                 Random.Range(-dealerScatterX, dealerScatterX) * winCashoutScale,
                 Random.Range(-dealerScatterY, dealerScatterY) * winCashoutScale,
                 0f);
-            
+
             // Arc animation: Create a mid-point above the path for the arc effect
             // This matches the refund animation style - slow and arcy (lift up then fly)
             Vector3 midPos = Vector3.Lerp(startPos, winCashoutTarget, 0.5f)
                            + new Vector3(Random.Range(-18f, 18f) * winCashoutScale, 110f * winCashoutScale, 0f);
-            
+
             // Use DOTween Sequence for smooth arc animation
             float halfDuration = cashoutDuration * 0.35f;  // First half (lift)
             float landDuration = cashoutDuration * 0.35f;  // Second half (fly down)
-            
+
             DOTween.Sequence()
                 .Append(winChip.DOMove(midPos, halfDuration).SetEase(Ease.OutQuad))
                 .Append(winChip.DOMove(winCashoutTarget, landDuration).SetEase(Ease.InQuad))

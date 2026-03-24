@@ -839,18 +839,29 @@ public class UIController : MonoBehaviour
 
     /// <summary>
     /// Updates the "hot" indicators and player count backgrounds based on which lobby has the highest player count.
-    /// Also updates friend/status images based on whether each lobby has players.
+    /// Hot is only shown when exactly one lobby has the highest count (no ties).
+    /// When all non-zero lobbies share the same count, everyone gets the green/normal sprite and hot is hidden.
     /// </summary>
     internal void UpdateLobbyHotIndicators(int casual = 0, int novice = 0, int expert = 0, int highRoller = 0)
     {
         // Find the maximum count
         int maxCount = Mathf.Max(casual, novice, expert, highRoller);
 
-        // Determine which lobby has the hot status
-        bool casualIsHot = maxCount > 0 && casual == maxCount;
-        bool noviceIsHot = maxCount > 0 && novice == maxCount;
-        bool expertIsHot = maxCount > 0 && expert == maxCount;
-        bool highRollerIsHot = maxCount > 0 && highRoller == maxCount;
+        // Count how many lobbies share the maximum (to detect ties like 1,1,1,0)
+        int tiedAtMax = 0;
+        if (casual == maxCount) tiedAtMax++;
+        if (novice == maxCount) tiedAtMax++;
+        if (expert == maxCount) tiedAtMax++;
+        if (highRoller == maxCount) tiedAtMax++;
+
+        // Hot is only valid when exactly ONE lobby has the highest count and it has players.
+        // If two or more lobbies share the top count (tie), nobody gets the hot/red treatment.
+        bool hotEnabled = maxCount > 0 && tiedAtMax == 1;
+
+        bool casualIsHot = hotEnabled && casual == maxCount;
+        bool noviceIsHot = hotEnabled && novice == maxCount;
+        bool expertIsHot = hotEnabled && expert == maxCount;
+        bool highRollerIsHot = hotEnabled && highRoller == maxCount;
 
         // Update hot indicators and backgrounds for each level
         UpdateLobbyLevelUI("Casual", casual, casualIsHot, CasualHot_Object, CasualCountBg_Object, CasualCountBg_Image);
@@ -874,7 +885,7 @@ public class UIController : MonoBehaviour
             if (playerCount > 0)
             {
                 countBgObject.SetActive(true);
-                
+
                 // Update sprite based on hot status
                 if (countBgImage != null)
                 {

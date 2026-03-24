@@ -210,7 +210,6 @@ public class BetLimitManager : MonoBehaviour
         if (scrollRect != null)
         {
             scrollRect.onValueChanged.AddListener(OnScrollValueChanged);
-            Debug.Log("BetLimitManager: Scrollbar setup complete. ScrollRect connected.");
         }
         else
         {

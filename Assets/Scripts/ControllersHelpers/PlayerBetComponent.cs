@@ -143,14 +143,25 @@ public class PlayerBetComponent : MonoBehaviour
         totalBetAmount -= bets[lastIndex].amount;
         bets.RemoveAt(lastIndex);
 
+        // Deactivate the chip at the last index
         if (lastIndex < allChips.Count && allChips[lastIndex] != null)
         {
             allChips[lastIndex].transform.DOKill();
             allChips[lastIndex].SetActive(false);
         }
 
-        UpdateTotalDisplay();
-        if (bets.Count == 0) gameObject.SetActive(false);
+        if (bets.Count == 0)
+        {
+            // Last bet removed — fully reset so the component is clean for next use.
+            // This disables the GameObject so it is invisible between rounds and after
+            // the final undo/cancel, matching the same state as after a round end.
+            Clear();
+        }
+        else
+        {
+            // Still has bets remaining — just update the displayed total.
+            UpdateTotalDisplay();
+        }
     }
 
     internal void Clear()
@@ -165,12 +176,14 @@ public class PlayerBetComponent : MonoBehaviour
 
         foreach (var chip in allChips) chip?.transform.DOKill();
 
+        // Destroy spawned chips (beyond initial pool)
         for (int i = allChips.Count - 1; i >= initialChips.Count; i--)
         {
             if (allChips[i] != null) Destroy(allChips[i].gameObject);
             allChips.RemoveAt(i);
         }
 
+        // Reset initial chips to inactive state
         foreach (var chip in initialChips)
         {
             if (chip != null)
@@ -184,6 +197,12 @@ public class PlayerBetComponent : MonoBehaviour
             betAmountBackground.transform.localScale = originalBackgroundScale;
 
         UpdateTotalDisplay();
+
+        // Fully disable the component GameObject so nothing is visible.
+        // AddSingleChip will re-enable it when a new bet is placed.
+        if (totalBetAmountText != null)
+            totalBetAmountText.gameObject.SetActive(false);
+
         gameObject.SetActive(false);
     }
 
@@ -198,7 +217,10 @@ public class PlayerBetComponent : MonoBehaviour
     #region Chip Management
     private void AddSingleChip(double amount, int chipIndex, bool skipDisplay = false)
     {
-        if (chipIndex < 0 || chipIndex >= chipSprites.Length) return;
+        // Guard: chipSprites must be initialized and chipIndex must be valid.
+        // This can be null if the component was disabled via Clear() before
+        // Initialize() was called again in a new round on a fresh bet area.
+        if (chipSprites == null || chipIndex < 0 || chipIndex >= chipSprites.Length) return;
 
         bets.Add(new BetData { amount = amount, chipIndex = chipIndex });
         totalBetAmount += amount;
@@ -219,8 +241,13 @@ public class PlayerBetComponent : MonoBehaviour
             AnimateChipDrop(chip, finalPosition);
         }
 
-        if (!skipDisplay) UpdateTotalDisplay();
+        // Re-enable the component GameObject and the total text BEFORE UpdateTotalDisplay
+        // so they are visible immediately when the first bet is placed after a Clear()/undo.
         if (!gameObject.activeSelf) gameObject.SetActive(true);
+        if (totalBetAmountText != null && !totalBetAmountText.gameObject.activeSelf)
+            totalBetAmountText.gameObject.SetActive(true);
+
+        if (!skipDisplay) UpdateTotalDisplay();
     }
 
     private Chip GetOrSpawnChip(int index)
@@ -342,4 +369,4 @@ public class PlayerBetComponent : MonoBehaviour
         }
     }
     #endregion
-}
+}   

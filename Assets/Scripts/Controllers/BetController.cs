@@ -1,5 +1,6 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -106,11 +107,6 @@ public class BetController : MonoBehaviour
     private Tween mainChipTween;
     private Sprite[] currentLevelChipSprites; // Cache for current level's chip sprites
 
-    // Store bet data for refund animations (before broadcasts clear them)
-    private Dictionary<string, double> pendingCancelBets = new Dictionary<string, double>();
-    private string pendingUndoBetOption = "";
-    private double pendingUndoBetAmount = 0;
-
     // GC optimisation: reuse collections instead of allocating every call/round
     private readonly HashSet<int> _uniqueDiceCache = new HashSet<int>();
     private readonly List<WinAreaData> _winAreasCache = new List<WinAreaData>();
@@ -124,6 +120,13 @@ public class BetController : MonoBehaviour
     private Leaderboards currentLeaderboards = null;
     private bool isPlayerRichest = false;
     private bool isPlayerWinner = false;
+
+    /// <summary>
+    /// When true, chip badge repaints are suppressed.
+    /// Set when dice result arrives (animations in flight) and cleared when the
+    /// round fully resets via ClearAllBets, preventing mid-animation badge jitter.
+    /// </summary>
+    private bool _badgesLocked = false;
     #endregion
 
     #region Animation Constants
@@ -463,6 +466,9 @@ public class BetController : MonoBehaviour
         currentTotalBet = 0;
         betHistory.Clear();
 
+        // Round is fully over � unfreeze badge repaints and repaint with latest data.
+        UnlockBadges();
+
 
         ClearArea(SmallArea);
         ClearArea(BigArea);
@@ -606,56 +612,16 @@ public class BetController : MonoBehaviour
 
     private void HandleUndoBroadcast(BetPlacedData data)
     {
-        if (data.amount >= 0) return;
-        double removeAmount = System.Math.Abs(data.amount);
-
-        for (int i = betHistory.Count - 1; i >= 0; i--)
-        {
-            if (betHistory[i].betOption == data.betOption) { betHistory.RemoveAt(i); break; }
-        }
-
-        if (areaBets.ContainsKey(data.betOption))
-        {
-            areaBets[data.betOption] -= removeAmount;
-            if (areaBets[data.betOption] <= 0.01)
-            {
-                areaBets.Remove(data.betOption);
-            }
-        }
-
-        currentTotalBet -= removeAmount;
-        RemoveLastChipFromArea(data.betOption);
-        UpdateTotalBet();
+        // Don't manipulate state on broadcasts - ACK handles everything
+        // Broadcasts are just notifications that bets changed, but ACK is the source of truth
+        Debug.Log($"[BetController] Received undo broadcast for {data.betOption}, amount: {data.amount} - ignoring client-side state changes");
     }
 
     private void HandleCancelBroadcast(BetPlacedData data)
     {
-        if (data.amount >= 0) return;
-        double removeAmount = System.Math.Abs(data.amount);
-        double totalRemoved = 0;
-
-        for (int i = betHistory.Count - 1; i >= 0; i--)
-        {
-            if (betHistory[i].betOption == data.betOption)
-            {
-                totalRemoved += betHistory[i].amount;
-                betHistory.RemoveAt(i);
-                if (System.Math.Abs(totalRemoved - removeAmount) < 0.01) break;
-            }
-        }
-
-        if (areaBets.ContainsKey(data.betOption))
-        {
-            areaBets[data.betOption] -= removeAmount;
-            if (areaBets[data.betOption] <= 0.01)
-            {
-                areaBets.Remove(data.betOption);
-            }
-        }
-
-        currentTotalBet -= removeAmount;
-        ClearBetsFromArea(data.betOption);
-        UpdateTotalBet();
+        // Don't manipulate state on broadcasts - ACK handles everything
+        // Broadcasts are just notifications that bets changed, but ACK is the source of truth
+        Debug.Log($"[BetController] Received cancel broadcast for {data.betOption}, amount: {data.amount} - ignoring client-side state changes");
     }
 
     private void HandleOpponentBet(BetPlacedData data)
@@ -757,28 +723,46 @@ public class BetController : MonoBehaviour
                 break;
 
             case "CANCEL":
-                Debug.Log($"[BetController] CANCEL - pendingCancelBets.Count: {pendingCancelBets.Count}, chipWinAnimationController: {(chipWinAnimationController != null ? "assigned" : "NULL")}");
-               
-                // Use the stored bet data (captured before broadcasts cleared it)
-                if (chipWinAnimationController != null && pendingCancelBets.Count > 0)
+                Debug.Log($"[BetController] CANCEL ACK - refundAmount: {response.payload.refundAmount}");
+
+                // Build refund data from betHistory so the animation spawns one chip
+                // per original bet placed (not just one chip for the whole area total).
+                // We aggregate by betOption but keep the full total so BuildCombination
+                // in ChipWinAnimationController can reconstruct the right chip count.
+                Dictionary<string, double> refundBets = new Dictionary<string, double>();
+                foreach (var action in betHistory)
                 {
-                    Debug.Log($"[BetController] Calling PlayRefundAnimation with {pendingCancelBets.Count} bet areas:");
-                    foreach (var kvp in pendingCancelBets)
+                    if (action == null || string.IsNullOrEmpty(action.betOption)) continue;
+                    if (!refundBets.ContainsKey(action.betOption)) refundBets[action.betOption] = 0;
+                    refundBets[action.betOption] += action.amount;
+                    Debug.Log($"[BetController]   - Refund bet: {action.betOption}: +{action.amount}");
+                }
+
+                // Also include any areaBets not captured in history (edge cases)
+                foreach (var kvp in areaBets)
+                {
+                    if (kvp.Value > 0 && !refundBets.ContainsKey(kvp.Key))
                     {
-                        Debug.Log($"[BetController]   - {kvp.Key}: {kvp.Value}");
+                        refundBets[kvp.Key] = kvp.Value;
+                        Debug.Log($"[BetController]   - Refund area fallback: {kvp.Key}: {kvp.Value}");
                     }
-                    
-                    // Pass exact amounts for each bet area
-                    chipWinAnimationController.PlayRefundAnimation(pendingCancelBets);
                 }
-                else
+
+                // Trigger refund animation
+                if (chipWinAnimationController != null && refundBets.Count > 0)
                 {
-                    Debug.LogWarning($"[BetController] NOT calling PlayRefundAnimation! pendingCancelBets: {pendingCancelBets.Count}");
+                    Debug.Log($"[BetController] Calling PlayRefundAnimation for CANCEL with {refundBets.Count} areas");
+                    // clearComponentsAfter=true: CANCEL wipes all bets, so clearing all components is correct.
+                    chipWinAnimationController.PlayRefundAnimation(refundBets, clearComponentsAfter: true);
                 }
-                
-                // Clear the stored data
-                pendingCancelBets.Clear();
-                
+
+                // Now clear all bet areas
+                foreach (var betOption in areaBets.Keys.ToArray())
+                {
+                    ClearBetsFromArea(betOption);
+                }
+
+                // Clear state
                 areaBets.Clear();
                 betHistory.Clear();
                 currentTotalBet = 0;
@@ -786,59 +770,72 @@ public class BetController : MonoBehaviour
                 break;
 
             case "UNDO":
-                Debug.Log($"[BetController] UNDO - chipWinAnimationController: {(chipWinAnimationController != null ? "assigned" : "NULL")}");
-                
-                // Use stored bet data (captured BEFORE the action was sent)
-                string undoBetOption = pendingUndoBetOption;
-                double undoBetAmount = pendingUndoBetAmount;
-                
-                // Fallback to server response if stored data is missing
-                if (string.IsNullOrEmpty(undoBetOption) && response.payload.bet != null && !string.IsNullOrEmpty(response.payload.bet.betOption))
+                Debug.Log($"[BetController] UNDO ACK - refundAmount: {response.payload.refundAmount}");
+
+                // Get undo bet info from ACK
+                string undoBetOption = "";
+                double undoAmount = 0;
+
+                if (response.payload.bet != null && !string.IsNullOrEmpty(response.payload.bet.betOption))
                 {
                     undoBetOption = response.payload.bet.betOption;
-                    undoBetAmount = response.payload.bet.amount;
-                    Debug.Log($"[BetController] UNDO using server response: {undoBetOption}, amount: {undoBetAmount}");
+                    undoAmount = response.payload.bet.amount;
+                    Debug.Log($"[BetController] UNDO bet from ACK: {undoBetOption}, amount: {undoAmount}");
                 }
-                else if (!string.IsNullOrEmpty(undoBetOption))
-                {
-                    Debug.Log($"[BetController] UNDO using stored data: {undoBetOption}, amount: {undoBetAmount}");
-                }
-                else
-                {
-                    Debug.LogWarning("[BetController] UNDO - No bet info available!");
-                }
-                
-                // Use refundAmount from server if available, otherwise use stored amount
+
+                // Use refundAmount if available
                 if (response.payload.refundAmount > 0)
                 {
-                    undoBetAmount = response.payload.refundAmount;
+                    undoAmount = response.payload.refundAmount;
                 }
-                
-                // Trigger animation if we have a bet to refund
-                if (chipWinAnimationController != null && !string.IsNullOrEmpty(undoBetOption))
+
+                // Trigger refund animation
+                if (chipWinAnimationController != null && !string.IsNullOrEmpty(undoBetOption) && undoAmount > 0)
                 {
-                    Dictionary<string, double> refundBets = new Dictionary<string, double>
+                    Dictionary<string, double> undoRefundBets = new Dictionary<string, double>
                     {
-                        { undoBetOption, undoBetAmount }
+                        { undoBetOption, undoAmount }
                     };
-                    
-                    Debug.Log($"[BetController] Calling PlayRefundAnimation for UNDO: {undoBetOption}, amount: {undoBetAmount}");
-                    chipWinAnimationController.PlayRefundAnimation(refundBets);
+
+                    Debug.Log($"[BetController] Calling PlayRefundAnimation for UNDO: {undoBetOption}, amount: {undoAmount}");
+                    // clearComponentsAfter=false: BetController removes only the last chip via RemoveLastChipFromArea.
+                    // Clearing here would wipe ALL remaining chips on that area.
+                    chipWinAnimationController.PlayRefundAnimation(undoRefundBets, clearComponentsAfter: false);
                 }
-                else
+
+                // Remove last chip from the area
+                if (!string.IsNullOrEmpty(undoBetOption))
                 {
-                    Debug.LogWarning($"[BetController] NOT calling PlayRefundAnimation for UNDO!");
+                    RemoveLastChipFromArea(undoBetOption);
+
+                    // Update bet history - remove last occurrence of this bet option
+                    for (int i = betHistory.Count - 1; i >= 0; i--)
+                    {
+                        if (betHistory[i].betOption == undoBetOption)
+                        {
+                            betHistory.RemoveAt(i);
+                            break;
+                        }
+                    }
+
+                    // Update areaBets
+                    if (areaBets.ContainsKey(undoBetOption))
+                    {
+                        areaBets[undoBetOption] -= undoAmount;
+                        if (areaBets[undoBetOption] <= 0.01)
+                        {
+                            areaBets.Remove(undoBetOption);
+                        }
+                    }
                 }
-                
-                // Clear stored data
-                pendingUndoBetOption = "";
-                pendingUndoBetAmount = 0;
-                
+
+                // Update total bet from ACK
                 if (response.payload.totalBet >= 0)
                 {
                     currentTotalBet = response.payload.totalBet;
-                    UpdateTotalBet();
                 }
+
+                UpdateTotalBet();
                 break;
         }
     }
@@ -1103,19 +1100,7 @@ public class BetController : MonoBehaviour
     {
         if (!isBettingEnabled || isProcessingBetAction) { uiController?.ShowInGamePopup("Please wait..."); return; }
         AudioManager.Instance?.PlayButtonClick();
-        
-        // Store the last bet data BEFORE it gets cleared by broadcasts
-        pendingUndoBetOption = "";
-        pendingUndoBetAmount = 0;
-        
-        if (betHistory.Count > 0)
-        {
-            BetAction lastBet = betHistory[betHistory.Count - 1];
-            pendingUndoBetOption = lastBet.betOption;
-            pendingUndoBetAmount = lastBet.amount;
-            Debug.Log($"[BetController] Stored undo data: {pendingUndoBetOption}, amount: {pendingUndoBetAmount}");
-        }
-        
+
         isProcessingBetAction = true;
         currentBetAction = "UNDO";
         receivedBroadcastCount = 0;
@@ -1126,15 +1111,7 @@ public class BetController : MonoBehaviour
     {
         if (!isBettingEnabled || isProcessingBetAction) { uiController?.ShowInGamePopup("Please wait..."); return; }
         AudioManager.Instance?.PlayButtonClick();
-        
-        // Store ALL current bet data BEFORE it gets cleared by broadcasts
-        pendingCancelBets.Clear();
-        foreach (var kvp in areaBets)
-        {
-            pendingCancelBets[kvp.Key] = kvp.Value;
-        }
-        Debug.Log($"[BetController] Stored cancel data: {pendingCancelBets.Count} bet areas");
-        
+
         isProcessingBetAction = true;
         currentBetAction = "CANCEL";
         receivedBroadcastCount = 0;
@@ -1298,18 +1275,41 @@ public class BetController : MonoBehaviour
             if (!hasActiveChips)
             {
                 opponentChipManager.SetLeaderboardData(leaderboards);
-
             }
-
         }
 
+        // Always keep the status values up to date for the next unlock.
         RefreshPlayerLeaderboardStatus();
-        RefreshAllPlayerChipBadges();
+
+        // Only repaint chips when no animation is running; prevents mid-animation
+        // badge jitter caused by a leaderboard push arriving while chips are in flight.
+        if (!_badgesLocked)
+            RefreshAllPlayerChipBadges();
     }
 
     internal void SetCashoutData(List<Payout> payouts)
     {
         opponentChipManager?.SetCashoutData(payouts);
+    }
+
+    /// <summary>
+    /// Freeze badge repaints on all player chips.
+    /// Call this when dice result arrives and chip animations begin.
+    /// </summary>
+    internal void LockBadges()
+    {
+        _badgesLocked = true;
+    }
+
+    /// <summary>
+    /// Unfreeze badge repaints and immediately repaint all chips with the latest
+    /// leaderboard status.  Call this when the round fully resets (ClearAllBets).
+    /// </summary>
+    internal void UnlockBadges()
+    {
+        _badgesLocked = false;
+        RefreshPlayerLeaderboardStatus();
+        RefreshAllPlayerChipBadges();
     }
 
     private void RefreshPlayerLeaderboardStatus()
@@ -1320,6 +1320,7 @@ public class BetController : MonoBehaviour
 
     private void RefreshAllPlayerChipBadges()
     {
+        if (_badgesLocked) return;
         ApplyBadgesToContainer(SmallArea?.PlayerBetContainer);
         ApplyBadgesToContainer(BigArea?.PlayerBetContainer);
         ApplyBadgesToContainer(OddArea?.PlayerBetContainer);
@@ -1329,30 +1330,51 @@ public class BetController : MonoBehaviour
         foreach (var area in SumAreas) ApplyBadgesToContainer(area?.PlayerBetContainer);
     }
 
+
     private void ApplyBadgesToContainer(Transform container)
     {
-        if (container == null) return;
-        Chip[] chips = container.GetComponentsInChildren<Chip>(true);
+        if (container == null || _badgesLocked) return;
+
+        // FIX 3: Only get chips that are direct children or from PlayerBetComponent
+        // Don't search recursively to avoid affecting opponent chips
+        Chip[] chips = container.GetComponentsInChildren<Chip>(includeInactive: true);
+
         foreach (var chip in chips)
         {
             if (chip == null) continue;
-            if (isPlayerRichest || isPlayerWinner) chip.SetLeaderboardBadge(isPlayerRichest, isPlayerWinner);
-            else chip.ClearLeaderboardBadge();
+
+            // FIX 3: Additional safety check - verify chip is actually in player's hierarchy
+            // by checking if it belongs to a PlayerBetComponent
+            Transform chipTransform = chip.transform;
+            PlayerBetComponent parentComponent = chipTransform.GetComponentInParent<PlayerBetComponent>();
+
+            // Only apply badges to chips that belong to PlayerBetComponent
+            // This prevents accidentally badging opponent chips
+            if (parentComponent != null)
+            {
+                if (isPlayerRichest || isPlayerWinner)
+                    chip.SetLeaderboardBadge(isPlayerRichest, isPlayerWinner);
+                else
+                    chip.ClearLeaderboardBadge();
+            }
         }
     }
 
     internal void RefreshBadgesForContainer(Transform container)
     {
+        // Respect the lock so newly spawned chips during a round don't flicker.
+        if (_badgesLocked) return;
         ApplyBadgesToContainer(container);
     }
 
+    /// <summary>
+    /// Returns true only when the player occupies the #1 slot (index 0) in the given
+    /// leaderboard list.  Badges are shown exclusively for 1st place, not top-3.
+    /// </summary>
     private static bool IsUsernameInLeaderboardList(string username, List<LeaderboardEntry> entries)
     {
-        if (string.IsNullOrEmpty(username) || entries == null) return false;
-        int count = Mathf.Min(3, entries.Count);
-        for (int i = 0; i < count; i++)
-            if (entries[i] != null && entries[i].username == username) return true;
-        return false;
+        if (string.IsNullOrEmpty(username) || entries == null || entries.Count == 0) return false;
+        return entries[0] != null && entries[0].username == username;
     }
     #endregion
 
@@ -1410,6 +1432,14 @@ public class BetController : MonoBehaviour
 
     internal PlayerBetComponent GetPlayerBetComponent(string betOption) =>
         activeComponents.TryGetValue(betOption, out var c) ? c : GetBetAreaByOption(betOption)?.playerBetComponent;
+
+    /// <summary>
+    /// Returns every bet option that has a registered PlayerBetComponent,
+    /// regardless of whether the player has placed a bet there.
+    /// Used by ChipWinAnimationController to fade out chips on non-winning areas.
+    /// </summary>
+    internal IReadOnlyCollection<string> GetAllBetOptions() => activeComponents.Keys;
+
     internal List<double> GetChipValues() => new List<double>(currentChipValues);
     internal Sprite[] GetChipSprites() => GetCurrentLevelSprites();
 
