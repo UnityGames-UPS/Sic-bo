@@ -15,15 +15,18 @@ public class OpponentChipManager : MonoBehaviour
     [SerializeField] private Sprite grayChipSprite;
 
     [Header("Animation Settings")]
-    [SerializeField] private float dealerToBetDuration = 0.45f;
-    [SerializeField] private float chipStaggerDelay = 0.06f;
-    [SerializeField] private float cashoutDuration = 0.55f;
-    [SerializeField] private float cashoutStagger = 0.05f;
+    [SerializeField] private float dealerToBetDuration = 0.65f;
+    [SerializeField] private float chipStaggerDelay = 0.0f;   // kept for inspector but intentionally zero
+    [SerializeField] private float cashoutDuration = 0.70f;
+    [SerializeField] private float cashoutStagger = 0.0f;     // all chips fly together
     [SerializeField] private float dealerScatterX = 20f;
     [SerializeField] private float dealerScatterY = 15f;
     [SerializeField] private float betAreaScatterX = 12f;
     [SerializeField] private float betAreaScatterY = 10f;
     [SerializeField] private float chipScale = 0.8f;
+
+    [Tooltip("Extra pause (seconds) after losing chips have faded out before winning chips start flying.")]
+    [SerializeField] private float postFadeDelay = 0.3f;
 
     [Header("References")]
     [SerializeField] private Canvas targetCanvas;
@@ -132,6 +135,14 @@ public class OpponentChipManager : MonoBehaviour
     {
         if (chipRT == null) return;
         chipRT.DOKill();
+        
+        // Clear badge before returning to pool
+        Chip chipComponent = chipRT.GetComponent<Chip>();
+        if (chipComponent != null)
+        {
+            chipComponent.ClearLeaderboardBadge();
+        }
+        
         chipRT.gameObject.SetActive(false);
         chipRT.localScale = Vector3.one;
 
@@ -392,11 +403,9 @@ public class OpponentChipManager : MonoBehaviour
                     }
                     winChip.SetSprite(grayChipSprite);
                     winChip.SetActive(true);
-                    if (chipToOriginalBadge.ContainsKey(chip))
-                    {
-                        BadgeState badge = chipToOriginalBadge[chip];
-                        winChip.SetLeaderboardBadge(badge.isRichest, badge.isWinner);
-                    }
+                    // Win-animation chips are anonymous dealer chips — no badge.
+                    // Badges are only shown on the original bet-area chips at spawn time.
+                    winChip.ClearLeaderboardBadge();
                     if (estimatedWinPerChip > 0)
                     {
                         string formattedAmount = GameUtilities.FormatCurrency(estimatedWinPerChip);
@@ -493,13 +502,22 @@ public class OpponentChipManager : MonoBehaviour
         chip.SetSprite(grayChipSprite);
         chip.SetAmount(GameUtilities.FormatCurrency(amount));
         chip.SetActive(true);
-        Leaderboards leaderboardsToUse = lockedLeaderboards ?? currentLeaderboards;
-        bool showRichestBadge = spawnedFromRichest && IsPlayerInTop3(username, leaderboardsToUse?.richest);
-        bool showWinnerBadge = spawnedFromWinners && IsPlayerInTop3(username, leaderboardsToUse?.winners);
-
-        if (showRichestBadge && showWinnerBadge)
+        
+        // BADGE FIX: Only use locked leaderboards (not current), and only if locked exists.
+        // This prevents badge jitter during cashout/round end when leaderboards update.
+        bool showRichestBadge = false;
+        bool showWinnerBadge = false;
+        
+        if (lockedLeaderboards != null)
         {
-            showRichestBadge = false;
+            showRichestBadge = spawnedFromRichest && IsPlayerInFirst(username, lockedLeaderboards.richest);
+            showWinnerBadge = spawnedFromWinners && IsPlayerInFirst(username, lockedLeaderboards.winners);
+
+            // If player is in both, prioritize winner badge
+            if (showRichestBadge && showWinnerBadge)
+            {
+                showRichestBadge = false;
+            }
         }
 
         chip.SetLeaderboardBadge(showRichestBadge, showWinnerBadge);
@@ -575,8 +593,8 @@ public class OpponentChipManager : MonoBehaviour
 
         bool checkWinnersFirst = true;
 
-        bool isTop3Richest = IsPlayerInTop3(username, leaderboardsToUse.richest);
-        bool isTop3Winner = IsPlayerInTop3(username, leaderboardsToUse.winners);
+        bool isTop3Richest = IsPlayerInFirst(username, leaderboardsToUse.richest);
+        bool isTop3Winner = IsPlayerInFirst(username, leaderboardsToUse.winners);
 
         if (isTop3Richest && !isTop3Winner)
         {
@@ -636,170 +654,149 @@ public class OpponentChipManager : MonoBehaviour
         if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
 
-        foreach (var kvp in chipToOriginalBadge)
-        {
-            RectTransform chipRT = kvp.Key;
-            BadgeState originalBadge = kvp.Value;
-
-            if (chipRT != null)
-            {
-                Chip chipComponent = chipRT.GetComponent<Chip>();
-                if (chipComponent != null)
-                {
-                    chipComponent.SetLeaderboardBadge(originalBadge.isRichest, originalBadge.isWinner);
-                }
-            }
-        }
-
+        // ── Build winner map ─────────────────────────────────────────────────
         _winnersByBetAreaCache.Clear();
-
-        if (currentPayouts != null && currentPayouts.Count > 0)
+        if (currentPayouts != null)
         {
-
             foreach (var payout in currentPayouts)
             {
-                if (payout.win > 0 && !string.IsNullOrEmpty(payout.username))
+                if (payout.win <= 0 || string.IsNullOrEmpty(payout.username)) continue;
+                foreach (var kvp in chipsByBetArea)
                 {
-                    foreach (var kvp in chipsByBetArea)
+                    string betArea = kvp.Key;
+                    if (!winningBetAreas.Contains(betArea)) continue;
+                    foreach (var chip in kvp.Value)
                     {
-                        string betArea = kvp.Key;
-
-                        if (!winningBetAreas.Contains(betArea)) continue;
-
-                        foreach (var chip in kvp.Value)
+                        if (chipToUsername.ContainsKey(chip) && chipToUsername[chip] == payout.username)
                         {
-                            if (chipToUsername.ContainsKey(chip) && chipToUsername[chip] == payout.username)
-                            {
-                                if (!_winnersByBetAreaCache.ContainsKey(betArea))
-                                    _winnersByBetAreaCache[betArea] = new HashSet<string>();
-                                else
-                                    _winnersByBetAreaCache[betArea].Clear();
-
-                                _winnersByBetAreaCache[betArea].Add(payout.username);
-                                break;
-                            }
+                            if (!_winnersByBetAreaCache.ContainsKey(betArea))
+                                _winnersByBetAreaCache[betArea] = new HashSet<string>();
+                            _winnersByBetAreaCache[betArea].Add(payout.username);
+                            break;
                         }
                     }
                 }
             }
         }
-        int chipAnimationCount = 0;
+
+        // ── Collect chips into losing / winning buckets ───────────────────────
+        var losingChips  = new List<RectTransform>();
+        var winningChips = new List<RectTransform>();
 
         foreach (var kvp in chipsByBetArea)
         {
             string betArea = kvp.Key;
-            List<RectTransform> chipsInArea = kvp.Value;
-
             bool isWinningArea = winningBetAreas.Contains(betArea);
 
-            foreach (var chip in chipsInArea)
+            foreach (var chip in kvp.Value)
             {
                 if (chip == null) continue;
-
                 chip.SetParent(canvasRoot, worldPositionStays: true);
 
                 string chipOwner = chipToUsername.ContainsKey(chip) ? chipToUsername[chip] : "";
                 bool chipOwnerWon = !string.IsNullOrEmpty(chipOwner) &&
-                                   _winnersByBetAreaCache.ContainsKey(betArea) &&
-                                   _winnersByBetAreaCache[betArea].Contains(chipOwner);
+                                    _winnersByBetAreaCache.ContainsKey(betArea) &&
+                                    _winnersByBetAreaCache[betArea].Contains(chipOwner);
 
-                bool isLosingChip = !isWinningArea || !chipOwnerWon;
-
-                if (isLosingChip)
-                {
-                    Chip chipComponent = chip.GetComponent<Chip>();
-                    if (chipComponent != null)
-                    {
-                        chipComponent.ClearLeaderboardBadge();
-                    }
-
-                    RectTransform targetDealer = Random.value > 0.5f ? playerDealerArea : opponentDealerArea;
-
-                    float coScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
-                    Vector3 cashoutLoseTarget = targetDealer.position + new Vector3(
-                        Random.Range(-dealerScatterX, dealerScatterX) * coScale,
-                        Random.Range(-dealerScatterY, dealerScatterY) * coScale,
-                        0f);
-                    float staggerDelay = chipAnimationCount * cashoutStagger * 0.1f;
-
-                    chip.DOMove(cashoutLoseTarget, cashoutDuration).SetEase(Ease.InQuad).SetDelay(staggerDelay);
-                    chip.DOScale(0f, cashoutDuration * 0.6f)
-                        .SetDelay(cashoutDuration * 0.4f + staggerDelay)
-                        .SetEase(Ease.InBack)
-                        .OnComplete(() => { if (chip != null) ReturnChipToPool(chip); });
-
-                    chipAnimationCount++;
-                }
+                if (!isWinningArea || !chipOwnerWon)
+                    losingChips.Add(chip);
                 else
-                {
-
-                    Chip chipComponent = chip.GetComponent<Chip>();
-                    if (chipToOriginalBadge.ContainsKey(chip))
-                    {
-                        BadgeState originalBadge = chipToOriginalBadge[chip];
-
-                        if (chipComponent != null)
-                        {
-                            chipComponent.SetLeaderboardBadge(originalBadge.isRichest, originalBadge.isWinner);
-                        }
-
-                    }
-
-                    RectTransform targetPosition = GetCashoutDestinationForWinner(chip);
-
-                    float scatterX = 15f;
-                    float scatterY = 10f;
-
-                    if (targetPosition == playerDealerArea || targetPosition == opponentDealerArea)
-                    {
-                        scatterX = dealerScatterX;
-                        scatterY = dealerScatterY;
-                    }
-
-                    float coWinScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
-                    Vector3 cashoutWinTarget = targetPosition.position + new Vector3(
-                        Random.Range(-scatterX, scatterX) * coWinScale,
-                        Random.Range(-scatterY, scatterY) * coWinScale,
-                        0f);
-
-                    float staggerDelay = chipAnimationCount * cashoutStagger * 0.1f;
-
-                    chip.DOMove(cashoutWinTarget, cashoutDuration).SetEase(Ease.InQuad).SetDelay(staggerDelay);
-                    chip.DOScale(0f, cashoutDuration * 0.6f)
-                        .SetDelay(cashoutDuration * 0.4f + staggerDelay)
-                        .SetEase(Ease.InBack)
-                        .OnComplete(() => { if (chip != null) ReturnChipToPool(chip); });
-
-                    chipAnimationCount++;
-                }
+                    winningChips.Add(chip);
             }
         }
-        int winChipIndex = 0;
+
+        // ── PHASE 1 : clear badges and fade losing chips in place ─────────────
+        // Badges are cleared first so no incorrect badge flashes during the fade.
+        foreach (var chip in losingChips)
+        {
+            if (chip == null) continue;
+            Chip chipComponent = chip.GetComponent<Chip>();
+            chipComponent?.ClearLeaderboardBadge();
+        }
+        // Also strip badges from win-animation chips — they are anonymous dealer
+        // chips and should never carry a player badge during fly-back.
         foreach (var winChip in activeWinChips)
         {
             if (winChip == null) continue;
+            winChip.GetComponent<Chip>()?.ClearLeaderboardBadge();
+        }
 
+        float fadeDuration = cashoutDuration * 0.5f;
+        foreach (var chip in losingChips)
+        {
+            if (chip == null) continue;
+            chip.DOScale(0f, fadeDuration)
+                .SetEase(Ease.InBack)
+                .OnComplete(() => { if (chip != null) ReturnChipToPool(chip); });
+        }
+
+        // Wait for the fade to fully complete, then pause before launching.
+        yield return new WaitForSeconds(fadeDuration + postFadeDelay);
+
+        // ── PHASE 2 : fly winning chips to their destinations ─────────────────
+        foreach (var chip in winningChips)
+        {
+            if (chip == null) continue;
+
+            RectTransform targetPosition = GetCashoutDestinationForWinner(chip);
+
+            float scatterX = dealerScatterX;
+            float scatterY = dealerScatterY;
+            if (targetPosition != playerDealerArea && targetPosition != opponentDealerArea)
+            {
+                Rect targetRect = targetPosition.rect;
+                scatterX = Mathf.Min(targetRect.width * 0.4f, 15f);
+                scatterY = Mathf.Min(targetRect.height * 0.4f, 10f);
+            }
+
+            float coWinScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
+            Vector3 cashoutWinTarget = targetPosition.position + new Vector3(
+                Random.Range(-scatterX, scatterX) * coWinScale,
+                Random.Range(-scatterY, scatterY) * coWinScale,
+                0f);
+
+            chip.DOMove(cashoutWinTarget, cashoutDuration).SetEase(Ease.InQuad);
+            chip.DOScale(0f, cashoutDuration * 0.6f)
+                .SetDelay(cashoutDuration * 0.4f)
+                .SetEase(Ease.InBack)
+                .OnComplete(() => { if (chip != null) ReturnChipToPool(chip); });
+        }
+
+        // Win-animation chips (from CR_OpponentWinAnimation) fly to opponent dealer with arc.
+        // This creates a classic casino-style refund animation: lift up, then fly.
+        foreach (var winChip in activeWinChips)
+        {
+            if (winChip == null) continue;
             winChip.SetParent(canvasRoot, worldPositionStays: true);
-            RectTransform targetDealer = Random.value > 0.5f ? playerDealerArea : opponentDealerArea;
 
             float winCashoutScale = targetCanvas != null ? targetCanvas.transform.lossyScale.x : 1f;
-            Vector3 winCashoutTarget = targetDealer.position + new Vector3(
+            
+            // Calculate start position, mid-point (arc peak), and target
+            Vector3 startPos = winChip.position;
+            Vector3 winCashoutTarget = opponentDealerArea.position + new Vector3(
                 Random.Range(-dealerScatterX, dealerScatterX) * winCashoutScale,
                 Random.Range(-dealerScatterY, dealerScatterY) * winCashoutScale,
                 0f);
-            float staggerDelay = winChipIndex * cashoutStagger * 0.1f;
-
-            winChip.DOMove(winCashoutTarget, cashoutDuration * 0.7f).SetEase(Ease.InQuad).SetDelay(staggerDelay);
-            winChip.DOScale(0f, cashoutDuration * 0.5f)
-                .SetDelay(cashoutDuration * 0.3f + staggerDelay)
-                .SetEase(Ease.InBack)
+            
+            // Arc animation: Create a mid-point above the path for the arc effect
+            // This matches the refund animation style - slow and arcy (lift up then fly)
+            Vector3 midPos = Vector3.Lerp(startPos, winCashoutTarget, 0.5f)
+                           + new Vector3(Random.Range(-18f, 18f) * winCashoutScale, 110f * winCashoutScale, 0f);
+            
+            // Use DOTween Sequence for smooth arc animation
+            float halfDuration = cashoutDuration * 0.35f;  // First half (lift)
+            float landDuration = cashoutDuration * 0.35f;  // Second half (fly down)
+            
+            DOTween.Sequence()
+                .Append(winChip.DOMove(midPos, halfDuration).SetEase(Ease.OutQuad))
+                .Append(winChip.DOMove(winCashoutTarget, landDuration).SetEase(Ease.InQuad))
+                .Join(winChip.DOScale(0f, landDuration).SetEase(Ease.InBack))
                 .OnComplete(() => { if (winChip != null) ReturnChipToPool(winChip); });
-
-            winChipIndex++;
         }
 
         yield return new WaitForSeconds(cashoutDuration);
 
+        // ── Cleanup ───────────────────────────────────────────────────────────
         activeOpponentChips.Clear();
         activeWinChips.Clear();
         chipToSpawnPosition.Clear();
@@ -859,18 +856,14 @@ public class OpponentChipManager : MonoBehaviour
         return localPoint;
     }
 
-    private bool IsPlayerInTop3(string username, List<LeaderboardEntry> entries)
+    /// <summary>
+    /// Returns true only if the player is in 1st place (index 0) of the given leaderboard.
+    /// Badges are shown exclusively for the #1 player, not top-3.
+    /// </summary>
+    private bool IsPlayerInFirst(string username, List<LeaderboardEntry> entries)
     {
-        if (string.IsNullOrEmpty(username) || entries == null) return false;
-
-        int checkCount = Mathf.Min(3, entries.Count);
-        for (int i = 0; i < checkCount; i++)
-        {
-            if (entries[i] != null && entries[i].username == username)
-                return true;
-        }
-
-        return false;
+        if (string.IsNullOrEmpty(username) || entries == null || entries.Count == 0) return false;
+        return entries[0] != null && entries[0].username == username;
     }
 
     private bool IsPlayerInLeaderboard(string username, List<LeaderboardEntry> entries)

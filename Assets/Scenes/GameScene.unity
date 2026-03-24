@@ -90346,15 +90346,16 @@ MonoBehaviour:
   playerDealerArea: {fileID: 781455177}
   chipPrefab: {fileID: 612846565074103464, guid: a3c5d345c963f44339868a87b30b7fc2, type: 3}
   grayChipSprite: {fileID: 1590697182708911368, guid: c0f0032438b1a144191ba45c5e7427c7, type: 3}
-  dealerToBetDuration: 0.45
-  chipStaggerDelay: 0.06
-  cashoutDuration: 0.55
-  cashoutStagger: 0.05
+  dealerToBetDuration: 0.6
+  chipStaggerDelay: 0
+  cashoutDuration: 0.8
+  cashoutStagger: 0
   dealerScatterX: 20
   dealerScatterY: 15
   betAreaScatterX: 12
   betAreaScatterY: 10
-  chipScale: 0.8
+  chipScale: 1
+  postFadeDelay: 0.3
   targetCanvas: {fileID: 674617748}
   chipContainer: {fileID: 342734078}
   leaderboardController: {fileID: 1373798843}
@@ -113774,18 +113775,18 @@ MonoBehaviour:
   dealerScatterX: 28
   dealerScatterY: 18
   dealerToBetDuration: 0.9
-  chipStaggerDelay: 0.05
+  chipStaggerDelay: 0
   betAreaScatterX: 11
   betAreaScatterY: 9
   betToPlayerDuration: 0.8
-  cashoutStagger: 0.04
+  cashoutStagger: 0
   arcHeight: 110
   chipWorkingScale: 1
   animationStartPercent: 0.6
   enableWinAnimations: 1
   minChipsPerWin: 1
   maxChipsPerWin: 8
-  minWinForExtraChips: 2
+  minWinForExtraChips: 1
 --- !u!4 &2046684978
 Transform:
   m_ObjectHideFlags: 0

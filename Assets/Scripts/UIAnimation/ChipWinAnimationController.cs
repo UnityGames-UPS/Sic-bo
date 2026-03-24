@@ -20,14 +20,14 @@ internal class ChipWinAnimationController : MonoBehaviour
     [SerializeField] private float dealerScatterY = 18f;
 
     [Header("Dealer to Bet Area")]
-    [SerializeField] private float dealerToBetDuration = 0.50f;
-    [SerializeField] private float chipStaggerDelay = 0.055f;
+    [SerializeField] private float dealerToBetDuration = 0.65f;
+    [SerializeField] private float chipStaggerDelay = 0.0f;   // zero — all chips launch together
     [SerializeField] private float betAreaScatterX = 11f;
     [SerializeField] private float betAreaScatterY = 9f;
 
     [Header("Bet Area to Player")]
-    [SerializeField] private float betToPlayerDuration = 0.60f;
-    [SerializeField] private float cashoutStagger = 0.04f;
+    [SerializeField] private float betToPlayerDuration = 0.75f;
+    [SerializeField] private float cashoutStagger = 0.0f;     // zero — all chips fly together
     [SerializeField] private float arcHeight = 110f;
 
     [Header("Chip Visual")]
@@ -335,6 +335,12 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         yield return new WaitForSeconds(0.20f);
 
+        // Fade out losing-area chips first so they visually clear before
+        // any win chips appear.  The fade takes dealerToBetDuration * 0.6f,
+        // so a short extra pause lets it register on screen before we launch.
+        FadeOutLosingAreaChips(winAreas);
+        yield return new WaitForSeconds(0.18f);
+
         var animData = new List<(RectTransform rt, Vector3 worldTarget)>();
         foreach (var (rt, parent, localPos) in assignments)
         {
@@ -355,6 +361,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                 () => TriggerAllWinCountingAnimations(winAreas));
         }
 
+        // All chips launch simultaneously — no stagger delay between them.
         foreach (var (rt, worldTarget) in animData)
         {
             if (rt == null) continue;
@@ -365,8 +372,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                   if (rt != null)
                       rt.localPosition = rt.parent.InverseTransformPoint(worldTarget);
               });
-
-            yield return new WaitForSeconds(chipStaggerDelay);
+            // No yield — all chips start at the same time
         }
 
         yield return new WaitForSeconds(dealerToBetDuration);
@@ -398,6 +404,47 @@ internal class ChipWinAnimationController : MonoBehaviour
         if (val >= 20) return 3;
         if (val >= 5) return 2;
         return 1;
+    }
+
+    private void FadeOutLosingAreaChips(List<WinAreaData> winAreas)
+    {
+        if (betController == null) return;
+
+        // Collect winning betOptions for fast lookup
+        var winningOptions = new HashSet<string>();
+        foreach (var w in winAreas) winningOptions.Add(w.betOption);
+
+        // Ask the BetController for every bet option that exists
+        var allOptions = betController.GetAllBetOptions();
+        if (allOptions == null) return;
+
+        foreach (var option in allOptions)
+        {
+            if (winningOptions.Contains(option)) continue;
+
+            PlayerBetComponent comp = betController.GetPlayerBetComponent(option);
+            if (comp == null || !comp.HasBets()) continue;
+
+            // Fade all chips inside this bet component to zero and then disable it.
+            // We animate each child chip RT individually so the clear is visual, not instant.
+            foreach (Transform child in comp.transform)
+            {
+                if (child == null) continue;
+                CanvasGroup cg = child.GetComponent<CanvasGroup>();
+                if (cg == null) cg = child.gameObject.AddComponent<CanvasGroup>();
+                cg.DOFade(0f, dealerToBetDuration * 0.6f)
+                  .SetEase(Ease.InQuad)
+                  .OnComplete(() =>
+                  {
+                      if (child != null) child.gameObject.SetActive(false);
+                  });
+            }
+            // Clear the logical state after the fade so layout resets cleanly
+            DOVirtual.DelayedCall(dealerToBetDuration * 0.7f, () =>
+            {
+                if (comp != null) comp.Clear();
+            });
+        }
     }
 
     private void TriggerAllWinCountingAnimations(List<WinAreaData> winAreas)
@@ -468,6 +515,7 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         Vector2 playerCanvasPos = GetCanvasPosition(playerNameTarget);
 
+        // All chips fly to the player simultaneously — no stagger.
         foreach (var rt in toSweep)
         {
             if (rt == null) continue;
@@ -491,8 +539,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                     rt.SetParent(dealerSpawnPoint, worldPositionStays: false);
                     rt.localPosition = Vector3.zero;
                 });
-
-            yield return new WaitForSeconds(cashoutStagger);
+            // No yield — all start at once
         }
 
         yield return new WaitForSeconds(betToPlayerDuration + 0.25f);
@@ -642,10 +689,10 @@ internal class ChipWinAnimationController : MonoBehaviour
 
             float halfDur = betToPlayerDuration * 0.45f;
             float landDur = betToPlayerDuration * 0.55f;
-            float stagger = chipIndex * cashoutStagger;
+            // No per-chip stagger — all launch at once
 
             DOTween.Sequence()
-                .Append(chipRT.DOAnchorPos(midPos, halfDur).SetEase(Ease.OutQuad).SetDelay(stagger))
+                .Append(chipRT.DOAnchorPos(midPos, halfDur).SetEase(Ease.OutQuad))
                 .Append(chipRT.DOAnchorPos(playerCanvasPos, landDur).SetEase(Ease.InQuad))
                 .Join(chipRT.DOScale(Vector3.zero, landDur).SetEase(Ease.InBack))
                 .OnComplete(() =>
@@ -667,8 +714,8 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         Debug.Log($"[ChipWinAnim] Animation started for {chipIndex} chips");
 
-        // Wait for animations to complete
-        float totalDuration = (chipIndex * cashoutStagger) + betToPlayerDuration;
+        // All chips fly simultaneously, so wait exactly one flight duration.
+        float totalDuration = betToPlayerDuration;
         yield return new WaitForSeconds(totalDuration);
     }
     #endregion
