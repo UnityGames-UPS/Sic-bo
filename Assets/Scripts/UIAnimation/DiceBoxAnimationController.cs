@@ -4,7 +4,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-
+/// <summary>
+/// DiceBoxAnimationController - Reworked for FPS independence
+/// Uses time-based sampling instead of frame delays for smooth, consistent playback on any device
+/// </summary>
 public class DiceBoxAnimationController : MonoBehaviour
 {
     #region Serialized Fields
@@ -28,7 +31,7 @@ public class DiceBoxAnimationController : MonoBehaviour
     [SerializeField] private List<Sprite> openCloseBaseSequence;
     [SerializeField] private List<Sprite> openCloseTopSequence;
 
-    [Header("Timing")]
+    [Header("Timing - Animation completes in exact duration regardless of FPS")]
     [SerializeField] private float shakeDuration = 2.5f;
     [SerializeField] private float idleDuration = 4.0f;
     [SerializeField] private float zoomInDuration = 0.8f;
@@ -46,15 +49,14 @@ public class DiceBoxAnimationController : MonoBehaviour
     [SerializeField] private int diceScaleStartFrame = 40;
     [SerializeField] private int diceScaleEndFrame = 51;
     [SerializeField] private float diceScaleTarget = 1.3f;
-    [SerializeField] private AnimationCurve diceScaleCurve = new AnimationCurve(new Keyframe(0f, 0f, 0f, 3f), new Keyframe(0.5f, 0.88f, 1.2f, 0.4f), new Keyframe(1f, 1f, 0.1f, 0f));
+    [SerializeField] private AnimationCurve diceScaleCurve = new AnimationCurve(
+        new Keyframe(0f, 0f, 0f, 3f), 
+        new Keyframe(0.5f, 0.88f, 1.2f, 0.4f), 
+        new Keyframe(1f, 1f, 0.1f, 0f));
     [SerializeField] private int diceScaleResetFrameOffset = 5;
 
     [Header("Speed")]
     [SerializeField] private float fastForwardSpeed = 3f;
-
-    [Header("FPS Adaptation - NEW")]
-    [SerializeField] private float targetFPS = 60f;
-    [SerializeField] private bool enableFPSAdaptation = true;
 
     #endregion
 
@@ -82,10 +84,8 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     private bool hasPendingReveal = false;
 
-    // FPS tracking - NEW
-    private float averageFPS = 60f;
-    private const int FPS_SAMPLE_SIZE = 30;
-    private Queue<float> fpsSamples = new Queue<float>();
+    // Frame trigger tracking to prevent duplicate calls
+    private HashSet<int> triggeredFrames = new HashSet<int>();
 
     #endregion
 
@@ -93,18 +93,8 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     private void Awake()
     {
-
         if (diceContainer) diceContainer.SetActive(false);
         SetTopLayerActive(false);
-    }
-
-    // NEW: FPS tracking
-    private void Update()
-    {
-        if (enableFPSAdaptation)
-        {
-            UpdateFPSTracking();
-        }
     }
 
     private void OnDestroy() => StopAllAnimations();
@@ -113,45 +103,44 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     #region Internal API
 
-   internal void StartAnimationCycleWithServerSync(long roundStartTimestamp, long bettingEndTimestamp, long currentServerTime)
-{
-    // ✅ FIX: Save the current state BEFORE resetting
-    DiceBoxState previousState = currentState;
-    
-    ForceResetToCleanState();
- 
-    // ✅ Check the PREVIOUS state (before reset), not the current state (after reset)
-    if (previousState == DiceBoxState.Opening ||
-        previousState == DiceBoxState.Open ||
-        previousState == DiceBoxState.Closing ||
-        previousState == DiceBoxState.ZoomingOut)
+    internal void StartAnimationCycleWithServerSync(long roundStartTimestamp, long bettingEndTimestamp, long currentServerTime)
     {
-        // New round started while previous animation still playing - use fast-forward
-        playbackSpeed = fastForwardSpeed;
-        hasPendingRound = true;
-        pendingRoundStartTimestamp = roundStartTimestamp;
-        pendingBettingEndTimestamp = bettingEndTimestamp;
-        pendingServerTime = currentServerTime;
-        return;
+        // Save the current state BEFORE resetting
+        DiceBoxState previousState = currentState;
+        
+        ForceResetToCleanState();
+     
+        // Check the PREVIOUS state (before reset), not the current state (after reset)
+        if (previousState == DiceBoxState.Opening ||
+            previousState == DiceBoxState.Open ||
+            previousState == DiceBoxState.Closing ||
+            previousState == DiceBoxState.ZoomingOut)
+        {
+            // New round started while previous animation still playing - use fast-forward
+            playbackSpeed = fastForwardSpeed;
+            hasPendingRound = true;
+            pendingRoundStartTimestamp = roundStartTimestamp;
+            pendingBettingEndTimestamp = bettingEndTimestamp;
+            pendingServerTime = currentServerTime;
+            return;
+        }
+     
+        playbackSpeed = 1f;
+        hasPendingRound = false;
+        hasPendingReveal = false;
+     
+        StopAllAnimations();
+        ResetSoundFlags();
+     
+        serverTimeOffset = currentServerTime - (long)(Time.realtimeSinceStartup * 1000);
+     
+        float elapsedSeconds = (currentServerTime - roundStartTimestamp) / 1000f;
+     
+        if (diceContainer) diceContainer.SetActive(false);
+        SetTopLayerActive(false);
+     
+        JumpToCorrectPhase(elapsedSeconds);
     }
- 
-    playbackSpeed = 1f;
-    hasPendingRound = false;
-    hasPendingReveal = false;
- 
-    StopAllAnimations();
-    ResetSoundFlags();
- 
-    serverTimeOffset = currentServerTime - (long)(Time.realtimeSinceStartup * 1000);
- 
-    float elapsedSeconds = (currentServerTime - roundStartTimestamp) / 1000f;
- 
-    if (diceContainer) diceContainer.SetActive(false);
-    SetTopLayerActive(false);
- 
-    JumpToCorrectPhase(elapsedSeconds);
-}
- 
 
     internal void SyncToPhaseOnJoin(string phase, long timeUntilNextRound, long serverTime)
     {
@@ -182,7 +171,7 @@ public class DiceBoxAnimationController : MonoBehaviour
                 if (secondsUntilNext > 2f)
                 {
                     float adjustedIdleDuration = Mathf.Max(0.5f, secondsUntilNext - 1f);
-                    animationCoroutine = StartCoroutine(PlayBaseSequence(
+                    animationCoroutine = StartCoroutine(PlayTimedSequence(
                         idleSequence,
                         adjustedIdleDuration,
                         loop: true,
@@ -202,7 +191,7 @@ public class DiceBoxAnimationController : MonoBehaviour
                 if (secondsUntilNext > 2f)
                 {
                     float adjustedIdleDuration = Mathf.Max(0.5f, secondsUntilNext - 1f);
-                    animationCoroutine = StartCoroutine(PlayBaseSequence(
+                    animationCoroutine = StartCoroutine(PlayTimedSequence(
                         idleSequence,
                         adjustedIdleDuration,
                         loop: true,
@@ -367,7 +356,6 @@ public class DiceBoxAnimationController : MonoBehaviour
         {
             hasPendingReveal = false;
             currentState = DiceBoxState.Waiting;
-
             onAnimationCycleComplete?.Invoke();
         }
     }
@@ -386,7 +374,7 @@ public class DiceBoxAnimationController : MonoBehaviour
         AudioManager.Instance?.PlayShake();
         hasPlayedShakeSound = true;
 
-        animationCoroutine = StartCoroutine(PlayBaseSequence(
+        animationCoroutine = StartCoroutine(PlayTimedSequence(
             shakeSequence, shakeDuration, loop: false, reverse: false,
             startTime: startTime, onComplete: OnShakeComplete));
     }
@@ -396,7 +384,7 @@ public class DiceBoxAnimationController : MonoBehaviour
     private void PlayIdleAnimation(float startTime = 0f)
     {
         currentState = DiceBoxState.Idle;
-        animationCoroutine = StartCoroutine(PlayBaseSequence(
+        animationCoroutine = StartCoroutine(PlayTimedSequence(
             idleSequence, idleDuration, loop: true, reverse: false,
             startTime: startTime, onComplete: null));
     }
@@ -404,7 +392,7 @@ public class DiceBoxAnimationController : MonoBehaviour
     private void PlayZoomInAnimation(float startTime = 0f)
     {
         currentState = DiceBoxState.ZoomingIn;
-        animationCoroutine = StartCoroutine(PlayBaseSequence(
+        animationCoroutine = StartCoroutine(PlayTimedSequence(
             zoomInSequence, zoomInDuration, loop: false, reverse: false,
             startTime: startTime, onComplete: OnZoomInComplete));
     }
@@ -459,7 +447,14 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     private IEnumerator HoldThenClose(float holdDuration)
     {
-        yield return new WaitForSecondsRealtime(holdDuration / Mathf.Max(playbackSpeed, 0.01f));
+        float elapsed = 0f;
+        float scaledDuration = holdDuration / Mathf.Max(playbackSpeed, 0.01f);
+        
+        while (elapsed < scaledDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
 
         currentState = DiceBoxState.Closing;
 
@@ -474,53 +469,6 @@ public class DiceBoxAnimationController : MonoBehaviour
             onComplete: OnClosingComplete));
     }
 
-    private IEnumerator PlayTimedSequenceForRolling(float idleTime, float openCloseTime)
-    {
-        isAnimating = true;
-        currentState = DiceBoxState.Idle;
-
-        yield return StartCoroutine(PlayBaseSequence(
-            idleSequence,
-            idleTime,
-            loop: true,
-            reverse: false,
-            startTime: 0f,
-            onComplete: null));
-
-        currentState = DiceBoxState.ZoomingIn;
-        SetTopLayerActive(true);
-
-        float adjustedOpenDuration = openCloseTime * 0.4f;
-        float adjustedHoldDuration = openCloseTime * 0.3f;
-        float adjustedCloseDuration = openCloseTime * 0.3f;
-
-        int totalFrames = TotalOpenCloseFrames();
-        int openEndFrame = Mathf.Min(holdOnFrame, totalFrames - 1);
-
-        yield return StartCoroutine(PlayOpenCloseRange(
-            startFrame: 0,
-            endFrame: openEndFrame,
-            duration: adjustedOpenDuration,
-            startTime: 0f,
-            onComplete: null));
-
-        currentState = DiceBoxState.Open;
-        yield return new WaitForSecondsRealtime(adjustedHoldDuration);
-
-        currentState = DiceBoxState.Closing;
-        yield return StartCoroutine(PlayOpenCloseRange(
-            startFrame: openEndFrame,
-            endFrame: totalFrames - 1,
-            duration: adjustedCloseDuration,
-            startTime: 0f,
-            onComplete: null));
-
-        SetTopLayerActive(false);
-        if (diceContainer) diceContainer.SetActive(false);
-        currentState = DiceBoxState.Waiting;
-        isAnimating = false;
-    }
-
     private void OnClosingComplete()
     {
         SetTopLayerActive(false);
@@ -530,7 +478,7 @@ public class DiceBoxAnimationController : MonoBehaviour
     private void PlayZoomOutAnimation(float startTime = 0f)
     {
         currentState = DiceBoxState.ZoomingOut;
-        animationCoroutine = StartCoroutine(PlayBaseSequence(
+        animationCoroutine = StartCoroutine(PlayTimedSequence(
             zoomInSequence, zoomOutDuration, loop: false, reverse: true,
             startTime: startTime, onComplete: OnZoomOutComplete));
     }
@@ -551,9 +499,13 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     #endregion
 
-    #region Core Coroutines
+    #region Core Animation System - Time-Based Sampling (FPS Independent)
 
-    private IEnumerator PlayBaseSequence(
+    /// <summary>
+    /// Time-based animation player - samples sprite sequence based on elapsed time
+    /// Guarantees animation completes in exact duration regardless of FPS
+    /// </summary>
+    private IEnumerator PlayTimedSequence(
         List<Sprite> sequence,
         float duration,
         bool loop,
@@ -568,40 +520,52 @@ public class DiceBoxAnimationController : MonoBehaviour
         }
 
         isAnimating = true;
-        float frameDelay = duration / sequence.Count;
-
-        int startFrame = Mathf.FloorToInt(startTime / frameDelay);
-        float timeIntoStartFrame = startTime - startFrame * frameDelay;
-
-        if (timeIntoStartFrame > 0f && startFrame < sequence.Count)
-        {
-            int displayIdx = reverse ? (sequence.Count - 1 - startFrame) : startFrame;
-            SetBaseFrame(sequence, displayIdx);
-
-            // MODIFIED: Apply FPS multiplier
-            float fpsMultiplier = GetFPSMultiplier();
-            yield return WaitForSecondsAccurate((frameDelay - timeIntoStartFrame) * fpsMultiplier / Mathf.Max(playbackSpeed, 0.01f));
-            startFrame++;
-        }
+        float elapsedTime = startTime;
+        float scaledDuration = duration / Mathf.Max(playbackSpeed, 0.01f);
+        int frameCount = sequence.Count;
+        int lastDisplayedFrame = -1;
 
         do
         {
-            int iFrom = reverse ? (sequence.Count - 1 - startFrame) : startFrame;
-            int iTo = reverse ? 0 : (sequence.Count - 1);
-            int step = reverse ? -1 : 1;
-
-            for (int i = iFrom; reverse ? (i >= iTo) : (i <= iTo); i += step)
+            // Time-based frame calculation - FPS independent
+            float normalizedTime = elapsedTime / scaledDuration;
+            
+            if (loop)
             {
-                SetBaseFrame(sequence, i);
-
-                // MODIFIED: Apply FPS multiplier
-                float fpsMultiplier = GetFPSMultiplier();
-                yield return WaitForSecondsAccurate(frameDelay * fpsMultiplier / Mathf.Max(playbackSpeed, 0.01f));
+                // Loop: wrap time to [0, 1] range
+                normalizedTime = normalizedTime % 1f;
+            }
+            else
+            {
+                // Non-loop: clamp to [0, 1] range
+                normalizedTime = Mathf.Clamp01(normalizedTime);
             }
 
-            startFrame = 0;
+            // Calculate current frame index based on time
+            int frameIndex = Mathf.FloorToInt(normalizedTime * frameCount);
+            frameIndex = Mathf.Clamp(frameIndex, 0, frameCount - 1);
+
+            // Apply reverse if needed
+            int displayIndex = reverse ? (frameCount - 1 - frameIndex) : frameIndex;
+
+            // Only update sprite if frame changed (optimization)
+            if (displayIndex != lastDisplayedFrame)
+            {
+                SetBaseFrame(sequence, displayIndex);
+                lastDisplayedFrame = displayIndex;
+            }
+
+            // Check if animation completed (non-looping only)
+            if (!loop && elapsedTime >= scaledDuration)
+            {
+                break;
+            }
+
+            // Advance time
+            elapsedTime += Time.unscaledDeltaTime;
+            yield return null;
         }
-        while (loop && isAnimating);
+        while (loop || elapsedTime < scaledDuration);
 
         isAnimating = false;
         animationCoroutine = null;
@@ -609,6 +573,10 @@ public class DiceBoxAnimationController : MonoBehaviour
         if (!loop) onComplete?.Invoke();
     }
 
+    /// <summary>
+    /// Time-based open/close animation - samples frame range based on elapsed time
+    /// Fires frame triggers at exact frame indices
+    /// </summary>
     private IEnumerator PlayOpenCloseRange(
         int startFrame,
         int endFrame,
@@ -624,29 +592,34 @@ public class DiceBoxAnimationController : MonoBehaviour
         if (frameCount == 0) { onComplete?.Invoke(); yield break; }
 
         isAnimating = true;
-        float frameDelay = duration / frameCount;
+        triggeredFrames.Clear(); // Reset trigger tracking
+        
+        float elapsedTime = startTime;
+        float scaledDuration = duration / Mathf.Max(playbackSpeed, 0.01f);
+        int lastDisplayedFrame = -1;
 
-        int skipFrames = Mathf.FloorToInt(startTime / frameDelay);
-        float timeIntoSkipFrame = startTime - skipFrames * frameDelay;
-        int currentFrame = Mathf.Min(startFrame + skipFrames, endFrame);
-
-        if (timeIntoSkipFrame > 0f && currentFrame <= endFrame)
+        while (elapsedTime < scaledDuration)
         {
-            SetOpenCloseFrameBothLayers(currentFrame);
-            FireOpenCloseFrameTriggers(currentFrame);
+            // Time-based frame calculation
+            float normalizedTime = Mathf.Clamp01(elapsedTime / scaledDuration);
+            int frameOffset = Mathf.FloorToInt(normalizedTime * frameCount);
+            int currentFrame = Mathf.Clamp(startFrame + frameOffset, startFrame, endFrame);
 
-            float fpsMultiplier = GetFPSMultiplier();
-            yield return WaitForSecondsAccurate((frameDelay - timeIntoSkipFrame) * fpsMultiplier / Mathf.Max(playbackSpeed, 0.01f));
-            currentFrame++;
+            // Only update if frame changed
+            if (currentFrame != lastDisplayedFrame)
+            {
+                SetOpenCloseFrameBothLayers(currentFrame);
+                FireOpenCloseFrameTriggers(currentFrame);
+                lastDisplayedFrame = currentFrame;
+            }
+
+            elapsedTime += Time.unscaledDeltaTime;
+            yield return null;
         }
 
-        for (int frame = currentFrame; frame <= endFrame; frame++)
-        {
-            SetOpenCloseFrameBothLayers(frame);
-            FireOpenCloseFrameTriggers(frame);
-            float fpsMultiplier = GetFPSMultiplier();
-            yield return WaitForSecondsAccurate(frameDelay * fpsMultiplier / Mathf.Max(playbackSpeed, 0.01f));
-        }
+        // Ensure final frame is displayed
+        SetOpenCloseFrameBothLayers(endFrame);
+        FireOpenCloseFrameTriggers(endFrame);
 
         isAnimating = false;
         animationCoroutine = null;
@@ -682,6 +655,10 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     private void FireOpenCloseFrameTriggers(int frame)
     {
+        // Prevent duplicate triggers for the same frame
+        if (triggeredFrames.Contains(frame)) return;
+        triggeredFrames.Add(frame);
+
         if (frame == boxOpenSoundFrame && !hasPlayedBoxOpenSound)
         {
             AudioManager.Instance?.PlayBoxOpen();
@@ -705,6 +682,7 @@ public class DiceBoxAnimationController : MonoBehaviour
             AudioManager.Instance?.PlayDiceShow();
         }
 
+        // Dice scaling logic
         if (frame >= diceScaleStartFrame && frame <= diceScaleEndFrame && diceContainer != null)
         {
             int range = diceScaleEndFrame - diceScaleStartFrame;
@@ -727,9 +705,10 @@ public class DiceBoxAnimationController : MonoBehaviour
             StartCoroutine(HideDiceNextFrame());
         }
     }
+
     private IEnumerator HideDiceNextFrame()
     {
-        yield return null;  // skip to end of current frame
+        yield return null;
         if (diceContainer) diceContainer.SetActive(false);
         onDiceShouldHide?.Invoke();
     }
@@ -773,6 +752,8 @@ public class DiceBoxAnimationController : MonoBehaviour
         hasPendingReveal = false;
         playbackSpeed = 1f;
         currentState = DiceBoxState.Waiting;
+        triggeredFrames.Clear();
+        
         if (diceContainer)
         {
             diceContainer.SetActive(false);
@@ -785,51 +766,5 @@ public class DiceBoxAnimationController : MonoBehaviour
         }
     }
 
-    private IEnumerator WaitForSecondsAccurate(float seconds)
-    {
-        float elapsed = 0f;
-        while (elapsed < seconds)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            yield return null;
-        }
-    }
-
-    // NEW: FPS tracking methods
-    private void UpdateFPSTracking()
-    {
-        float currentFPS = 1f / Time.unscaledDeltaTime;
-
-        fpsSamples.Enqueue(currentFPS);
-        if (fpsSamples.Count > FPS_SAMPLE_SIZE)
-        {
-            fpsSamples.Dequeue();
-        }
-
-        float sum = 0f;
-        foreach (float fps in fpsSamples)
-        {
-            sum += fps;
-        }
-        averageFPS = sum / fpsSamples.Count;
-    }
-
-    private float GetFPSMultiplier()
-    {
-        if (!enableFPSAdaptation) return 1f;
-
-        // Adjust timing to ensure smooth animation completion at any FPS
-        // At lower FPS (30): multiply delays to stretch animation, ensuring all sprites show
-        // At higher FPS (120): reduce delays to maintain visual flow
-        // Formula: targetFPS / averageFPS  
-        // - At 30 FPS: 60/30 = 2.0 (each sprite shown longer)
-        // - At 60 FPS: 60/60 = 1.0 (normal timing)
-        // - At 120 FPS: 60/120 = 0.5 (each sprite shown shorter)
-        float ratio = targetFPS / averageFPS;
-
-        return Mathf.Clamp(ratio, 0.8f, 1.2f);
-    }
-
     #endregion
-
-}   
+}

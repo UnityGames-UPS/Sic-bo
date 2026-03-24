@@ -260,7 +260,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 1.7}
-  m_SizeDelta: {x: 170, y: 170}
+  m_SizeDelta: {x: 160, y: 160}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4041931033476350249
 CanvasRenderer:
@@ -338,7 +338,7 @@ MonoBehaviour:
   StartOnAwake: 0
   StartonEnable: 1
   currentAnimationState: 0
-  AnimationSpeed: 18
+  AnimationSpeed: 29
   delayBetweenLoop: 0
 --- !u!1 &6814881221705434442
 GameObject:
