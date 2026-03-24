@@ -4,10 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// DiceBoxAnimationController - Reworked for FPS independence
-/// Uses time-based sampling instead of frame delays for smooth, consistent playback on any device
-/// </summary>
+
 public class DiceBoxAnimationController : MonoBehaviour
 {
     #region Serialized Fields
@@ -44,6 +41,8 @@ public class DiceBoxAnimationController : MonoBehaviour
     [SerializeField] private int holdOnFrame = 51;
     [SerializeField] private int diceShowFrame = 40;
     [SerializeField] private int diceHideFrame = 65;
+    [SerializeField] private int resultShowFrame = 40;
+    [SerializeField] private int resultHideFrame = 65;
     [SerializeField] private int boxOpenSoundFrame = 0;
     [SerializeField] private int boxCloseSoundFrame = 0;
     [SerializeField] private int diceScaleStartFrame = 40;
@@ -71,6 +70,9 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     private Action onDiceShouldShow;
     private Action onDiceShouldHide;
+
+    private Action onResultShouldShow;
+    private Action onResultShouldHide;
     private Action onAnimationCycleComplete;
 
     private bool hasPlayedShakeSound = false;
@@ -105,18 +107,15 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     internal void StartAnimationCycleWithServerSync(long roundStartTimestamp, long bettingEndTimestamp, long currentServerTime)
     {
-        // Save the current state BEFORE resetting
         DiceBoxState previousState = currentState;
         
         ForceResetToCleanState();
      
-        // Check the PREVIOUS state (before reset), not the current state (after reset)
         if (previousState == DiceBoxState.Opening ||
             previousState == DiceBoxState.Open ||
             previousState == DiceBoxState.Closing ||
             previousState == DiceBoxState.ZoomingOut)
         {
-            // New round started while previous animation still playing - use fast-forward
             playbackSpeed = fastForwardSpeed;
             hasPendingRound = true;
             pendingRoundStartTimestamp = roundStartTimestamp;
@@ -281,6 +280,10 @@ public class DiceBoxAnimationController : MonoBehaviour
     internal void SetDiceShowCallback(Action cb) => onDiceShouldShow = cb;
     internal void SetDiceHideCallback(Action cb) => onDiceShouldHide = cb;
     internal void SetAnimationCycleCompleteCallback(Action cb) => onAnimationCycleComplete = cb;
+
+    internal void SetResultShowCallback(Action cb) => onResultShouldShow = cb;
+    internal void SetResultHideCallback(Action cb) => onResultShouldHide = cb;
+
 
     internal DiceBoxState GetCurrentState() => currentState;
     internal bool IsAnimating() => isAnimating;
@@ -501,10 +504,6 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     #region Core Animation System - Time-Based Sampling (FPS Independent)
 
-    /// <summary>
-    /// Time-based animation player - samples sprite sequence based on elapsed time
-    /// Guarantees animation completes in exact duration regardless of FPS
-    /// </summary>
     private IEnumerator PlayTimedSequence(
         List<Sprite> sequence,
         float duration,
@@ -527,41 +526,31 @@ public class DiceBoxAnimationController : MonoBehaviour
 
         do
         {
-            // Time-based frame calculation - FPS independent
             float normalizedTime = elapsedTime / scaledDuration;
             
             if (loop)
             {
-                // Loop: wrap time to [0, 1] range
                 normalizedTime = normalizedTime % 1f;
             }
             else
             {
-                // Non-loop: clamp to [0, 1] range
                 normalizedTime = Mathf.Clamp01(normalizedTime);
             }
 
-            // Calculate current frame index based on time
             int frameIndex = Mathf.FloorToInt(normalizedTime * frameCount);
             frameIndex = Mathf.Clamp(frameIndex, 0, frameCount - 1);
 
-            // Apply reverse if needed
             int displayIndex = reverse ? (frameCount - 1 - frameIndex) : frameIndex;
 
-            // Only update sprite if frame changed (optimization)
             if (displayIndex != lastDisplayedFrame)
             {
                 SetBaseFrame(sequence, displayIndex);
                 lastDisplayedFrame = displayIndex;
             }
-
-            // Check if animation completed (non-looping only)
             if (!loop && elapsedTime >= scaledDuration)
             {
                 break;
             }
-
-            // Advance time
             elapsedTime += Time.unscaledDeltaTime;
             yield return null;
         }
@@ -573,10 +562,6 @@ public class DiceBoxAnimationController : MonoBehaviour
         if (!loop) onComplete?.Invoke();
     }
 
-    /// <summary>
-    /// Time-based open/close animation - samples frame range based on elapsed time
-    /// Fires frame triggers at exact frame indices
-    /// </summary>
     private IEnumerator PlayOpenCloseRange(
         int startFrame,
         int endFrame,
@@ -592,7 +577,7 @@ public class DiceBoxAnimationController : MonoBehaviour
         if (frameCount == 0) { onComplete?.Invoke(); yield break; }
 
         isAnimating = true;
-        triggeredFrames.Clear(); // Reset trigger tracking
+        triggeredFrames.Clear(); 
         
         float elapsedTime = startTime;
         float scaledDuration = duration / Mathf.Max(playbackSpeed, 0.01f);
@@ -600,12 +585,10 @@ public class DiceBoxAnimationController : MonoBehaviour
 
         while (elapsedTime < scaledDuration)
         {
-            // Time-based frame calculation
             float normalizedTime = Mathf.Clamp01(elapsedTime / scaledDuration);
             int frameOffset = Mathf.FloorToInt(normalizedTime * frameCount);
             int currentFrame = Mathf.Clamp(startFrame + frameOffset, startFrame, endFrame);
 
-            // Only update if frame changed
             if (currentFrame != lastDisplayedFrame)
             {
                 SetOpenCloseFrameBothLayers(currentFrame);
@@ -617,7 +600,6 @@ public class DiceBoxAnimationController : MonoBehaviour
             yield return null;
         }
 
-        // Ensure final frame is displayed
         SetOpenCloseFrameBothLayers(endFrame);
         FireOpenCloseFrameTriggers(endFrame);
 
@@ -655,7 +637,6 @@ public class DiceBoxAnimationController : MonoBehaviour
 
     private void FireOpenCloseFrameTriggers(int frame)
     {
-        // Prevent duplicate triggers for the same frame
         if (triggeredFrames.Contains(frame)) return;
         triggeredFrames.Add(frame);
 
@@ -680,6 +661,16 @@ public class DiceBoxAnimationController : MonoBehaviour
             }
             onDiceShouldShow?.Invoke();
             AudioManager.Instance?.PlayDiceShow();
+        }
+
+        if (frame == resultShowFrame)
+        {
+            onResultShouldShow?.Invoke();
+        }
+
+        if (frame == resultHideFrame)
+        {
+            onResultShouldHide?.Invoke();
         }
 
         // Dice scaling logic

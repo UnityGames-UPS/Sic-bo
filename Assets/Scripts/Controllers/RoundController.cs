@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 public class RoundController : MonoBehaviour
 {
@@ -18,6 +19,7 @@ public class RoundController : MonoBehaviour
     [Header("Result Display")]
     [SerializeField] private TMPro.TMP_Text Sum_Text;
     [SerializeField] private GameObject ResultPanel;
+    [SerializeField] private CanvasGroup ResultPanelCanvasGroup; 
 
     [Header("Result Indicators")]
     [SerializeField] private GameObject SmallImage;
@@ -28,6 +30,10 @@ public class RoundController : MonoBehaviour
     [Header("Sum Text Colors")]
     [SerializeField] private Color oddSumColor = Color.red;
     [SerializeField] private Color evenSumColor = Color.black;
+
+    [Header("Result Panel Animation")]
+    [SerializeField] private float resultPanelFadeDuration = 0.6f;
+    [SerializeField] private Ease resultPanelFadeEase = Ease.OutQuad;
 
     [Header("References")]
     [SerializeField] private UIController uiController;
@@ -53,6 +59,7 @@ public class RoundController : MonoBehaviour
     private DiceResultData currentDiceResult;
     private bool diceResultReceived = false;
     private long currentBettingEndTime = 0;
+    private Tween resultPanelFadeTween; 
     #endregion
 
     #region Unity Lifecycle
@@ -63,10 +70,31 @@ public class RoundController : MonoBehaviour
             diceBoxAnimController.SetDiceShowCallback(OnAnimationShowDice);
             diceBoxAnimController.SetDiceHideCallback(OnAnimationHideDice);
             diceBoxAnimController.SetAnimationCycleCompleteCallback(OnAnimationCycleComplete);
+            diceBoxAnimController.SetResultShowCallback(OnResultShouldShow);
+            diceBoxAnimController.SetResultHideCallback(OnResultShouldHide); 
+
+        }
+
+        // Setup CanvasGroup for fading if not already assigned
+        if (ResultPanel != null && ResultPanelCanvasGroup == null)
+        {
+            ResultPanelCanvasGroup = ResultPanel.GetComponent<CanvasGroup>();
+            if (ResultPanelCanvasGroup == null)
+                ResultPanelCanvasGroup = ResultPanel.AddComponent<CanvasGroup>();
         }
 
         if (DiceContainer) DiceContainer.SetActive(false);
-        if (ResultPanel) ResultPanel.SetActive(false);
+        if (ResultPanel)
+        {
+            ResultPanel.SetActive(false);
+            if (ResultPanelCanvasGroup != null)
+                ResultPanelCanvasGroup.alpha = 0f;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        resultPanelFadeTween?.Kill();
     }
     #endregion
 
@@ -126,7 +154,6 @@ public class RoundController : MonoBehaviour
         diceResultReceived = true;
 
         betController.DisableBetting();
-        ////uiController.UpdateRoundPhase("RESULT");
 
         if (diceBoxAnimController != null)
             diceBoxAnimController.RevealDiceResult();
@@ -134,15 +161,23 @@ public class RoundController : MonoBehaviour
         {
             bool isTriple = data.dice1 == data.dice2 && data.dice2 == data.dice3;
             SetDiceValues(data);
-            ShowResult(data.sum, data.matchSide, isTriple);
+            //ShowResult(data.sum, data.matchSide, isTriple);
             PlayDiceResultSounds(data);
         }
     }
 
     internal void ClearRoundDisplay()
     {
+        // Kill any ongoing fade animation
+        resultPanelFadeTween?.Kill();
+
         if (DiceContainer) DiceContainer.SetActive(false);
-        if (ResultPanel) ResultPanel.SetActive(false);
+        if (ResultPanel)
+        {
+            ResultPanel.SetActive(false);
+            if (ResultPanelCanvasGroup != null)
+                ResultPanelCanvasGroup.alpha = 0f;
+        }
         if (SmallImage) SmallImage.SetActive(false);
         if (BigImage) BigImage.SetActive(false);
         if (OddImage) OddImage.SetActive(false);
@@ -167,18 +202,31 @@ public class RoundController : MonoBehaviour
     {
         if (currentDiceResult == null) return;
 
-        bool isTriple = currentDiceResult.dice1 == currentDiceResult.dice2 && currentDiceResult.dice2 == currentDiceResult.dice3;
+       // bool isTriple = currentDiceResult.dice1 == currentDiceResult.dice2 && currentDiceResult.dice2 == currentDiceResult.dice3;
 
         SetDiceValues(currentDiceResult);
         ApplyRandomPresetPosition();
-        ShowResult(currentDiceResult.sum, currentDiceResult.matchSide, isTriple);
+        //ShowResultWithFade(currentDiceResult.sum, currentDiceResult.matchSide, isTriple);
         PlayDiceResultSounds(currentDiceResult);
     }
 
     private void OnAnimationHideDice()
     {
         if (DiceContainer) DiceContainer.SetActive(false);
-        if (ResultPanel) ResultPanel.SetActive(false);
+     //   HideResultWithFade();
+    }
+
+    private void OnResultShouldShow()
+    {
+     
+            if (currentDiceResult == null) return;
+            bool isTriple = currentDiceResult.dice1 == currentDiceResult.dice2 && currentDiceResult.dice2 == currentDiceResult.dice3;
+            ShowResultWithFade(currentDiceResult.sum, currentDiceResult.matchSide, isTriple);
+    }
+
+    private void OnResultShouldHide()
+    {
+        HideResultWithFade();
     }
 
     private void OnAnimationCycleComplete() => isRoundActive = false;
@@ -200,6 +248,7 @@ public class RoundController : MonoBehaviour
         ApplyToDice(Dice2_Image, selectedSet.GetDice2Pos());
         ApplyToDice(Dice3_Image, selectedSet.GetDice3Pos());
     }
+
     private void ApplyToDice(Image diceImage, Vector2 basePosition)
     {
         if (diceImage == null) return;
@@ -214,6 +263,7 @@ public class RoundController : MonoBehaviour
         float randomZ = Random.Range(-maxRotationOffset, maxRotationOffset);
         rect.localRotation = Quaternion.Euler(0f, 0f, randomZ);
     }
+
     private void SetDiceValues(DiceResultData data)
     {
         if (DiceSprites == null || DiceSprites.Length < 6) return;
@@ -229,7 +279,81 @@ public class RoundController : MonoBehaviour
         diceImage.sprite = DiceSprites[faceIndex];
     }
 
+    /// <summary>
+    /// Show result with smooth fade-in animation
+    /// </summary>
+    private void ShowResultWithFade(int sum, string matchSide, bool isTriple)
+    {
+        // Setup the result content first (while invisible)
+        SetupResultContent(sum, matchSide, isTriple);
+
+        // Ensure panel is active but invisible
+        if (ResultPanel)
+        {
+            ResultPanel.SetActive(true);
+            if (ResultPanelCanvasGroup != null)
+            {
+                ResultPanelCanvasGroup.alpha = 0f;
+                
+                // Kill any existing fade animation
+                resultPanelFadeTween?.Kill();
+                
+                // Fade in smoothly
+                resultPanelFadeTween = ResultPanelCanvasGroup.DOFade(1f, resultPanelFadeDuration)
+                    .SetEase(resultPanelFadeEase)
+                    .SetUpdate(true);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Hide result with smooth fade-out animation
+    /// </summary>
+    private void HideResultWithFade()
+    {
+        if (ResultPanel && ResultPanelCanvasGroup != null)
+        {
+            // Kill any existing fade animation
+            resultPanelFadeTween?.Kill();
+            
+            // Fade out smoothly
+            resultPanelFadeTween = ResultPanelCanvasGroup.DOFade(0f, resultPanelFadeDuration)
+                .SetEase(resultPanelFadeEase)
+                .SetUpdate(true)
+                .OnComplete(() =>
+                {
+                    if (ResultPanel != null)
+                        ResultPanel.SetActive(false);
+                });
+        }
+        else if (ResultPanel)
+        {
+            // Fallback if no canvas group
+            ResultPanel.SetActive(false);
+        }
+    }
+
+    /*/// <summary>
+    /// Legacy method for immediate show (without fade)
+    /// Kept for backward compatibility
+    /// </summary>
     private void ShowResult(int sum, string matchSide, bool isTriple)
+    {
+        SetupResultContent(sum, matchSide, isTriple);
+        
+        if (ResultPanel)
+        {
+            ResultPanel.SetActive(true);
+            if (ResultPanelCanvasGroup != null)
+                ResultPanelCanvasGroup.alpha = 1f;
+        }
+    }*/
+
+    /// <summary>
+    /// Sets up the result panel content (text, colors, indicators)
+    /// Separated from visibility logic for reuse
+    /// </summary>
+    private void SetupResultContent(int sum, string matchSide, bool isTriple)
     {
         if (Sum_Text)
         {
@@ -237,13 +361,13 @@ public class RoundController : MonoBehaviour
             Sum_Text.color = (sum % 2 != 0) ? oddSumColor : evenSumColor;
         }
 
-        // FIXED: Always clear all indicators first
+        // Clear all indicators first
         if (SmallImage) SmallImage.SetActive(false);
         if (BigImage) BigImage.SetActive(false);
         if (OddImage) OddImage.SetActive(false);
         if (EvenImage) EvenImage.SetActive(false);
 
-        // FIXED: Never show big/small for triples
+        // Never show big/small for triples
         if (isTriple)
         {
             // For triples, only show odd/even (though this is rare)
@@ -258,7 +382,7 @@ public class RoundController : MonoBehaviour
 
         if (!string.IsNullOrEmpty(matchSide))
         {
-            // FIXED: Use server's matchSide if available (most reliable)
+            // Use server's matchSide if available (most reliable)
             string side = matchSide.ToLower();
             showBig = side == "big";
             showSmall = side == "small";
@@ -270,7 +394,7 @@ public class RoundController : MonoBehaviour
             showBig = sum >= 11 && sum <= 17;
         }
 
-        // FIXED: Only activate the correct indicator, never both
+        // Only activate the correct indicator, never both
         if (showSmall && SmallImage)
         {
             SmallImage.SetActive(true);
@@ -283,8 +407,6 @@ public class RoundController : MonoBehaviour
         // Set odd/even
         if (sum % 2 != 0 && OddImage) OddImage.SetActive(true);
         else if (sum % 2 == 0 && EvenImage) EvenImage.SetActive(true);
-
-        if (ResultPanel) ResultPanel.SetActive(true);
     }
     #endregion
 
