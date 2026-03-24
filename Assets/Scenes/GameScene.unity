@@ -24183,7 +24183,7 @@ MonoBehaviour:
   testToken: b73653c53c2e497bbff2251008ce4be9
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
-  showDebugLogs: 1
+  showDebugLogs: 0
 --- !u!4 &410521237
 Transform:
   m_ObjectHideFlags: 0
@@ -91647,7 +91647,7 @@ MonoBehaviour:
   EvenImage: {fileID: 288508438}
   oddSumColor: {r: 1, g: 1, b: 1, a: 1}
   evenSumColor: {r: 1, g: 1, b: 1, a: 1}
-  resultPanelFadeDuration: 0.6
+  resultPanelFadeDuration: 0.45
   resultPanelFadeEase: 6
   uiController: {fileID: 1759262012}
   betController: {fileID: 275686507}
@@ -94129,7 +94129,7 @@ MonoBehaviour:
   resultPlaneController: {fileID: 760194023}
   socketManager: {fileID: 410521236}
   diceResultHighlightDelay: 0.8
-  showDebugLogs: 1
+  showDebugLogs: 0
 --- !u!4 &1673436616
 Transform:
   m_ObjectHideFlags: 0
