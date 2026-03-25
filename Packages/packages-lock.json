@@ -136,7 +136,11 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.burst": {
+<<<<<<< HEAD
       "version": "1.8.29",
+=======
+      "version": "1.8.25",
+>>>>>>> 659b2074 (Complete the rebase)
       "depth": 1,
       "source": "registry",
       "dependencies": {

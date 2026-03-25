@@ -28,12 +28,6 @@ mergeInto(LibraryManager.library, {
         }
         window.ReactNativeWebView.postMessage(message);
       }
-      else if(window.parent){
-        if(window.parent.dispatchReactUnityEvent){
-          console.log("Inside window parent");
-          window.parent.dispatchReactUnityEvent(message); 
-        }
-      }
     },
 
     RequestFullscreen: function () {
