@@ -905,6 +905,19 @@ public class UIController : MonoBehaviour
 
     internal void UpdateLeaderboards(Leaderboards leaderboards) => leaderboardController?.UpdateLeaderboard(leaderboards);
 
+    /// <summary>Returns true while the leaderboard is running its slide/fade animation.</summary>
+    internal bool IsLeaderboardAnimating() => leaderboardController != null && leaderboardController.IsAnimating();
+
+    /// <summary>
+    /// Yields every frame until the leaderboard animation has finished.
+    /// Safe to call when leaderboardController is null — returns immediately.
+    /// </summary>
+    internal IEnumerator WaitForLeaderboardAnimation()
+    {
+        if (leaderboardController == null) yield break;
+        yield return leaderboardController.WaitForAnimationComplete();
+    }
+
     internal void UpdateStats(StatsResult stats)
     {
         if (stats == null) return;

@@ -80,6 +80,9 @@ internal class ChipWinAnimationController : MonoBehaviour
 
     internal void PlayCashoutAnimation()
     {
+        // Nothing to sweep — player lost this round, skip the coroutine entirely.
+        if (activeWinChips.Count == 0 && stakeReturnChips.Count == 0) return;
+
         if (cashoutCoroutine != null) StopCoroutine(cashoutCoroutine);
         cashoutCoroutine = StartCoroutine(CR_Cashout());
     }
@@ -418,7 +421,6 @@ internal class ChipWinAnimationController : MonoBehaviour
     {
         if (betController == null) return;
 
-        // Collect winning betOptions for fast lookup
         var winningOptions = new HashSet<string>();
         foreach (var w in winAreas) winningOptions.Add(w.betOption);
 
@@ -433,25 +435,8 @@ internal class ChipWinAnimationController : MonoBehaviour
             PlayerBetComponent comp = betController.GetPlayerBetComponent(option);
             if (comp == null || !comp.HasBets()) continue;
 
-            // Fade all chips inside this bet component to zero and then disable it.
-            // We animate each child chip RT individually so the clear is visual, not instant.
-            foreach (Transform child in comp.transform)
-            {
-                if (child == null) continue;
-                CanvasGroup cg = child.GetComponent<CanvasGroup>();
-                if (cg == null) cg = child.gameObject.AddComponent<CanvasGroup>();
-                cg.DOFade(0f, dealerToBetDuration * 0.6f)
-                  .SetEase(Ease.InQuad)
-                  .OnComplete(() =>
-                  {
-                      if (child != null) child.gameObject.SetActive(false);
-                  });
-            }
-            // Clear the logical state after the fade so layout resets cleanly
-            DOVirtual.DelayedCall(dealerToBetDuration * 0.7f, () =>
-            {
-                if (comp != null) comp.Clear();
-            });
+            // Simple immediate disable — no fade tweens that can race with the next round.
+            comp.Clear();
         }
     }
 
@@ -483,22 +468,8 @@ internal class ChipWinAnimationController : MonoBehaviour
             toSweep.Add(rt);
         }
         stakeReturnChips.Clear();
-        int extraNeeded = Mathf.Min(3, dealerPool.Count);
-        foreach (var (rt, _) in dealerPool)
-        {
-            if (extraNeeded <= 0) break;
-            if (activeWinChips.Contains(rt)) continue;
 
-            rt.gameObject.SetActive(true);
-            rt.localPosition = new Vector3(
-                Random.Range(-dealerScatterX, dealerScatterX),
-                Random.Range(-dealerScatterY, dealerScatterY), 0f);
-            rt.localScale = Vector3.zero;
-            rt.DOScale(chipWorkingScale * 0.70f, 0.14f).SetEase(Ease.OutBack);
-
-            toSweep.Add(rt);
-            extraNeeded--;
-        }
+        // No extra dealer-spawn chips — they start from off-screen and break the arc.
 
         yield return new WaitForSeconds(0.18f);
 
@@ -538,7 +509,7 @@ internal class ChipWinAnimationController : MonoBehaviour
             DOTween.Sequence()
                 .Append(rt.DOAnchorPos(midPos, halfDur).SetEase(Ease.OutQuad))
                 .Append(rt.DOAnchorPos(playerCanvasPos, landDur).SetEase(Ease.InQuad))
-                .Join(rt.DOScale(Vector3.zero, landDur).SetDelay(halfDur).SetEase(Ease.InBack))
+                .Join(rt.DOScale(Vector3.zero, landDur).SetEase(Ease.InBack))
                 .OnComplete(() =>
                 {
                     if (rt == null) return;

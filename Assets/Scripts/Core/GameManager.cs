@@ -121,6 +121,13 @@ public class GameManager : MonoBehaviour
         uiController.UpdateLeaderboards(payload.leaderboards);
         betController.SetLeaderboardData(payload.leaderboards);
 
+        // FIX: Lock leaderboards when joining mid-round so opponent chips get correct badges
+        if (isLevelJoin && payload.leaderboards != null)
+        {
+            opponentChipManager?.SetLeaderboardData(payload.leaderboards);
+            opponentChipManager?.LockLeaderboardsForRound();
+        }
+
         if (payload.stats != null && payload.stats.Count > 0)
             uiController.UpdateStats(GameUtilities.CalculateStats(payload.stats));
 
@@ -220,7 +227,7 @@ public class GameManager : MonoBehaviour
     internal void ReconcileResultsOnFocusGain()
     {
         if (socketManager == null || socketManager.CurrentRoomPayload == null) return;
-        
+
         var stats = socketManager.CurrentRoomPayload.stats;
         if (stats != null && stats.Count > 0)
         {
@@ -283,6 +290,11 @@ public class GameManager : MonoBehaviour
 
         betController.DisableBetting();
         uiController.ShowBetLocked();
+
+        // Lock badge repaints immediately — any leaderboard update that arrives
+        // during the dice reveal / chip-fly animation must not repaint player chips.
+        // Badges are unlocked again in ClearAllBets when the next round starts.
+        betController.LockBadges();
 
         roundController.ShowDiceResult(data);
 
@@ -362,16 +374,38 @@ public class GameManager : MonoBehaviour
                     ApplyBalanceUpdate(payout.balance);
 
                     if (payout.win > 0)
-                    {
                         uiController.ShowWinAnimation(payout.win);
-                        chipWinAnimationController?.PlayCashoutAnimation();
-                    }
                 }
             }
         }
 
-        opponentChipManager?.PlayCashoutAnimation();
+        // Kick off the cashout flow in a coroutine so we can wait for the
+        // leaderboard slide animation to finish before flying any chips.
+        // Waiting ensures spawn-positions returned by GetPlayerPosition() are
+        // valid (blocks no longer mid-transition) so chips go to the right place.
+        StartCoroutine(CR_CashoutFlow());
+
         betController.ClearAllBets(false);
+    }
+
+    /// <summary>
+    /// Waits for the leaderboard animation (triggered by the cashout leaderboard push)
+    /// to finish, then fires player and opponent cashout chip animations simultaneously.
+    /// This keeps both animations in sync AND ensures correct chip destinations after
+    /// the leaderboard updates (e.g. a player who dropped out of the leaderboard must
+    /// have their chips fly to the opponent dealer, not a now-stale leaderboard block).
+    /// </summary>
+    private IEnumerator CR_CashoutFlow()
+    {
+        // Wait until the leaderboard has finished animating its new state.
+        // This is typically very short (< 0.4 s) — negligible visual delay.
+        if (uiController.IsLeaderboardAnimating())
+            yield return uiController.WaitForLeaderboardAnimation();
+
+        // Fire player and opponent cashout on the same frame so chips from
+        // both sides begin their journey to their destinations simultaneously.
+        chipWinAnimationController?.PlayCashoutAnimation();
+        opponentChipManager?.PlayCashoutAnimation();
     }
 
     internal void OnRoundEnd(RoundEndPayload data)
@@ -415,6 +449,15 @@ public class GameManager : MonoBehaviour
 
         uiController.UpdateLeaderboards(data.leaderboards);
         betController.SetLeaderboardData(data.leaderboards);
+
+        // FIX: Update opponent chip manager with new leaderboards and re-lock
+        // so opponent chips spawned after this update get correct badges
+        if (opponentChipManager != null)
+        {
+            opponentChipManager.SetLeaderboardData(data.leaderboards);
+            opponentChipManager.LockLeaderboardsForRound();
+        }
+
         uiController.UpdatePlayerCountInLevel(data.playerCount);
     }
 

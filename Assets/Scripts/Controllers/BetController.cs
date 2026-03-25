@@ -122,6 +122,14 @@ public class BetController : MonoBehaviour
     private bool isPlayerWinner = false;
 
     /// <summary>
+    /// Snapshot of the badge state from the last time we applied badges to player chips.
+    /// Only repaint when this actually changes — prevents glitching chips whose
+    /// leaderboard position didn't move when an unrelated update arrives.
+    /// </summary>
+    private bool _lastAppliedRichest = false;
+    private bool _lastAppliedWinner = false;
+
+    /// <summary>
     /// When true, chip badge repaints are suppressed.
     /// Set when dice result arrives (animations in flight) and cleared when the
     /// round fully resets via ClearAllBets, preventing mid-animation badge jitter.
@@ -1268,22 +1276,31 @@ public class BetController : MonoBehaviour
     {
         currentLeaderboards = leaderboards;
 
+        // Always forward leaderboard data to opponent manager — it uses this
+        // when a new opponent places a bet so their chip spawns from the right slot.
+        // Only skip if a cashout animation is actively running (chips may be in flight).
         if (opponentChipManager != null)
         {
             bool hasActiveChips = opponentChipManager.IsCashoutRunning() || opponentChipManager.HasActiveChips();
-
             if (!hasActiveChips)
-            {
                 opponentChipManager.SetLeaderboardData(leaderboards);
-            }
         }
 
-        // Always keep the status values up to date for the next unlock.
+        // Recompute the player's current position.
         RefreshPlayerLeaderboardStatus();
 
-        // Only repaint chips when no animation is running; prevents mid-animation
-        // badge jitter caused by a leaderboard push arriving while chips are in flight.
-        if (!_badgesLocked)
+        // If badges are locked (dice result in flight) do nothing more — the unlock
+        // in ClearAllBets will repaint everything with the freshest data.
+        if (_badgesLocked) return;
+
+        // Only repaint chips when the player's own badge state actually changed.
+        // This prevents flickering chips whose position didn't move when an
+        // unrelated leaderboard push arrives (e.g. a different player overtook
+        // someone, but the local player is still #1 richest).
+        bool richestChanged = isPlayerRichest != _lastAppliedRichest;
+        bool winnerChanged = isPlayerWinner != _lastAppliedWinner;
+
+        if (richestChanged || winnerChanged)
             RefreshAllPlayerChipBadges();
     }
 
@@ -1308,6 +1325,10 @@ public class BetController : MonoBehaviour
     internal void UnlockBadges()
     {
         _badgesLocked = false;
+        // Reset the snapshot so the unlock always forces a full repaint,
+        // even if isPlayerRichest/Winner didn't change since the last paint.
+        _lastAppliedRichest = !isPlayerRichest;
+        _lastAppliedWinner = !isPlayerWinner;
         RefreshPlayerLeaderboardStatus();
         RefreshAllPlayerChipBadges();
     }
@@ -1321,6 +1342,8 @@ public class BetController : MonoBehaviour
     private void RefreshAllPlayerChipBadges()
     {
         if (_badgesLocked) return;
+
+        // Paint all active player-bet containers.
         ApplyBadgesToContainer(SmallArea?.PlayerBetContainer);
         ApplyBadgesToContainer(BigArea?.PlayerBetContainer);
         ApplyBadgesToContainer(OddArea?.PlayerBetContainer);
@@ -1328,6 +1351,10 @@ public class BetController : MonoBehaviour
         foreach (var area in TripleDiceAreas) ApplyBadgesToContainer(area?.PlayerBetContainer);
         foreach (var area in SingleDiceAreas) ApplyBadgesToContainer(area?.PlayerBetContainer);
         foreach (var area in SumAreas) ApplyBadgesToContainer(area?.PlayerBetContainer);
+
+        // Record what we just applied so future calls can diff against it.
+        _lastAppliedRichest = isPlayerRichest;
+        _lastAppliedWinner = isPlayerWinner;
     }
 
 
@@ -1335,21 +1362,24 @@ public class BetController : MonoBehaviour
     {
         if (container == null || _badgesLocked) return;
 
-        // FIX 3: Only get chips that are direct children or from PlayerBetComponent
-        // Don't search recursively to avoid affecting opponent chips
+        // includeInactive: true so we find all chips, but we skip any that
+        // aren't actively visible — cleared / pooled chips must not receive badges.
         Chip[] chips = container.GetComponentsInChildren<Chip>(includeInactive: true);
 
         foreach (var chip in chips)
         {
             if (chip == null) continue;
 
-            // FIX 3: Additional safety check - verify chip is actually in player's hierarchy
-            // by checking if it belongs to a PlayerBetComponent
+            // Skip chips that are not currently active in the hierarchy —
+            // they belong to cleared bet slots and must not be re-badged.
+            if (!chip.gameObject.activeInHierarchy) continue;
+
+            // Only apply badges to chips that belong to a PlayerBetComponent.
+            // This prevents accidentally badging opponent chips that share the
+            // same container hierarchy.
             Transform chipTransform = chip.transform;
             PlayerBetComponent parentComponent = chipTransform.GetComponentInParent<PlayerBetComponent>();
 
-            // Only apply badges to chips that belong to PlayerBetComponent
-            // This prevents accidentally badging opponent chips
             if (parentComponent != null)
             {
                 if (isPlayerRichest || isPlayerWinner)

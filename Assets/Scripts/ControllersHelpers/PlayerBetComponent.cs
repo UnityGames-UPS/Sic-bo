@@ -49,6 +49,9 @@ public class PlayerBetComponent : MonoBehaviour
     private Sequence popSequence;
     private bool hasStoredOriginalScale = false;
     private bool isAnimatingWin = false;
+    // Suppresses the automatic pop animation that fires from OnEnable when we
+    // re-activate the GameObject as a result of a new bet (not a panel open).
+    private bool _suppressNextOnEnablePop = false;
     #endregion
 
     #region Unity Lifecycle
@@ -63,6 +66,13 @@ public class PlayerBetComponent : MonoBehaviour
 
     private void OnEnable()
     {
+        // Suppress pop when we're re-enabling because of a new chip bet —
+        // AddSingleChip handles the visual feedback itself.
+        if (_suppressNextOnEnablePop)
+        {
+            _suppressNextOnEnablePop = false;
+            return;
+        }
         if (betAmountBackground != null)
             StartCoroutine(PlayPopAfterFrame());
     }
@@ -147,20 +157,27 @@ public class PlayerBetComponent : MonoBehaviour
         if (lastIndex < allChips.Count && allChips[lastIndex] != null)
         {
             allChips[lastIndex].transform.DOKill();
+            allChips[lastIndex].transform.localScale = Vector3.one;
             allChips[lastIndex].SetActive(false);
         }
 
+        UpdateTotalDisplay();
+
+        // Only hide the component if no bets remain
         if (bets.Count == 0)
         {
-            // Last bet removed — fully reset so the component is clean for next use.
-            // This disables the GameObject so it is invisible between rounds and after
-            // the final undo/cancel, matching the same state as after a round end.
-            Clear();
-        }
-        else
-        {
-            // Still has bets remaining — just update the displayed total.
-            UpdateTotalDisplay();
+            // Kill any background tween and restore original scale before deactivating
+            // so the component is in a clean state for the next re-enable.
+            if (betAmountBackground != null && hasStoredOriginalScale)
+            {
+                betAmountBackground.transform.DOKill();
+                betAmountBackground.transform.localScale = originalBackgroundScale;
+            }
+            _suppressNextOnEnablePop = false;
+
+            if (totalBetAmountText != null)
+                totalBetAmountText.gameObject.SetActive(false);
+            gameObject.SetActive(false);
         }
     }
 
@@ -194,12 +211,14 @@ public class PlayerBetComponent : MonoBehaviour
         }
 
         if (betAmountBackground != null && hasStoredOriginalScale)
+        {
+            betAmountBackground.transform.DOKill();
             betAmountBackground.transform.localScale = originalBackgroundScale;
+        }
 
-        UpdateTotalDisplay();
+        // Always clear the suppress flag so the next re-enable starts fresh.
+        _suppressNextOnEnablePop = false;
 
-        // Fully disable the component GameObject so nothing is visible.
-        // AddSingleChip will re-enable it when a new bet is placed.
         if (totalBetAmountText != null)
             totalBetAmountText.gameObject.SetActive(false);
 
@@ -217,9 +236,7 @@ public class PlayerBetComponent : MonoBehaviour
     #region Chip Management
     private void AddSingleChip(double amount, int chipIndex, bool skipDisplay = false)
     {
-        // Guard: chipSprites must be initialized and chipIndex must be valid.
-        // This can be null if the component was disabled via Clear() before
-        // Initialize() was called again in a new round on a fresh bet area.
+        // Guard: chipIndex must be valid
         if (chipSprites == null || chipIndex < 0 || chipIndex >= chipSprites.Length) return;
 
         bets.Add(new BetData { amount = amount, chipIndex = chipIndex });
@@ -241,10 +258,18 @@ public class PlayerBetComponent : MonoBehaviour
             AnimateChipDrop(chip, finalPosition);
         }
 
-        // Re-enable the component GameObject and the total text BEFORE UpdateTotalDisplay
-        // so they are visible immediately when the first bet is placed after a Clear()/undo.
-        if (!gameObject.activeSelf) gameObject.SetActive(true);
-        if (totalBetAmountText != null && !totalBetAmountText.gameObject.activeSelf)
+        // CRITICAL: Enable gameObject and text BEFORE UpdateTotalDisplay
+        // so the text is visible when UpdateTotalDisplay sets it.
+        // Always explicitly enable both to ensure proper visibility and fix any hierarchy issues.
+        // Suppress the automatic pop in OnEnable — we're re-enabling due to a
+        // new chip bet, not a panel open, so we don't want the double-pop.
+        if (!gameObject.activeSelf)
+        {
+            _suppressNextOnEnablePop = true;
+        }
+        gameObject.SetActive(true);
+
+        if (totalBetAmountText != null)
             totalBetAmountText.gameObject.SetActive(true);
 
         if (!skipDisplay) UpdateTotalDisplay();
@@ -301,7 +326,7 @@ public class PlayerBetComponent : MonoBehaviour
         if (Mathf.Approximately((float)fromAmount, (float)toAmount))
         {
             totalBetAmountText.text = GameUtilities.FormatCurrency(toAmount);
-            PlayBackgroundScaleAnimation(); // still give visual feedback for 1:1 bets (small/big/single)
+            PlayBackgroundScaleAnimation();
             isAnimatingWin = false;
             return;
         }
@@ -361,12 +386,7 @@ public class PlayerBetComponent : MonoBehaviour
         if (bets.Count > 0)
         {
             totalBetAmountText.text = GameUtilities.FormatCurrency(totalBetAmount);
-            totalBetAmountText.gameObject.SetActive(true);
-        }
-        else
-        {
-            totalBetAmountText.gameObject.SetActive(false);
         }
     }
     #endregion
-}   
+}

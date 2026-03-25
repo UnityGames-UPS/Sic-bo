@@ -275,15 +275,12 @@ public class OpponentChipManager : MonoBehaviour
     {
         if (isCashoutRunning || activeOpponentChips.Count == 0) return;
 
-        if (leaderboardController != null && leaderboardController.IsAnimating())
-        {
-            StartCoroutine(WaitForLeaderboardThenCashout());
-        }
-        else if (winAnimationCoroutine != null)
-        {
-
+        // Do NOT gate on leaderboardController.IsAnimating() here — doing so
+        // introduces an unpredictable delay that desynchronises the opponent
+        // cashout from the player's cashout animation (both must start together).
+        // Leaderboard badges are already locked/cleared before cashout begins.
+        if (winAnimationCoroutine != null)
             StartCoroutine(WaitForWinAnimationThenCashout());
-        }
         else
         {
             AudioManager.Instance?.PlayChipAdd();
@@ -295,18 +292,6 @@ public class OpponentChipManager : MonoBehaviour
     {
         if (winAnimationCoroutine != null) StopCoroutine(winAnimationCoroutine);
         winAnimationCoroutine = StartCoroutine(CR_OpponentWinAnimation());
-    }
-
-    private IEnumerator WaitForLeaderboardThenCashout()
-    {
-        yield return leaderboardController.WaitForAnimationComplete();
-        if (winAnimationCoroutine != null)
-        {
-            yield return winAnimationCoroutine;
-        }
-
-        AudioManager.Instance?.PlayChipAdd();
-        cashoutCoroutine = StartCoroutine(CR_Cashout());
     }
 
     private IEnumerator WaitForWinAnimationThenCashout()
@@ -333,6 +318,11 @@ public class OpponentChipManager : MonoBehaviour
             yield break;
         }
 
+        // Match player ChipWinAnimationController's full pre-flight delay exactly:
+        //   0.20s initial wait  +  0.18s fade-out wait  =  0.38s total
+        // Without this the opponent chips start flying 0.18s early relative to
+        // the player's dealer-to-bet-area chips.
+        yield return new WaitForSeconds(0.38f);
 
         if (targetCanvas == null) targetCanvas = GetComponentInParent<Canvas>();
         Transform canvasRoot = targetCanvas != null ? targetCanvas.transform : transform.root;
@@ -423,12 +413,12 @@ public class OpponentChipManager : MonoBehaviour
                         Random.Range(-dealerScatterY, dealerScatterY), 0f);
                     winChipRT.localScale = Vector3.zero;
 
-                    // Add slight random delay for more natural appearance (but much faster than before)
-                    float quickDelay = i * 0.01f;
-                    winChipRT.DOScale(chipScale * 0.9f, 0.18f).SetEase(Ease.OutBack).SetDelay(quickDelay);
+                    // FIX: Scale animation happens during movement, not before
+                    // No delay needed - all chips scale simultaneously
+                    winChipRT.DOScale(chipScale * 0.9f, 0.18f).SetEase(Ease.OutBack);
 
-                    // Start moving to target immediately without waiting
-                    StartCoroutine(CR_AnimateWinChipToTarget(winChipRT, targetContainer, canvasRoot, quickDelay));
+                    // Start moving to target - movement happens while scaling
+                    StartCoroutine(CR_AnimateWinChipToTarget(winChipRT, targetContainer, canvasRoot));
 
                     activeWinChips.Add(winChipRT);
                 }
@@ -441,12 +431,10 @@ public class OpponentChipManager : MonoBehaviour
     }
 
     // Helper coroutine to animate individual win chips without blocking the main loop
-    private IEnumerator CR_AnimateWinChipToTarget(RectTransform winChipRT, RectTransform targetContainer, Transform canvasRoot, float initialDelay)
+    private IEnumerator CR_AnimateWinChipToTarget(RectTransform winChipRT, RectTransform targetContainer, Transform canvasRoot)
     {
-        if (initialDelay > 0)
-            yield return new WaitForSeconds(initialDelay);
-
-        yield return new WaitForSeconds(0.18f); // Wait for scale animation
+        // Chips start moving immediately while scaling
+        if (winChipRT == null || targetContainer == null) yield break;
 
         winChipRT.SetParent(canvasRoot, worldPositionStays: true);
 
@@ -520,11 +508,10 @@ public class OpponentChipManager : MonoBehaviour
             showRichestBadge = spawnedFromRichest && opponentIsFirstRichest;
             showWinnerBadge = spawnedFromWinners && opponentIsFirstWinner;
 
-            // If opponent is in both 1st positions, prioritize winner badge
+            // Richest badge takes priority over winner badge when the opponent
+            // holds 1st place in both leaderboards simultaneously.
             if (showRichestBadge && showWinnerBadge)
-            {
-                showRichestBadge = false;
-            }
+                showWinnerBadge = false;
 
             // FIX 3: Additional validation - ensure this is not the local player
             // Local player chips should be handled by PlayerBetComponent, not OpponentChipManager
