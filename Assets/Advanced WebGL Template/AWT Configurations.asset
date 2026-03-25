@@ -71,9 +71,9 @@ MonoBehaviour:
   _playPongButtonFontSize: 13px
   _watchVideoButtonYoutubeLink: https://www.youtube.com/watch?v=FIpZ1h7LEos
   _disableMobileWarning: 1
-  _targetPath: /Users/ekansh/Sic-BoB2B/Build
+  _targetPath: /Users/ekansh/Desktop/WebGLBuild/Build
   _s11: "\n    &&& title2019start &&&<title>%UNITY_WEB_NAME%</title>&&& title2019end
-    &&&\n    &&& title2020start &&&<title>ML_SB</title>&&& title2020end &&&\n   
+    &&&\n    &&& title2020start &&&<title>Aviator</title>&&& title2020end &&&\n   
     &&& UnityLoader1 &&& <script src=\"%UNITY_WEBGL_LOADER_URL%\"></script> &&& UnityLoader2
     &&&\n    "
   _s21: "\n            applicationInstance = UnityLoader.instantiate(\"gameContainer\",
@@ -82,5 +82,5 @@ MonoBehaviour:
     var config = {\n        dataUrl: buildUrl + \"/Build.data.unityweb\",\n       
     frameworkUrl: buildUrl + \"/Build.framework.js.unityweb\",\n        codeUrl:
     buildUrl + \"/Build.wasm.unityweb\",\n        streamingAssetsUrl: \"StreamingAssets\",\n       
-    companyName: \"DefaultCompany\",\n        productName: \"ML_SB\",\n        productVersion:
-    \"1.0\",\n    };\n    "
+    companyName: \"DefaultCompany\",\n        productName: \"Aviator\",\n       
+    productVersion: \"1.0\",\n    };\n    "
