@@ -90359,6 +90359,7 @@ MonoBehaviour:
   targetCanvas: {fileID: 674617748}
   chipContainer: {fileID: 342734078}
   leaderboardController: {fileID: 1373798843}
+  chipWinAnimationController: {fileID: 2046684977}
 --- !u!4 &1594718134
 Transform:
   m_ObjectHideFlags: 0
@@ -113771,6 +113772,7 @@ MonoBehaviour:
   playerNameTarget: {fileID: 926643729}
   betController: {fileID: 275686507}
   gameManager: {fileID: 1673436615}
+  chipContainer: {fileID: 342734078}
   dealerPoolSize: 35
   dealerScatterX: 28
   dealerScatterY: 18
@@ -113778,6 +113780,8 @@ MonoBehaviour:
   chipStaggerDelay: 0
   betAreaScatterX: 11
   betAreaScatterY: 9
+  initialWaitBeforeAnimation: 0.2
+  postFadeWaitBeforeChips: 0.18
   betToPlayerDuration: 0.8
   cashoutStagger: 0
   arcHeight: 110

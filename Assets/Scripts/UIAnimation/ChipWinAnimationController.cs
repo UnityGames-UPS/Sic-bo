@@ -13,6 +13,7 @@ internal class ChipWinAnimationController : MonoBehaviour
     [SerializeField] private RectTransform playerNameTarget;
     [SerializeField] private BetController betController;
     [SerializeField] private GameManager gameManager;
+    [SerializeField] private RectTransform chipContainer;
 
     [Header("Pool")]
     [SerializeField] private int dealerPoolSize = 25;
@@ -21,9 +22,13 @@ internal class ChipWinAnimationController : MonoBehaviour
 
     [Header("Dealer to Bet Area")]
     [SerializeField] private float dealerToBetDuration = 0.65f;
-    [SerializeField] private float chipStaggerDelay = 0.0f;   // zero — all chips launch together
+    [SerializeField] private float chipStaggerDelay = 0.0f;   
     [SerializeField] private float betAreaScatterX = 11f;
     [SerializeField] private float betAreaScatterY = 9f;
+
+    [Header("Sync Delays (read by OpponentChipManager)")]
+    [SerializeField] private float initialWaitBeforeAnimation = 0.20f;  // was hard-coded 0.20f
+    [SerializeField] private float postFadeWaitBeforeChips = 0.18f;  // was hard-coded 0.18f
 
     [Header("Bet Area to Player")]
     [SerializeField] private float betToPlayerDuration = 0.75f;
@@ -43,6 +48,10 @@ internal class ChipWinAnimationController : MonoBehaviour
     [SerializeField] private double minWinForExtraChips = 1.0;
     #endregion
 
+    #region Internal Sync Properties
+    internal float TotalPreFlightDelay => initialWaitBeforeAnimation + postFadeWaitBeforeChips;
+    #endregion
+
     #region Private Fields
     private readonly List<(RectTransform rt, Chip chip)> dealerPool = new List<(RectTransform, Chip)>();
     private readonly List<RectTransform> activeWinChips = new List<RectTransform>();
@@ -52,6 +61,10 @@ internal class ChipWinAnimationController : MonoBehaviour
     private Coroutine cashoutCoroutine;
 
     private readonly List<WinAreaData> _recalcCache = new List<WinAreaData>();
+
+    private readonly HashSet<PlayerBetComponent> _winAreaComponents = new HashSet<PlayerBetComponent>();
+
+    private Tween _clearWinCompsTween;
     #endregion
 
     #region Unity Lifecycle
@@ -80,21 +93,12 @@ internal class ChipWinAnimationController : MonoBehaviour
 
     internal void PlayCashoutAnimation()
     {
-        // Nothing to sweep — player lost this round, skip the coroutine entirely.
         if (activeWinChips.Count == 0 && stakeReturnChips.Count == 0) return;
 
         if (cashoutCoroutine != null) StopCoroutine(cashoutCoroutine);
         cashoutCoroutine = StartCoroutine(CR_Cashout());
     }
 
-    /// <summary>
-    /// Plays the chip-flying-back-to-player animation.
-    /// </summary>
-    /// <param name="refundBets">BetOption to amount mapping.</param>
-    /// <param name="clearComponentsAfter">
-    ///   true  = call Clear() on every PlayerBetComponent after spawning (CANCEL: wipes all chips).
-    ///   false = do NOT clear the components (UNDO: BetController removes only the last chip itself).
-    /// </param>
     internal void PlayRefundAnimation(Dictionary<string, double> refundBets, bool clearComponentsAfter = true)
     {
         if (refundBets == null || refundBets.Count == 0) return;
@@ -119,8 +123,12 @@ internal class ChipWinAnimationController : MonoBehaviour
             rt.gameObject.SetActive(false);
         }
 
+        _clearWinCompsTween?.Kill();
+        _clearWinCompsTween = null;
+
         activeWinChips.Clear();
         stakeReturnChips.Clear();
+        _winAreaComponents.Clear();
         isAnimating = false;
     }
     #endregion
@@ -145,7 +153,7 @@ internal class ChipWinAnimationController : MonoBehaviour
                 });
             }
         }
-        return _recalcCache;
+        return new List<WinAreaData>(_recalcCache); 
     }
 
     private double CalculateActualWin(string betOption, double betAmount, DiceResultData diceResult)
@@ -273,6 +281,8 @@ internal class ChipWinAnimationController : MonoBehaviour
     private IEnumerator CR_DealerToBetAreas(List<WinAreaData> winAreas)
     {
         isAnimating = true;
+        _winAreaComponents.Clear();
+
         List<double> chipValues = betController != null ? betController.GetChipValues() : new List<double>();
         Sprite[] chipSprites = betController != null ? betController.GetChipSprites() : null;
 
@@ -285,39 +295,34 @@ internal class ChipWinAnimationController : MonoBehaviour
 
             PlayerBetComponent playerBetComp = betController?.GetPlayerBetComponent(area.betOption);
             if (playerBetComp == null) continue;
+            _winAreaComponents.Add(playerBetComp);
 
             Transform chipParent = playerBetComp.transform;
             AudioManager.Instance?.PlayChipAdd();
+            var winCombination = BuildCombination(area.winAmount, chipValues, chipSprites);
+            int winChipCount = Mathf.Clamp(winCombination.Count, minChipsPerWin, maxChipsPerWin);
 
-            bool spawnWinChips = area.winRatio > 1.0 && area.winRatio >= minWinForExtraChips;
-            if (spawnWinChips)
+            for (int i = 0; i < winChipCount && poolIdx < dealerPool.Count; i++, poolIdx++)
             {
-                var combination = BuildCombination(area.winAmount, chipValues, chipSprites);
-                int count = Mathf.Clamp(combination.Count, minChipsPerWin, maxChipsPerWin);
+                var (rt, chip) = dealerPool[poolIdx];
+                if (rt == null) continue;
 
-                for (int i = 0; i < count && poolIdx < dealerPool.Count; i++, poolIdx++)
-                {
-                    var (rt, chip) = dealerPool[poolIdx];
-                    if (rt == null) continue;
+                ApplyChipVisual(chip, winCombination, i, chipSprites);
 
-                    ApplyChipVisual(chip, combination, i, chipSprites);
+                rt.gameObject.SetActive(true);
+                rt.localPosition = new Vector3(
+                    Random.Range(-dealerScatterX, dealerScatterX),
+                    Random.Range(-dealerScatterY, dealerScatterY), 0f);
+                rt.localScale = Vector3.zero;
+                rt.DOScale(chipWorkingScale, 0.18f).SetEase(Ease.OutBack);
 
-                    rt.gameObject.SetActive(true);
-                    rt.localPosition = new Vector3(
-                        Random.Range(-dealerScatterX, dealerScatterX),
-                        Random.Range(-dealerScatterY, dealerScatterY), 0f);
-                    rt.localScale = Vector3.zero;
-                    rt.DOScale(chipWorkingScale, 0.18f).SetEase(Ease.OutBack);
+                Vector3 localPos = new Vector3(
+                    Random.Range(-betAreaScatterX, betAreaScatterX),
+                    Random.Range(-betAreaScatterY, betAreaScatterY), 0f);
 
-                    Vector3 localPos = new Vector3(
-                        Random.Range(-betAreaScatterX, betAreaScatterX),
-                        Random.Range(-betAreaScatterY, betAreaScatterY), 0f);
-
-                    assignments.Add((rt, chipParent, localPos));
-                    activeWinChips.Add(rt);
-                }
+                assignments.Add((rt, chipParent, localPos));
+                activeWinChips.Add(rt);
             }
-
             int stakeCount = CalculateStakeReturnChipCount(area.winRatio, area.betAmount);
             var stakeCombination = BuildCombination(area.betAmount, chipValues, chipSprites);
             int actualStakeCount = Mathf.Min(stakeCount, Mathf.Max(1, stakeCombination.Count));
@@ -343,14 +348,9 @@ internal class ChipWinAnimationController : MonoBehaviour
                 stakeReturnChips.Add(rt);
             }
         }
+        yield return new WaitForSeconds(initialWaitBeforeAnimation);
 
-        yield return new WaitForSeconds(0.20f);
-
-        // Fade out losing-area chips first so they visually clear before
-        // any win chips appear.  The fade takes dealerToBetDuration * 0.6f,
-        // so a short extra pause lets it register on screen before we launch.
-        FadeOutLosingAreaChips(winAreas);
-        yield return new WaitForSeconds(0.18f);
+        yield return new WaitForSeconds(postFadeWaitBeforeChips);
 
         var animData = new List<(RectTransform rt, Vector3 worldTarget)>();
         foreach (var (rt, parent, localPos) in assignments)
@@ -372,19 +372,31 @@ internal class ChipWinAnimationController : MonoBehaviour
                 () => TriggerAllWinCountingAnimations(winAreas));
         }
 
-        // All chips launch simultaneously — no stagger delay between them.
+        int totalChips = animData.Count;
+        int landedChipCount = 0;
+        var capturedWinAreas = winAreas;
+
         foreach (var (rt, worldTarget) in animData)
         {
-            if (rt == null) continue;
-            rt.DOMove(worldTarget, dealerToBetDuration)
+            if (rt == null) { totalChips--; continue; }
+
+            RectTransform capturedRT = rt;
+            Vector3 capturedTarget = worldTarget;
+
+            capturedRT.DOMove(capturedTarget, dealerToBetDuration)
               .SetEase(Ease.OutQuad)
               .OnComplete(() =>
               {
-                  if (rt != null)
-                      rt.localPosition = rt.parent.InverseTransformPoint(worldTarget);
+                  if (capturedRT != null)
+                      capturedRT.localPosition = capturedRT.parent.InverseTransformPoint(capturedTarget);
+
+                  landedChipCount++;
+                  if (landedChipCount >= totalChips)
+                      FadeOutLosingAreaChips(capturedWinAreas);
               });
-            // No yield — all chips start at the same time
         }
+        if (totalChips <= 0)
+            FadeOutLosingAreaChips(capturedWinAreas);
 
         yield return new WaitForSeconds(dealerToBetDuration);
 
@@ -424,18 +436,16 @@ internal class ChipWinAnimationController : MonoBehaviour
         var winningOptions = new HashSet<string>();
         foreach (var w in winAreas) winningOptions.Add(w.betOption);
 
-        // Ask the BetController for every bet option that exists
         var allOptions = betController.GetAllBetOptions();
         if (allOptions == null) return;
 
         foreach (var option in allOptions)
         {
-            if (winningOptions.Contains(option)) continue;
+            if (winningOptions.Contains(option)) continue;   // skip winning areas
 
             PlayerBetComponent comp = betController.GetPlayerBetComponent(option);
             if (comp == null || !comp.HasBets()) continue;
 
-            // Simple immediate disable — no fade tweens that can race with the next round.
             comp.Clear();
         }
     }
@@ -447,7 +457,7 @@ internal class ChipWinAnimationController : MonoBehaviour
         {
             PlayerBetComponent comp = betController.GetPlayerBetComponent(winArea.betOption);
             if (comp == null || winArea.betAmount <= 0) continue;
-            comp.AnimateWinWithRatio(winArea.winAmount / winArea.betAmount);
+            comp.AnimateWinWithRatio(winArea.winRatio);
         }
     }
     #endregion
@@ -469,8 +479,6 @@ internal class ChipWinAnimationController : MonoBehaviour
         }
         stakeReturnChips.Clear();
 
-        // No extra dealer-spawn chips — they start from off-screen and break the arc.
-
         yield return new WaitForSeconds(0.18f);
 
         var chipCanvasPositions = new Dictionary<RectTransform, Vector2>();
@@ -479,46 +487,61 @@ internal class ChipWinAnimationController : MonoBehaviour
             if (rt == null) continue;
             chipCanvasPositions[rt] = GetCanvasPosition(rt);
         }
+        Transform flightParent = chipContainer != null
+            ? (Transform)chipContainer
+            : targetCanvas.transform;
 
         foreach (var rt in toSweep)
         {
             if (rt == null) continue;
-            if (rt.parent != targetCanvas.transform)
+            if (rt.parent != flightParent)
             {
-                rt.SetParent(targetCanvas.transform, worldPositionStays: false);
-                rt.SetAsLastSibling();
+                rt.SetParent(flightParent, worldPositionStays: false);
                 if (chipCanvasPositions.ContainsKey(rt))
                     rt.anchoredPosition = chipCanvasPositions[rt];
             }
         }
 
         Vector2 playerCanvasPos = GetCanvasPosition(playerNameTarget);
+        float halfDur = betToPlayerDuration * 0.45f;
+        float landDur = betToPlayerDuration * 0.55f;
+        float clearDelay = halfDur * 0.5f;   // halfway up the arc
 
-        // All chips fly to the player simultaneously — no stagger.
+        var winCompsToClean = new List<PlayerBetComponent>(_winAreaComponents);
+        _winAreaComponents.Clear();
+
+        if (winCompsToClean.Count > 0)
+        {
+            _clearWinCompsTween?.Kill();
+            _clearWinCompsTween = DOVirtual.DelayedCall(clearDelay, () =>
+            {
+                foreach (var comp in winCompsToClean)
+                    if (comp != null) comp.Clear();
+                _clearWinCompsTween = null;
+            });
+        }
+
         foreach (var rt in toSweep)
         {
             if (rt == null) continue;
 
-            Vector2 startPos = rt.anchoredPosition;
+            RectTransform capturedRT = rt;
+            Vector2 startPos = capturedRT.anchoredPosition;
             Vector2 midPos = Vector2.Lerp(startPos, playerCanvasPos, 0.5f)
                              + new Vector2(Random.Range(-18f, 18f), arcHeight);
 
-            float halfDur = betToPlayerDuration * 0.45f;
-            float landDur = betToPlayerDuration * 0.55f;
-
             DOTween.Sequence()
-                .Append(rt.DOAnchorPos(midPos, halfDur).SetEase(Ease.OutQuad))
-                .Append(rt.DOAnchorPos(playerCanvasPos, landDur).SetEase(Ease.InQuad))
-                .Join(rt.DOScale(Vector3.zero, landDur).SetEase(Ease.InBack))
+                .Append(capturedRT.DOAnchorPos(midPos, halfDur).SetEase(Ease.OutQuad))
+                .Append(capturedRT.DOAnchorPos(playerCanvasPos, landDur).SetEase(Ease.InQuad))
+                .Join(capturedRT.DOScale(Vector3.zero, landDur).SetEase(Ease.InBack))
                 .OnComplete(() =>
                 {
-                    if (rt == null) return;
+                    if (capturedRT == null) return;
                     AudioManager.Instance?.PlayChipAdd();
-                    rt.gameObject.SetActive(false);
-                    rt.SetParent(dealerSpawnPoint, worldPositionStays: false);
-                    rt.localPosition = Vector3.zero;
+                    capturedRT.gameObject.SetActive(false);
+                    capturedRT.SetParent(dealerSpawnPoint, worldPositionStays: false);
+                    capturedRT.localPosition = Vector3.zero;
                 });
-            // No yield — all start at once
         }
 
         yield return new WaitForSeconds(betToPlayerDuration + 0.25f);
@@ -546,11 +569,6 @@ internal class ChipWinAnimationController : MonoBehaviour
             Debug.LogError("[ChipWinAnim] chipSprites is null or empty!");
             yield break;
         }
-
-        // Build per-area chip lists.
-        // CANCEL (clearComponentsAfter=true)  -> one chip per original BetData entry,
-        //                                        using the stored chipIndex directly.
-        // UNDO   (clearComponentsAfter=false) -> chips built from refund amount via BuildCombination.
         var refundData = new List<(PlayerBetComponent component, Transform betArea, List<ChipCombinationItem> chips)>();
 
         foreach (var kvp in refundBets)
@@ -569,8 +587,6 @@ internal class ChipWinAnimationController : MonoBehaviour
 
             if (clearComponentsAfter)
             {
-                // CANCEL: reconstruct exact chips the player placed so each original
-                // chip flies back individually (e.g. two 2-chips, not one 4-chip).
                 List<BetData> betDataList = comp.GetBetData();
                 chipsForArea = new List<ChipCombinationItem>(betDataList.Count);
                 foreach (var bd in betDataList)
@@ -581,13 +597,11 @@ internal class ChipWinAnimationController : MonoBehaviour
                         chipIndex = bd.chipIndex
                     });
                 }
-                // Fallback if component has no stored bets
                 if (chipsForArea.Count == 0)
                     chipsForArea = BuildCombination(betAmount > 0 ? betAmount : 1, chipValues, chipSprites);
             }
             else
             {
-                // UNDO: single refund amount decomposed into chip denominations
                 double amount = betAmount > 0 ? betAmount : 1;
                 chipsForArea = BuildCombination(amount, chipValues, chipSprites);
             }
@@ -606,9 +620,6 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         List<RectTransform> chipsToAnimate = new List<RectTransform>();
 
-        // Spawn pool chips.
-        // FIX (spam-undo): chips whose gameObject is already active belong to a
-        // concurrent animation -- skip them so we never steal their pool slot.
         int poolIdx = 0;
 
         foreach (var (component, betArea, chipsForArea) in refundData)
@@ -619,7 +630,6 @@ internal class ChipWinAnimationController : MonoBehaviour
 
             for (int i = 0; i < chipsForArea.Count; i++)
             {
-                // Advance past any pool chips that are currently in-flight
                 while (poolIdx < dealerPool.Count &&
                        dealerPool[poolIdx].rt != null &&
                        dealerPool[poolIdx].rt.gameObject.activeSelf)
@@ -642,12 +652,10 @@ internal class ChipWinAnimationController : MonoBehaviour
                     continue;
                 }
 
-                // Apply sprite + label from the chip item
                 ChipCombinationItem item = chipsForArea[i];
                 int safeIdx = Mathf.Clamp(item.chipIndex, 0, chipSprites.Length - 1);
                 chipComponent.SetData(chipSprites[safeIdx], GameUtilities.FormatCurrency(item.amount), safeIdx);
 
-                // Position at bet area with slight random scatter
                 chipRT.SetParent(targetCanvas.transform, worldPositionStays: false);
                 chipRT.anchoredPosition = betAreaCanvasPos + new Vector2(
                     Random.Range(-betAreaScatterX, betAreaScatterX),
@@ -663,7 +671,6 @@ internal class ChipWinAnimationController : MonoBehaviour
 
         Debug.Log($"[ChipWinAnim] Total chips spawned: {chipsToAnimate.Count}");
 
-        // Clear bet components (CANCEL only) AFTER spawning so GetBetData() above had valid data.
         if (clearComponentsAfter)
         {
             foreach (var (component, _, _) in refundData)
@@ -679,8 +686,6 @@ internal class ChipWinAnimationController : MonoBehaviour
             Debug.LogError("[ChipWinAnim] No chips to animate!");
             yield break;
         }
-
-        // Animate chips to player
         Vector2 playerCanvasPos = GetCanvasPosition(playerNameTarget);
         Debug.Log($"[ChipWinAnim] Animating {chipsToAnimate.Count} chips to player at: {playerCanvasPos}");
 
@@ -688,7 +693,6 @@ internal class ChipWinAnimationController : MonoBehaviour
         {
             if (chipRT == null) continue;
 
-            // Capture for lambda -- required in C# foreach over value types
             RectTransform capturedRT = chipRT;
 
             Vector2 startPos = capturedRT.anchoredPosition;
@@ -739,10 +743,10 @@ internal class ChipWinAnimationController : MonoBehaviour
             new ChipCombinationItem { amount = amount, chipIndex = FallbackSpriteIndex(amount, sprites) }
         };
     }
+
     private static void ApplyChipVisual(Chip chip, List<ChipCombinationItem> combination, int i, Sprite[] sprites)
     {
         if (chip == null || sprites == null || sprites.Length == 0 || combination.Count == 0) return;
-
 
         ChipCombinationItem item = combination[i % combination.Count];
         int safeIdx = Mathf.Clamp(item.chipIndex, 0, sprites.Length - 1);
@@ -782,5 +786,5 @@ internal class WinAreaData
     internal Transform betAreaTarget;
     internal double betAmount;
     internal double winAmount;
-    internal double winRatio; // winAmount / betAmount
+    internal double winRatio;
 }

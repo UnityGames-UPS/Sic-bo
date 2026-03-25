@@ -469,23 +469,34 @@ public class BetController : MonoBehaviour
     }
 
     internal void ClearAllBets(bool opponentBetClear)
+        => ClearAllBets(opponentBetClear, null);
+
+    /// <summary>
+    /// Clears all player bet components.
+    /// Pass <paramref name="skipOptions"/> with the winning bet option keys to leave those
+    /// PlayerBetComponents visible -- they are cleared later by ChipWinAnimationController
+    /// once the cashout arc's first half has finished and the chips are in the air.
+    /// </summary>
+    internal void ClearAllBets(bool opponentBetClear, ICollection<string> skipOptions)
     {
         areaBets.Clear();
         currentTotalBet = 0;
         betHistory.Clear();
 
-        // Round is fully over � unfreeze badge repaints and repaint with latest data.
+        // Round is fully over -- unfreeze badge repaints and repaint with latest data.
         UnlockBadges();
 
+        ClearAreaUnlessSkipped(SmallArea, "small", skipOptions);
+        ClearAreaUnlessSkipped(BigArea, "big", skipOptions);
+        ClearAreaUnlessSkipped(OddArea, "odd", skipOptions);
+        ClearAreaUnlessSkipped(EvenArea, "even", skipOptions);
 
-        ClearArea(SmallArea);
-        ClearArea(BigArea);
-        ClearArea(OddArea);
-        ClearArea(EvenArea);
-
-        foreach (var area in TripleDiceAreas) ClearArea(area);
-        foreach (var area in SingleDiceAreas) ClearArea(area);
-        foreach (var area in SumAreas) ClearArea(area);
+        for (int i = 0; i < TripleDiceAreas.Count; i++)
+            ClearAreaUnlessSkipped(TripleDiceAreas[i], $"specific_3_{i + 1}", skipOptions);
+        for (int i = 0; i < SingleDiceAreas.Count; i++)
+            ClearAreaUnlessSkipped(SingleDiceAreas[i], $"single_{i + 1}", skipOptions);
+        for (int i = 0; i < SumAreas.Count; i++)
+            ClearAreaUnlessSkipped(SumAreas[i], $"sum_{i + 4}", skipOptions);
 
         if (opponentBetClear) ClearAllOpponentBets();
 
@@ -1261,6 +1272,14 @@ public class BetController : MonoBehaviour
     private void ClearArea(TripleSameDiceArea area) { area?.ClearBets(); }
     private void ClearArea(SingleDiceArea area) { area?.ClearBets(); }
     private void ClearArea(SumArea area) { area?.ClearBets(); }
+
+    // Clears the area only when its betOption is NOT in the skip set.
+    // Used by ClearAllBets(bool, ICollection<string>) to leave winning-area
+    // PlayerBetComponents visible until the cashout arc's first half finishes.
+    private void ClearAreaUnlessSkipped(SimpleBetArea area, string option, ICollection<string> skip) { if (skip == null || !skip.Contains(option)) area?.ClearBets(); }
+    private void ClearAreaUnlessSkipped(TripleSameDiceArea area, string option, ICollection<string> skip) { if (skip == null || !skip.Contains(option)) area?.ClearBets(); }
+    private void ClearAreaUnlessSkipped(SingleDiceArea area, string option, ICollection<string> skip) { if (skip == null || !skip.Contains(option)) area?.ClearBets(); }
+    private void ClearAreaUnlessSkipped(SumArea area, string option, ICollection<string> skip) { if (skip == null || !skip.Contains(option)) area?.ClearBets(); }
 
     private void SetAreaHighlight(SimpleBetArea area, bool highlight) { area?.SetHighlight(highlight); }
     #endregion

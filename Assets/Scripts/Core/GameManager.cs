@@ -39,7 +39,6 @@ public class GameManager : MonoBehaviour
     #region Private Fields
     private string pendingRoomSwitch = null;
 
-    // GC optimisation: reuse collections in GetAllWinningAreasFromDice (called every dice result)
     private readonly List<string> _winnersCache = new List<string>(12);
     private readonly HashSet<int> _seenDiceCache = new HashSet<int>();
     private static readonly List<string> _emptyStringList = new List<string>(0);
@@ -99,15 +98,12 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region Socket Callbacks - Room
-    // isLevelJoin = false  → came from room:joined (lobby room) → update home TotalPlayers_Text
-    // isLevelJoin = true   → came from JOIN_LEVEL ack (game room) → update in-game PlayerCount_Text
     internal void OnRoomJoinedWithData(RoomPayload payload, bool isLevelJoin = false)
     {
         if (payload == null) return;
 
         uiController.HideLoadingScreen();
 
-        // If we have lobby data (player joined lobby room), update hot indicators
         if (!isLevelJoin && payload.lobby != null)
         {
             uiController.UpdateLobbyHotIndicators(
@@ -121,7 +117,6 @@ public class GameManager : MonoBehaviour
         uiController.UpdateLeaderboards(payload.leaderboards);
         betController.SetLeaderboardData(payload.leaderboards);
 
-        // FIX: Lock leaderboards when joining mid-round so opponent chips get correct badges
         if (isLevelJoin && payload.leaderboards != null)
         {
             opponentChipManager?.SetLeaderboardData(payload.leaderboards);
@@ -220,10 +215,6 @@ public class GameManager : MonoBehaviour
     #endregion
 
     #region Focus & Reconnection Recovery
-    /// <summary>
-    /// Called when the app regains focus to reconcile the result plane from cached stats.
-    /// Prevents blank rows when returning from tab suspension or background.
-    /// </summary>
     internal void ReconcileResultsOnFocusGain()
     {
         if (socketManager == null || socketManager.CurrentRoomPayload == null) return;
@@ -290,16 +281,10 @@ public class GameManager : MonoBehaviour
 
         betController.DisableBetting();
         uiController.ShowBetLocked();
-
-        // Lock badge repaints immediately — any leaderboard update that arrives
-        // during the dice reveal / chip-fly animation must not repaint player chips.
-        // Badges are unlocked again in ClearAllBets when the next round starts.
         betController.LockBadges();
 
         roundController.ShowDiceResult(data);
 
-        // Delay highlights, bonus hits, and win chip animations so they
-        // sync with the dice reveal animation in the dice box.
         DOVirtual.DelayedCall(diceResultHighlightDelay, () =>
         {
             betController.HighlightWinningAreas(data.matchSide, data.sum);
@@ -378,32 +363,16 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
-
-        // Kick off the cashout flow in a coroutine so we can wait for the
-        // leaderboard slide animation to finish before flying any chips.
-        // Waiting ensures spawn-positions returned by GetPlayerPosition() are
-        // valid (blocks no longer mid-transition) so chips go to the right place.
+        var winningOptions = betController.GetWinningBetOptions();
         StartCoroutine(CR_CashoutFlow());
-
-        betController.ClearAllBets(false);
+        betController.ClearAllBets(false, winningOptions);
     }
 
-    /// <summary>
-    /// Waits for the leaderboard animation (triggered by the cashout leaderboard push)
-    /// to finish, then fires player and opponent cashout chip animations simultaneously.
-    /// This keeps both animations in sync AND ensures correct chip destinations after
-    /// the leaderboard updates (e.g. a player who dropped out of the leaderboard must
-    /// have their chips fly to the opponent dealer, not a now-stale leaderboard block).
-    /// </summary>
     private IEnumerator CR_CashoutFlow()
     {
-        // Wait until the leaderboard has finished animating its new state.
-        // This is typically very short (< 0.4 s) — negligible visual delay.
         if (uiController.IsLeaderboardAnimating())
             yield return uiController.WaitForLeaderboardAnimation();
 
-        // Fire player and opponent cashout on the same frame so chips from
-        // both sides begin their journey to their destinations simultaneously.
         chipWinAnimationController?.PlayCashoutAnimation();
         opponentChipManager?.PlayCashoutAnimation();
     }
@@ -417,11 +386,6 @@ public class GameManager : MonoBehaviour
         betController.OnRoundEnd();
     }
 
-    /// <summary>
-    /// Server correction for the next-round countdown — mirrors OnBettingTimer.
-    /// Fires every second during the cashout window; snaps the display to the
-    /// authoritative server value and phase-locks the local countdown coroutine.
-    /// </summary>
     internal void OnCashoutTimer(CashoutTimerData data)
     {
         if (data == null) return;
@@ -449,9 +413,6 @@ public class GameManager : MonoBehaviour
 
         uiController.UpdateLeaderboards(data.leaderboards);
         betController.SetLeaderboardData(data.leaderboards);
-
-        // FIX: Update opponent chip manager with new leaderboards and re-lock
-        // so opponent chips spawned after this update get correct badges
         if (opponentChipManager != null)
         {
             opponentChipManager.SetLeaderboardData(data.leaderboards);
