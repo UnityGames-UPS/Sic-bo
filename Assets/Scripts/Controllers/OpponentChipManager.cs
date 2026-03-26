@@ -189,7 +189,6 @@ public class OpponentChipManager : MonoBehaviour
     internal void LockLeaderboardsForRound()
     {
         lockedLeaderboards = currentLeaderboards;
-        Debug.Log("[OpponentChipManager] Leaderboards locked for round");
     }
 
     internal void SetCashoutData(List<Payout> payouts) => currentPayouts = payouts;

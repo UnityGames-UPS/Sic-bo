@@ -273,37 +273,86 @@ public class GameManager : MonoBehaviour
             bonusIndicatorController?.ShowBonusAnnouncements(data.bonus);
     }
 
+    /// <summary>
+    /// CENTRALIZED DICE RESULT HANDLING
+    /// 
+    /// This method now orchestrates ALL result-related actions in one place:
+    /// 1. Validates the dice result
+    /// 2. Adds result to history panel
+    /// 3. Disables betting and shows locked state
+    /// 4. Shows dice result in dice box animation
+    /// 5. After diceResultHighlightDelay, triggers ShowResultEffects() which handles:
+    ///    - Result panel visibility
+    ///    - Win area highlighting
+    ///    - Triple dice highlighting
+    ///    - Opponent chip placement
+    ///    - Bonus indicator handling
+    ///    - Player chip win animations
+    ///    - Opponent win animations
+    /// </summary>
     internal void OnDiceResult(DiceResultData data)
     {
         if (!ValidateDiceResult(data)) return;
 
+        // Add result to history panel (this doesn't show visually yet)
         resultPlaneController?.AddNewResult(data);
 
+        // Lock betting state
         betController.DisableBetting();
         uiController.ShowBetLocked();
         betController.LockBadges();
 
+        // Show dice result in dice box animation
         roundController.ShowDiceResult(data);
 
-        DOVirtual.DelayedCall(diceResultHighlightDelay, () =>
+        // After delay, trigger all visual effects together
+        DOVirtual.DelayedCall(diceResultHighlightDelay, () => ShowResultEffects(data));
+    }
+
+    /// <summary>
+    /// CENTRALIZED RESULT EFFECTS
+    /// 
+    /// All visual result effects are triggered from this single method to ensure perfect synchronization:
+    /// - Result panel shows with fade-in
+    /// - Win areas highlight
+    /// - Triple dice highlights
+    /// - Opponent chips appear on winning areas
+    /// - Bonus indicators update
+    /// - Player win chips fly from dealer to bet areas
+    /// - Opponent win chips animate
+    /// 
+    /// Everything happens together, controlled by the one delay set in diceResultHighlightDelay.
+    /// </summary>
+    private void ShowResultEffects(DiceResultData data)
+    {
+        // 1. Show result panel (this will fade in with all other effects)
+        resultPlaneController?.ShowResultPanel();
+
+        // 2. Highlight winning bet areas
+        betController.HighlightWinningAreas(data.matchSide, data.sum);
+
+        // 3. Highlight triple dice if applicable
+        betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
+
+        // 4. Get all winning areas for other systems
+        List<string> allWinningAreas = GetAllWinningAreasFromDice(data);
+
+        // 5. Set winning areas for opponent chip manager
+        opponentChipManager?.SetWinningBetAreas(allWinningAreas);
+
+        // 6. Handle bonus indicators
+        bonusIndicatorController?.HandleDiceResult(allWinningAreas);
+
+        // 7. Play player chip win animations (dealer → bet areas)
+        if (chipWinAnimationController != null)
         {
-            betController.HighlightWinningAreas(data.matchSide, data.sum);
-            betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
+            List<WinAreaData> winAreas = betController.GetWinningAreasData();
+            if (winAreas != null && winAreas.Count > 0)
+                chipWinAnimationController.PlayDiceResultAnimation(winAreas, data);
+        }
 
-            List<string> allWinningAreas = GetAllWinningAreasFromDice(data);
-            opponentChipManager?.SetWinningBetAreas(allWinningAreas);
-
-            bonusIndicatorController?.HandleDiceResult(allWinningAreas);
-
-            if (chipWinAnimationController != null)
-            {
-                List<WinAreaData> winAreas = betController.GetWinningAreasData();
-                if (winAreas != null && winAreas.Count > 0)
-                    chipWinAnimationController.PlayDiceResultAnimation(winAreas, data);
-            }
-
-            opponentChipManager?.PlayOpponentWinAnimations();
-        });
+        // 8. Play opponent win chip animations
+        opponentChipManager?.PlayOpponentWinAnimations();
     }
 
     private List<string> GetAllWinningAreasFromDice(DiceResultData data)
@@ -384,6 +433,9 @@ public class GameManager : MonoBehaviour
         int secondsUntilNextRound = GameUtilities.CalculateTimeRemaining(data.nextRoundStartTime, data.serverTime);
         uiController.ShowNextRound(secondsUntilNextRound);
         betController.OnRoundEnd();
+
+        // Hide result panel when round ends
+        resultPlaneController?.HideResultPanel();
     }
 
     internal void OnCashoutTimer(CashoutTimerData data)

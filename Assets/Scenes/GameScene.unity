@@ -24180,10 +24180,10 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: 34228b14b357495385f7f9448fb5509d
+  testToken: 4cff3914f8464da3a1c5404d721f58a1
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
-  showDebugLogs: 0
+  showDebugLogs: 1
 --- !u!4 &410521237
 Transform:
   m_ObjectHideFlags: 0
@@ -75255,7 +75255,7 @@ MonoBehaviour:
   holdOnFrame: 250
   diceShowFrame: 43
   diceHideFrame: 313
-  resultShowFrame: 200
+  resultShowFrame: 190
   resultHideFrame: 291
   boxOpenSoundFrame: 0
   boxCloseSoundFrame: 309
@@ -94130,7 +94130,7 @@ MonoBehaviour:
   resultPlaneController: {fileID: 760194023}
   socketManager: {fileID: 410521236}
   diceResultHighlightDelay: 0.8
-  showDebugLogs: 0
+  showDebugLogs: 1
 --- !u!4 &1673436616
 Transform:
   m_ObjectHideFlags: 0
