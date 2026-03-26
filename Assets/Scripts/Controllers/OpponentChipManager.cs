@@ -8,7 +8,9 @@ public class OpponentChipManager : MonoBehaviour
     #region Serialized Fields
     [Header("Dealer Areas")]
     [SerializeField] private RectTransform opponentDealerArea;
-    [SerializeField] private RectTransform playerDealerArea;
+
+    [Tooltip("RectTransform on the player-count UI element. Non-leaderboard opponent winning chips fly here.")]
+    [SerializeField] private RectTransform playerCountArea;
 
     [Header("Chip Spawning")]
     [SerializeField] private GameObject chipPrefab;
@@ -30,7 +32,7 @@ public class OpponentChipManager : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private Canvas targetCanvas;
-    [SerializeField] private RectTransform chipContainer; 
+    [SerializeField] private RectTransform chipContainer;
     [SerializeField] private LeaderboardController leaderboardController;
     [SerializeField] private ChipWinAnimationController chipWinAnimationController;
     #endregion
@@ -173,7 +175,7 @@ public class OpponentChipManager : MonoBehaviour
             container.offsetMin = Vector2.zero;
             container.offsetMax = Vector2.zero;
             container.localScale = Vector3.one;
-            container.pivot = new Vector2(0.5f, 0.5f);;
+            container.pivot = new Vector2(0.5f, 0.5f); ;
             containerObj.SetActive(false);
 
             opponentContainers[betOption] = container;
@@ -538,7 +540,7 @@ public class OpponentChipManager : MonoBehaviour
         chipRT.DOMove(targetWorldPos, dealerToBetDuration).SetEase(Ease.OutQuad);
         yield return new WaitForSeconds(dealerToBetDuration);
         chipRT.SetParent(container, worldPositionStays: true);
-      
+
 
         activeOpponentChips.Add(chipRT);
         chipsByBetArea[betOption].Add(chipRT);
@@ -706,7 +708,7 @@ public class OpponentChipManager : MonoBehaviour
 
             float scatterX = dealerScatterX;
             float scatterY = dealerScatterY;
-            if (targetPosition != playerDealerArea && targetPosition != opponentDealerArea)
+            if (targetPosition != opponentDealerArea && targetPosition != playerCountArea)
             {
                 Rect targetRect = targetPosition.rect;
                 scatterX = Mathf.Min(targetRect.width * 0.4f, 15f);
@@ -773,30 +775,24 @@ public class OpponentChipManager : MonoBehaviour
     {
         if (chipRT == null) return opponentDealerArea;
 
-        string chipOwner = chipToUsername.ContainsKey(chipRT) ? chipToUsername[chipRT] : "";
-
-        if (chipOwner == localPlayerUsername)
-        {
-            return playerDealerArea;
-        }
-
+        // Winning chips belonging to the local player are handled by ChipWinAnimationController,
+        // not here — so we should never reach this path for localPlayerUsername.
+        // For all opponent chips: fly back to whichever leaderboard slot they spawned from
+        // (richest or winners). If they were not on the leaderboard at all (spawned from
+        // opponentDealerArea), send them to playerCountArea — visually representing
+        // "the win going to other players" shown on the player count UI.
         if (chipToSpawnPosition.ContainsKey(chipRT))
         {
             RectTransform originalSpawnPosition = chipToSpawnPosition[chipRT];
 
-            if (originalSpawnPosition != null &&
-                originalSpawnPosition != opponentDealerArea &&
-                originalSpawnPosition != playerDealerArea)
+            if (originalSpawnPosition != null && originalSpawnPosition != opponentDealerArea)
             {
-                return originalSpawnPosition;
-            }
-
-            if (originalSpawnPosition == opponentDealerArea)
-            {
-                return opponentDealerArea;
+                return originalSpawnPosition;  // leaderboard chip slot
             }
         }
-        return opponentDealerArea;
+
+        // Non-leaderboard player — fly to player count indicator
+        return playerCountArea != null ? playerCountArea : opponentDealerArea;
     }
     #endregion
 

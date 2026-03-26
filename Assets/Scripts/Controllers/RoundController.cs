@@ -19,7 +19,8 @@ public class RoundController : MonoBehaviour
     [Header("Result Display")]
     [SerializeField] private TMPro.TMP_Text Sum_Text;
     [SerializeField] private GameObject ResultPanel;
-    [SerializeField] private CanvasGroup ResultPanelCanvasGroup; 
+    [SerializeField] private CanvasGroup ResultPanelCanvasGroup;
+    [SerializeField] private float resultshowtime = 3f;
 
     [Header("Result Indicators")]
     [SerializeField] private GameObject SmallImage;
@@ -70,8 +71,8 @@ public class RoundController : MonoBehaviour
             diceBoxAnimController.SetDiceShowCallback(OnAnimationShowDice);
             diceBoxAnimController.SetDiceHideCallback(OnAnimationHideDice);
             diceBoxAnimController.SetAnimationCycleCompleteCallback(OnAnimationCycleComplete);
-            diceBoxAnimController.SetResultShowCallback(OnResultShouldShow);
-            diceBoxAnimController.SetResultHideCallback(OnResultShouldHide); 
+           // diceBoxAnimController.SetResultShowCallback(OnResultShouldShow);
+            //diceBoxAnimController.SetResultHideCallback(OnResultShouldHide); 
 
         }
 
@@ -216,16 +217,16 @@ public class RoundController : MonoBehaviour
      //   HideResultWithFade();
     }
 
-    private void OnResultShouldShow()
+    internal void OnResultShouldShow()
     {
-     
             if (currentDiceResult == null) return;
             bool isTriple = currentDiceResult.dice1 == currentDiceResult.dice2 && currentDiceResult.dice2 == currentDiceResult.dice3;
             ShowResultWithFade(currentDiceResult.sum, currentDiceResult.matchSide, isTriple);
     }
 
-    private void OnResultShouldHide()
+    IEnumerator ResultShouldHide()
     {
+       yield return new WaitForSeconds(resultshowtime);
         HideResultWithFade();
     }
 
@@ -304,6 +305,8 @@ public class RoundController : MonoBehaviour
                     .SetUpdate(true);
             }
         }
+
+        StartCoroutine(ResultShouldHide());
     }
 
     /// <summary>

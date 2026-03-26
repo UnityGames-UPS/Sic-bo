@@ -41,8 +41,8 @@ public class DiceBoxAnimationController : MonoBehaviour
     [SerializeField] private int holdOnFrame = 51;
     [SerializeField] private int diceShowFrame = 40;
     [SerializeField] private int diceHideFrame = 65;
-    [SerializeField] private int resultShowFrame = 40;
-    [SerializeField] private int resultHideFrame = 65;
+   // [SerializeField] private int resultShowFrame = 40;
+    //[SerializeField] private int resultHideFrame = 65;
     [SerializeField] private int boxOpenSoundFrame = 0;
     [SerializeField] private int boxCloseSoundFrame = 0;
     [SerializeField] private int diceScaleStartFrame = 40;
@@ -71,8 +71,8 @@ public class DiceBoxAnimationController : MonoBehaviour
     private Action onDiceShouldShow;
     private Action onDiceShouldHide;
 
-    private Action onResultShouldShow;
-    private Action onResultShouldHide;
+  //  private Action onResultShouldShow;
+ //   private Action onResultShouldHide;
     private Action onAnimationCycleComplete;
 
     private bool hasPlayedShakeSound = false;
@@ -281,8 +281,8 @@ public class DiceBoxAnimationController : MonoBehaviour
     internal void SetDiceHideCallback(Action cb) => onDiceShouldHide = cb;
     internal void SetAnimationCycleCompleteCallback(Action cb) => onAnimationCycleComplete = cb;
 
-    internal void SetResultShowCallback(Action cb) => onResultShouldShow = cb;
-    internal void SetResultHideCallback(Action cb) => onResultShouldHide = cb;
+  //  internal void SetResultShowCallback(Action cb) => onResultShouldShow = cb;
+   // internal void SetResultHideCallback(Action cb) => onResultShouldHide = cb;
 
 
     internal DiceBoxState GetCurrentState() => currentState;
@@ -663,7 +663,7 @@ public class DiceBoxAnimationController : MonoBehaviour
             AudioManager.Instance?.PlayDiceShow();
         }
 
-        if (frame == resultShowFrame)
+       /* if (frame == resultShowFrame)
         {
             onResultShouldShow?.Invoke();
         }
@@ -671,7 +671,7 @@ public class DiceBoxAnimationController : MonoBehaviour
         if (frame == resultHideFrame)
         {
             onResultShouldHide?.Invoke();
-        }
+        }*/
 
         // Dice scaling logic
         if (frame >= diceScaleStartFrame && frame <= diceScaleEndFrame && diceContainer != null)

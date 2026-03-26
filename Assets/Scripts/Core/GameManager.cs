@@ -273,23 +273,6 @@ public class GameManager : MonoBehaviour
             bonusIndicatorController?.ShowBonusAnnouncements(data.bonus);
     }
 
-    /// <summary>
-    /// CENTRALIZED DICE RESULT HANDLING
-    /// 
-    /// This method now orchestrates ALL result-related actions in one place:
-    /// 1. Validates the dice result
-    /// 2. Adds result to history panel
-    /// 3. Disables betting and shows locked state
-    /// 4. Shows dice result in dice box animation
-    /// 5. After diceResultHighlightDelay, triggers ShowResultEffects() which handles:
-    ///    - Result panel visibility
-    ///    - Win area highlighting
-    ///    - Triple dice highlighting
-    ///    - Opponent chip placement
-    ///    - Bonus indicator handling
-    ///    - Player chip win animations
-    ///    - Opponent win animations
-    /// </summary>
     internal void OnDiceResult(DiceResultData data)
     {
         if (!ValidateDiceResult(data)) return;
@@ -309,24 +292,11 @@ public class GameManager : MonoBehaviour
         DOVirtual.DelayedCall(diceResultHighlightDelay, () => ShowResultEffects(data));
     }
 
-    /// <summary>
-    /// CENTRALIZED RESULT EFFECTS
-    /// 
-    /// All visual result effects are triggered from this single method to ensure perfect synchronization:
-    /// - Result panel shows with fade-in
-    /// - Win areas highlight
-    /// - Triple dice highlights
-    /// - Opponent chips appear on winning areas
-    /// - Bonus indicators update
-    /// - Player win chips fly from dealer to bet areas
-    /// - Opponent win chips animate
-    /// 
-    /// Everything happens together, controlled by the one delay set in diceResultHighlightDelay.
-    /// </summary>
+
     private void ShowResultEffects(DiceResultData data)
     {
         // 1. Show result panel (this will fade in with all other effects)
-        resultPlaneController?.ShowResultPanel();
+        roundController?.OnResultShouldShow();
 
         // 2. Highlight winning bet areas
         betController.HighlightWinningAreas(data.matchSide, data.sum);
@@ -434,8 +404,7 @@ public class GameManager : MonoBehaviour
         uiController.ShowNextRound(secondsUntilNextRound);
         betController.OnRoundEnd();
 
-        // Hide result panel when round ends
-        resultPlaneController?.HideResultPanel();
+      
     }
 
     internal void OnCashoutTimer(CashoutTimerData data)
