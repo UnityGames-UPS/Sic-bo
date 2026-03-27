@@ -24180,7 +24180,7 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: 634a41188c9a45d3a0472540885f3ad6
+  testToken: c814963a4d5a43ed996f027ef4cab88f
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
   showDebugLogs: 1
@@ -90344,9 +90344,9 @@ MonoBehaviour:
   playerCountArea: {fileID: 2043634637}
   chipPrefab: {fileID: 612846565074103464, guid: a3c5d345c963f44339868a87b30b7fc2, type: 3}
   grayChipSprite: {fileID: 1590697182708911368, guid: c0f0032438b1a144191ba45c5e7427c7, type: 3}
-  dealerToBetDuration: 0.6
+  dealerToBetDuration: 1
   chipStaggerDelay: 0
-  cashoutDuration: 0.8
+  cashoutDuration: 1.5
   cashoutStagger: 0
   dealerScatterX: 20
   dealerScatterY: 15

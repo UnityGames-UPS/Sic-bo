@@ -72,6 +72,7 @@ public class GameManager : MonoBehaviour
 
         betController.SetCurrentPlayerUsername(PlayerUsername);
         betController.SetLeaderboardData(socketManager.InitialData.leaderboards);
+        opponentChipManager?.SetLocalPlayerUsername(PlayerUsername);
 
         uiController.SetupInitialData(
             PlayerUsername,
@@ -121,6 +122,17 @@ public class GameManager : MonoBehaviour
         {
             opponentChipManager?.SetLeaderboardData(payload.leaderboards);
             opponentChipManager?.LockLeaderboardsForRound();
+
+            // Process existing bets from other players when joining mid-round
+            if (payload.bets != null && payload.bets.Count > 0)
+            {
+                Debug.Log($"[GameManager] OnRoomJoinedWithData: Found {payload.bets.Count} existing bets, calling AddJoinTimeBets");
+                opponentChipManager?.AddJoinTimeBets(payload.bets);
+            }
+            else
+            {
+                Debug.Log("[GameManager] OnRoomJoinedWithData: No existing bets found");
+            }
         }
 
         if (payload.stats != null && payload.stats.Count > 0)
@@ -404,7 +416,7 @@ public class GameManager : MonoBehaviour
         uiController.ShowNextRound(secondsUntilNextRound);
         betController.OnRoundEnd();
 
-      
+
     }
 
     internal void OnCashoutTimer(CashoutTimerData data)

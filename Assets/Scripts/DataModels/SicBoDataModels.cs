@@ -406,6 +406,17 @@ public class BetInfo
     public double amount;
     public double delta;
     public int diceNumber;
+    public string username;  // Added for opponent bets at join time
+}
+
+[Serializable]
+public class OpponentBetData
+{
+    public string username;
+    public string betId;
+    public string betType;
+    public string betOption;
+    public double amount;
 }
 
 [Serializable]

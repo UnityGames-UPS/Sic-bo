@@ -218,6 +218,185 @@ public class OpponentChipManager : MonoBehaviour
         StartCoroutine(CR_SpawnAndAnimateChip(betOption, amount, username));
     }
 
+    internal void AddJoinTimeBets(List<BetInfo> bets)
+    {
+        if (bets == null || bets.Count == 0)
+        {
+            Debug.Log("[OpponentChipManager] AddJoinTimeBets: No bets to add");
+            return;
+        }
+
+        if (opponentDealerArea == null || chipPrefab == null || grayChipSprite == null)
+        {
+            Debug.LogError("[OpponentChipManager] AddJoinTimeBets: Missing required components - " +
+                $"opponentDealerArea={opponentDealerArea != null}, " +
+                $"chipPrefab={chipPrefab != null}, " +
+                $"grayChipSprite={grayChipSprite != null}");
+            return;
+        }
+
+        Debug.Log($"[OpponentChipManager] AddJoinTimeBets: Processing {bets.Count} bets for local player '{localPlayerUsername}'");
+
+        // Group bets by betOption and username to aggregate amounts
+        Dictionary<string, Dictionary<string, double>> betsByOptionAndUser = new Dictionary<string, Dictionary<string, double>>();
+
+        foreach (var bet in bets)
+        {
+            // Skip bets without required data or from local player
+            if (string.IsNullOrEmpty(bet.betOption) || bet.amount <= 0 || string.IsNullOrEmpty(bet.username))
+            {
+                Debug.LogWarning($"[OpponentChipManager] Skipping invalid bet: option={bet.betOption}, amount={bet.amount}, username={bet.username}");
+                continue;
+            }
+
+            if (bet.username == localPlayerUsername)
+            {
+                Debug.Log($"[OpponentChipManager] Skipping local player bet: {bet.betOption} - {bet.amount}");
+                continue;  // Don't show local player's bets as opponent bets
+            }
+
+            string betOption = bet.betOption;
+
+            if (!betsByOptionAndUser.ContainsKey(betOption))
+                betsByOptionAndUser[betOption] = new Dictionary<string, double>();
+
+            if (!betsByOptionAndUser[betOption].ContainsKey(bet.username))
+                betsByOptionAndUser[betOption][bet.username] = 0;
+
+            betsByOptionAndUser[betOption][bet.username] += bet.amount;
+        }
+
+        Debug.Log($"[OpponentChipManager] Grouped into {betsByOptionAndUser.Count} bet areas");
+
+        // Now spawn chips for each aggregated bet
+        foreach (var betAreaKvp in betsByOptionAndUser)
+        {
+            string betOption = betAreaKvp.Key;
+            Dictionary<string, double> userBets = betAreaKvp.Value;
+
+            Debug.Log($"[OpponentChipManager] Bet area '{betOption}' has {userBets.Count} unique players");
+
+            foreach (var userBet in userBets)
+            {
+                string username = userBet.Key;
+                double amount = userBet.Value;
+
+                Debug.Log($"[OpponentChipManager] Spawning chip for {username} on {betOption}: {amount}");
+
+                // Spawn chip without animation for join-time bets
+                StartCoroutine(CR_SpawnJoinTimeChip(betOption, amount, username));
+            }
+        }
+    }
+
+    private IEnumerator CR_SpawnJoinTimeChip(string betOption, double amount, string username)
+    {
+        if (!opponentContainers.ContainsKey(betOption))
+        {
+            Debug.LogWarning($"[OpponentChipManager] CR_SpawnJoinTimeChip: No container for bet option '{betOption}'. Available containers: {string.Join(", ", opponentContainers.Keys)}");
+            yield break;
+        }
+
+        RectTransform targetContainer = opponentContainers[betOption];
+        if (targetContainer == null)
+        {
+            Debug.LogError($"[OpponentChipManager] CR_SpawnJoinTimeChip: Container for '{betOption}' is null");
+            yield break;
+        }
+
+        Debug.Log($"[OpponentChipManager] CR_SpawnJoinTimeChip: Creating chip for {username} on {betOption} - amount: {amount}");
+
+        // Get pooled chip
+        RectTransform chipRT = GetPooledChip();
+        if (chipRT == null)
+        {
+            Debug.LogError($"[OpponentChipManager] CR_SpawnJoinTimeChip: Failed to get pooled chip");
+            yield break;
+        }
+
+        // Setup chip appearance
+        Chip chipComponent = chipRT.GetComponent<Chip>();
+        if (chipComponent != null)
+        {
+            chipComponent.SetData(grayChipSprite, GameUtilities.FormatCurrency(amount), 0);
+
+            // Apply leaderboard badges based on locked leaderboards
+            if (lockedLeaderboards != null && !string.IsNullOrEmpty(username))
+            {
+                bool isRichest = IsPlayerInFirst(username, lockedLeaderboards.richest);
+                bool isWinner = IsPlayerInFirst(username, lockedLeaderboards.winners);
+                chipComponent.SetLeaderboardBadge(isRichest, isWinner);
+
+                Debug.Log($"[OpponentChipManager] Applied badges to {username}: richest={isRichest}, winner={isWinner}");
+            }
+        }
+        else
+        {
+            Debug.LogError($"[OpponentChipManager] CR_SpawnJoinTimeChip: Chip component is null");
+        }
+
+        // Place chip directly in bet area without animation
+        chipRT.SetParent(targetContainer, false);
+        chipRT.localScale = Vector3.one * chipScale;
+
+        // Randomize position within bet area
+        float scatterX = betAreaScatterX;
+        float scatterY = betAreaScatterY;
+        Vector2 randomPos = new Vector2(
+            Random.Range(-scatterX, scatterX),
+            Random.Range(-scatterY, scatterY)
+        );
+        chipRT.anchoredPosition = randomPos;
+
+        Debug.Log($"[OpponentChipManager] Chip spawned at position {randomPos} in container {betOption}");
+
+        // Track the chip
+        activeOpponentChips.Add(chipRT);
+        chipToUsername[chipRT] = username;
+
+        if (chipsByBetArea.ContainsKey(betOption))
+            chipsByBetArea[betOption].Add(chipRT);
+
+        // Store spawn position for cashout routing
+        if (lockedLeaderboards != null && !string.IsNullOrEmpty(username))
+        {
+            bool isOnRichestBoard = IsPlayerInLeaderboard(username, lockedLeaderboards.richest);
+            bool isOnWinnersBoard = IsPlayerInLeaderboard(username, lockedLeaderboards.winners);
+
+            if (isOnRichestBoard || isOnWinnersBoard)
+            {
+                // Chip came from leaderboard - store which one
+                // For simplicity, storing opponentDealerArea as placeholder
+                // In full implementation, you'd get the actual leaderboard chip slot
+                chipToSpawnPosition[chipRT] = opponentDealerArea;
+            }
+            else
+            {
+                chipToSpawnPosition[chipRT] = opponentDealerArea;
+            }
+        }
+        else
+        {
+            chipToSpawnPosition[chipRT] = opponentDealerArea;
+        }
+
+        // Store original badge state
+        if (chipComponent != null)
+        {
+            chipToOriginalBadge[chipRT] = new BadgeState
+            {
+                isRichest = chipComponent.HasRichestBadge(),
+                isWinner = chipComponent.HasWinnerBadge()
+            };
+        }
+
+        // Enable container
+        targetContainer.gameObject.SetActive(true);
+        Debug.Log($"[OpponentChipManager] Container '{betOption}' activated and chip visible");
+
+        yield return null;
+    }
+
     internal void ClearAllOpponentBets()
     {
         if (cashoutCoroutine != null)
