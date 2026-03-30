@@ -141,7 +141,7 @@ public class BetController : MonoBehaviour
     private const float CHIP_OPEN_DURATION = 0.5f;
     private const float CHIP_CLOSE_DURATION = 0.4f;
     private const float PANEL_SLIDE_DURATION = 0.3f;
-    private const float REPEAT_PANEL_SHOW_DURATION = 5f;
+    private const float REPEAT_PANEL_SHOW_DURATION = 20f;
     private const float REPEAT_PANEL_DELAY = 0.5f;
     private const int MAX_CHIP_COMBINATION_COUNT = 20;
     private const float MAIN_CHIP_Y_OFFSET = 30f;

@@ -307,25 +307,36 @@ public class GameManager : MonoBehaviour
 
     private void ShowResultEffects(DiceResultData data)
     {
-        // 1. Show result panel (this will fade in with all other effects)
+        // ── Phase 1 (instant) ────────────────────────────────────────────────
+        // • Win images appear on winning areas  (HighlightWinningAreas)
+        // • Non-winning player bet components clear  (inside PlayDiceResultAnimation → FadeOutLosingAreaChips)
+        // • Non-winning opponent chips fade out      (inside PlayOpponentWinAnimations → FadeOutNonWinningChips)
+        // ── Phase 2 (after losingAreaClearDuration) ──────────────────────────
+        // • Player dealer chips fly → winning bet areas
+        // • Opponent dealer chips fly → winning bet areas  (both start at the same moment)
+        // ── Phase 3 (after dealerToBetDuration + postLandWait) ──────────────
+        // • PlayCashoutAnimation sweeps all chips from bet areas to players
+        // ─────────────────────────────────────────────────────────────────────
+
+        // 1. Show result panel
         roundController?.OnResultShouldShow();
 
-        // 2. Highlight winning bet areas
+        // 2. Highlight winning bet areas (shows WinImage on each)
         betController.HighlightWinningAreas(data.matchSide, data.sum);
 
         // 3. Highlight triple dice if applicable
         betController.HighlightTripleDiceResult(data.dice1, data.dice2, data.dice3);
 
-        // 4. Get all winning areas for other systems
+        // 4. Resolve all winning area names
         List<string> allWinningAreas = GetAllWinningAreasFromDice(data);
 
-        // 5. Set winning areas for opponent chip manager
+        // 5. Tell opponent manager which areas are winning (needed before Phase 1 fade)
         opponentChipManager?.SetWinningBetAreas(allWinningAreas);
 
         // 6. Handle bonus indicators
         bonusIndicatorController?.HandleDiceResult(allWinningAreas);
 
-        // 7. Play player chip win animations (dealer → bet areas)
+        // 7. Player dealer → bet area chips   (also runs Phase-1 clear internally)
         if (chipWinAnimationController != null)
         {
             List<WinAreaData> winAreas = betController.GetWinningAreasData();
@@ -333,7 +344,7 @@ public class GameManager : MonoBehaviour
                 chipWinAnimationController.PlayDiceResultAnimation(winAreas, data);
         }
 
-        // 8. Play opponent win chip animations
+        // 8. Opponent dealer → bet area chips (Phase-1 fade + Phase-2 flight, in sync)
         opponentChipManager?.PlayOpponentWinAnimations();
     }
 
@@ -403,6 +414,15 @@ public class GameManager : MonoBehaviour
     {
         if (uiController.IsLeaderboardAnimating())
             yield return uiController.WaitForLeaderboardAnimation();
+
+        // Wait for dealer chips to land, then observe the configured post-land
+        // pause, then sweep all chips (player + opponent) simultaneously.
+        float dealerFlight = chipWinAnimationController != null
+            ? chipWinAnimationController.DealerToBetDuration : 0.65f;
+        float postLand = chipWinAnimationController != null
+            ? chipWinAnimationController.PostLandWait : 0.5f;
+
+        yield return new WaitForSeconds(dealerFlight + postLand);
 
         chipWinAnimationController?.PlayCashoutAnimation();
         opponentChipManager?.PlayCashoutAnimation();

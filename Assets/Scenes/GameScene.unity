@@ -24180,7 +24180,7 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: c814963a4d5a43ed996f027ef4cab88f
+  testToken: a1cd37342bed4deba1e7ed76ee8c11bf
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
   showDebugLogs: 1
@@ -90345,15 +90345,13 @@ MonoBehaviour:
   chipPrefab: {fileID: 612846565074103464, guid: a3c5d345c963f44339868a87b30b7fc2, type: 3}
   grayChipSprite: {fileID: 1590697182708911368, guid: c0f0032438b1a144191ba45c5e7427c7, type: 3}
   dealerToBetDuration: 1
-  chipStaggerDelay: 0
   cashoutDuration: 1.5
-  cashoutStagger: 0
   dealerScatterX: 20
   dealerScatterY: 15
   betAreaScatterX: 12
   betAreaScatterY: 10
   chipScale: 1
-  postFadeDelay: 0.3
+  cashoutArcHeight: 90
   targetCanvas: {fileID: 674617748}
   chipContainer: {fileID: 342734078}
   leaderboardController: {fileID: 1373798843}
@@ -113775,14 +113773,12 @@ MonoBehaviour:
   dealerPoolSize: 35
   dealerScatterX: 28
   dealerScatterY: 18
+  losingAreaClearDuration: 0.3
   dealerToBetDuration: 0.9
-  chipStaggerDelay: 0
   betAreaScatterX: 11
   betAreaScatterY: 9
-  initialWaitBeforeAnimation: 0.2
-  postFadeWaitBeforeChips: 0.18
+  postLandWait: 0.5
   betToPlayerDuration: 0.8
-  cashoutStagger: 0
   arcHeight: 110
   chipWorkingScale: 1
   animationStartPercent: 0.6
