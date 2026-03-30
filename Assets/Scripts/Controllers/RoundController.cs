@@ -60,7 +60,7 @@ public class RoundController : MonoBehaviour
     private DiceResultData currentDiceResult;
     private bool diceResultReceived = false;
     private long currentBettingEndTime = 0;
-    private Tween resultPanelFadeTween; 
+    private Tween resultPanelFadeTween;
     #endregion
 
     #region Unity Lifecycle
@@ -71,7 +71,7 @@ public class RoundController : MonoBehaviour
             diceBoxAnimController.SetDiceShowCallback(OnAnimationShowDice);
             diceBoxAnimController.SetDiceHideCallback(OnAnimationHideDice);
             diceBoxAnimController.SetAnimationCycleCompleteCallback(OnAnimationCycleComplete);
-           // diceBoxAnimController.SetResultShowCallback(OnResultShouldShow);
+            // diceBoxAnimController.SetResultShowCallback(OnResultShouldShow);
             //diceBoxAnimController.SetResultHideCallback(OnResultShouldHide); 
 
         }
@@ -100,6 +100,14 @@ public class RoundController : MonoBehaviour
     #endregion
 
     #region Internal API
+    /// <summary>
+    /// DICE ENABLING FLOW:
+    /// 1. GameManager receives dice result from server
+    /// 2. StoreDiceResult() is called to store the result data
+    /// 3. GameManager calls EnableAndSetupDice() with configurable delay (diceShowDelay)
+    /// 4. EnableAndSetupDice() enables container, sets values, positions, and plays sounds
+    /// This ensures dice are always shown even if animation frame trigger is missed
+    /// </summary>
     internal void StartRound(RoundStartData data)
     {
         if (data == null) return;
@@ -158,13 +166,42 @@ public class RoundController : MonoBehaviour
 
         if (diceBoxAnimController != null)
             diceBoxAnimController.RevealDiceResult();
-        else
-        {
-            bool isTriple = data.dice1 == data.dice2 && data.dice2 == data.dice3;
-            SetDiceValues(data);
-            //ShowResult(data.sum, data.matchSide, isTriple);
-            PlayDiceResultSounds(data);
-        }
+    }
+
+    /// <summary>
+    /// Store dice result for later use (called when result arrives from server)
+    /// </summary>
+    internal void StoreDiceResult(DiceResultData data)
+    {
+        if (data == null) return;
+
+        currentDiceResult = data;
+        diceResultReceived = true;
+
+        betController.DisableBetting();
+
+        if (diceBoxAnimController != null)
+            diceBoxAnimController.RevealDiceResult();
+    }
+
+    /// <summary>
+    /// Enable dice container and set dice values (called with delay from GameManager)
+    /// </summary>
+    internal void EnableAndSetupDice()
+    {
+        if (currentDiceResult == null) return;
+
+        // Enable the dice container
+        if (DiceContainer) DiceContainer.SetActive(true);
+
+        // Set dice values
+        SetDiceValues(currentDiceResult);
+
+        // Apply random preset position
+        ApplyRandomPresetPosition();
+
+        // Play dice result sounds
+        PlayDiceResultSounds(currentDiceResult);
     }
 
     internal void ClearRoundDisplay()
@@ -203,30 +240,31 @@ public class RoundController : MonoBehaviour
     {
         if (currentDiceResult == null) return;
 
-       // bool isTriple = currentDiceResult.dice1 == currentDiceResult.dice2 && currentDiceResult.dice2 == currentDiceResult.dice3;
-
-        SetDiceValues(currentDiceResult);
-        ApplyRandomPresetPosition();
-        //ShowResultWithFade(currentDiceResult.sum, currentDiceResult.matchSide, isTriple);
-        PlayDiceResultSounds(currentDiceResult);
+        // Note: DiceContainer enabling is now handled by GameManager with delay
+        // This callback only handles positioning and sounds if dice are already enabled
+        if (DiceContainer && DiceContainer.activeSelf)
+        {
+            ApplyRandomPresetPosition();
+            PlayDiceResultSounds(currentDiceResult);
+        }
     }
 
     private void OnAnimationHideDice()
     {
         if (DiceContainer) DiceContainer.SetActive(false);
-     //   HideResultWithFade();
+        //   HideResultWithFade();
     }
 
     internal void OnResultShouldShow()
     {
-            if (currentDiceResult == null) return;
-            bool isTriple = currentDiceResult.dice1 == currentDiceResult.dice2 && currentDiceResult.dice2 == currentDiceResult.dice3;
-            ShowResultWithFade(currentDiceResult.sum, currentDiceResult.matchSide, isTriple);
+        if (currentDiceResult == null) return;
+        bool isTriple = currentDiceResult.dice1 == currentDiceResult.dice2 && currentDiceResult.dice2 == currentDiceResult.dice3;
+        ShowResultWithFade(currentDiceResult.sum, currentDiceResult.matchSide, isTriple);
     }
 
     IEnumerator ResultShouldHide()
     {
-       yield return new WaitForSeconds(resultshowtime);
+        yield return new WaitForSeconds(resultshowtime);
         HideResultWithFade();
     }
 
@@ -295,10 +333,10 @@ public class RoundController : MonoBehaviour
             if (ResultPanelCanvasGroup != null)
             {
                 ResultPanelCanvasGroup.alpha = 0f;
-                
+
                 // Kill any existing fade animation
                 resultPanelFadeTween?.Kill();
-                
+
                 // Fade in smoothly
                 resultPanelFadeTween = ResultPanelCanvasGroup.DOFade(1f, resultPanelFadeDuration)
                     .SetEase(resultPanelFadeEase)
@@ -318,7 +356,7 @@ public class RoundController : MonoBehaviour
         {
             // Kill any existing fade animation
             resultPanelFadeTween?.Kill();
-            
+
             // Fade out smoothly
             resultPanelFadeTween = ResultPanelCanvasGroup.DOFade(0f, resultPanelFadeDuration)
                 .SetEase(resultPanelFadeEase)

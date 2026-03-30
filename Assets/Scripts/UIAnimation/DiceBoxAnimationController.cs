@@ -4,7 +4,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-
+/// <summary>
+/// DICE ENABLING FLOW:
+/// - Dice container is enabled by GameManager.OnDiceResult() with configurable delay (diceShowDelay)
+/// - This ensures dice are always shown even if animation frame trigger is missed
+/// - DiceBoxAnimationController handles: disabling, scaling, and positioning
+/// - Frame triggers (diceShowFrame) now only invoke callbacks, not enable the container
+/// </summary>
 public class DiceBoxAnimationController : MonoBehaviour
 {
     #region Serialized Fields
@@ -41,16 +47,17 @@ public class DiceBoxAnimationController : MonoBehaviour
     [SerializeField] private int holdOnFrame = 51;
     [SerializeField] private int diceShowFrame = 40;
     [SerializeField] private int diceHideFrame = 65;
-   // [SerializeField] private int resultShowFrame = 40;
+    // [SerializeField] private int resultShowFrame = 40;
     //[SerializeField] private int resultHideFrame = 65;
     [SerializeField] private int boxOpenSoundFrame = 0;
     [SerializeField] private int boxCloseSoundFrame = 0;
     [SerializeField] private int diceScaleStartFrame = 40;
     [SerializeField] private int diceScaleEndFrame = 51;
     [SerializeField] private float diceScaleTarget = 1.3f;
-    [SerializeField] private AnimationCurve diceScaleCurve = new AnimationCurve(
-        new Keyframe(0f, 0f, 0f, 3f), 
-        new Keyframe(0.5f, 0.88f, 1.2f, 0.4f), 
+    [SerializeField]
+    private AnimationCurve diceScaleCurve = new AnimationCurve(
+        new Keyframe(0f, 0f, 0f, 3f),
+        new Keyframe(0.5f, 0.88f, 1.2f, 0.4f),
         new Keyframe(1f, 1f, 0.1f, 0f));
     [SerializeField] private int diceScaleResetFrameOffset = 5;
 
@@ -71,8 +78,8 @@ public class DiceBoxAnimationController : MonoBehaviour
     private Action onDiceShouldShow;
     private Action onDiceShouldHide;
 
-  //  private Action onResultShouldShow;
- //   private Action onResultShouldHide;
+    //  private Action onResultShouldShow;
+    //   private Action onResultShouldHide;
     private Action onAnimationCycleComplete;
 
     private bool hasPlayedShakeSound = false;
@@ -108,9 +115,9 @@ public class DiceBoxAnimationController : MonoBehaviour
     internal void StartAnimationCycleWithServerSync(long roundStartTimestamp, long bettingEndTimestamp, long currentServerTime)
     {
         DiceBoxState previousState = currentState;
-        
+
         ForceResetToCleanState();
-     
+
         if (previousState == DiceBoxState.Opening ||
             previousState == DiceBoxState.Open ||
             previousState == DiceBoxState.Closing ||
@@ -123,21 +130,21 @@ public class DiceBoxAnimationController : MonoBehaviour
             pendingServerTime = currentServerTime;
             return;
         }
-     
+
         playbackSpeed = 1f;
         hasPendingRound = false;
         hasPendingReveal = false;
-     
+
         StopAllAnimations();
         ResetSoundFlags();
-     
+
         serverTimeOffset = currentServerTime - (long)(Time.realtimeSinceStartup * 1000);
-     
+
         float elapsedSeconds = (currentServerTime - roundStartTimestamp) / 1000f;
-     
+
         if (diceContainer) diceContainer.SetActive(false);
         SetTopLayerActive(false);
-     
+
         JumpToCorrectPhase(elapsedSeconds);
     }
 
@@ -281,8 +288,8 @@ public class DiceBoxAnimationController : MonoBehaviour
     internal void SetDiceHideCallback(Action cb) => onDiceShouldHide = cb;
     internal void SetAnimationCycleCompleteCallback(Action cb) => onAnimationCycleComplete = cb;
 
-  //  internal void SetResultShowCallback(Action cb) => onResultShouldShow = cb;
-   // internal void SetResultHideCallback(Action cb) => onResultShouldHide = cb;
+    //  internal void SetResultShowCallback(Action cb) => onResultShouldShow = cb;
+    // internal void SetResultHideCallback(Action cb) => onResultShouldHide = cb;
 
 
     internal DiceBoxState GetCurrentState() => currentState;
@@ -452,7 +459,7 @@ public class DiceBoxAnimationController : MonoBehaviour
     {
         float elapsed = 0f;
         float scaledDuration = holdDuration / Mathf.Max(playbackSpeed, 0.01f);
-        
+
         while (elapsed < scaledDuration)
         {
             elapsed += Time.unscaledDeltaTime;
@@ -527,7 +534,7 @@ public class DiceBoxAnimationController : MonoBehaviour
         do
         {
             float normalizedTime = elapsedTime / scaledDuration;
-            
+
             if (loop)
             {
                 normalizedTime = normalizedTime % 1f;
@@ -577,8 +584,8 @@ public class DiceBoxAnimationController : MonoBehaviour
         if (frameCount == 0) { onComplete?.Invoke(); yield break; }
 
         isAnimating = true;
-        triggeredFrames.Clear(); 
-        
+        triggeredFrames.Clear();
+
         float elapsedTime = startTime;
         float scaledDuration = duration / Mathf.Max(playbackSpeed, 0.01f);
         int lastDisplayedFrame = -1;
@@ -654,24 +661,20 @@ public class DiceBoxAnimationController : MonoBehaviour
 
         if (frame == diceShowFrame)
         {
-            if (diceContainer)
-            {
-                diceContainer.SetActive(true);
-                diceContainer.transform.localScale = Vector3.one;
-            }
+           
             onDiceShouldShow?.Invoke();
             AudioManager.Instance?.PlayDiceShow();
         }
 
-       /* if (frame == resultShowFrame)
-        {
-            onResultShouldShow?.Invoke();
-        }
+        /* if (frame == resultShowFrame)
+         {
+             onResultShouldShow?.Invoke();
+         }
 
-        if (frame == resultHideFrame)
-        {
-            onResultShouldHide?.Invoke();
-        }*/
+         if (frame == resultHideFrame)
+         {
+             onResultShouldHide?.Invoke();
+         }*/
 
         // Dice scaling logic
         if (frame >= diceScaleStartFrame && frame <= diceScaleEndFrame && diceContainer != null)
@@ -744,7 +747,7 @@ public class DiceBoxAnimationController : MonoBehaviour
         playbackSpeed = 1f;
         currentState = DiceBoxState.Waiting;
         triggeredFrames.Clear();
-        
+
         if (diceContainer)
         {
             diceContainer.SetActive(false);

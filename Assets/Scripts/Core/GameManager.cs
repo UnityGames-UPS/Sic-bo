@@ -23,6 +23,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Timing")]
     [SerializeField] private float diceResultHighlightDelay = 2f;
+    [SerializeField] private float diceShowDelay = 0.5f; // Delay before showing dice after result arrives
 
     [Header("Debug — disable in production builds")]
     [SerializeField] private bool showDebugLogs = false;
@@ -297,8 +298,11 @@ public class GameManager : MonoBehaviour
         uiController.ShowBetLocked();
         betController.LockBadges();
 
-        // Show dice result in dice box animation
-        roundController.ShowDiceResult(data);
+        // Pass dice result to RoundController (stores it for later use)
+        roundController.StoreDiceResult(data);
+
+        // Enable and setup dice with configurable delay
+        DOVirtual.DelayedCall(diceShowDelay, () => roundController.EnableAndSetupDice());
 
         // After delay, trigger all visual effects together
         DOVirtual.DelayedCall(diceResultHighlightDelay, () => ShowResultEffects(data));

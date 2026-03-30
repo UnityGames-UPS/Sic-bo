@@ -94127,6 +94127,7 @@ MonoBehaviour:
   resultPlaneController: {fileID: 760194023}
   socketManager: {fileID: 410521236}
   diceResultHighlightDelay: 2
+  diceShowDelay: 0.5
   showDebugLogs: 1
 --- !u!4 &1673436616
 Transform:
