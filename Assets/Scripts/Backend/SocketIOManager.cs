@@ -59,6 +59,10 @@ public class SocketIOManager : MonoBehaviour
     #region Private Fields - Room Tracking
     private string CurrentRoomId = null;
     private bool isPendingHome = false;
+    private int homeRetryCount = 0;
+    private const int MaxHomeRetries = 2;
+    private const float HomeAckTimeout = 0.75f; // 750ms
+    private Coroutine homeTimeoutCoroutine = null;
     #endregion
 
     #region Private Fields - Ping/Pong
@@ -309,14 +313,8 @@ public class SocketIOManager : MonoBehaviour
         // Always log socket-level errors — these are exceptional, not high-frequency
         Debug.LogError($"[SOCKET] Error: {error.message}");
 
-        // If a HOME request was pending and the server errored instead of acking,
-        // the ACK will never arrive — recover so the loading screen is not stuck.
-        if (isPendingHome)
-        {
-            isPendingHome = false;
-            Debug.LogWarning("[SOCKET] Error received while HOME was pending — forcing leave acknowledgement to unblock loading screen.");
-            gameManager?.OnLeaveAcknowledged();
-        }
+        // If a HOME request was pending and the server errored, the timeout handler will retry
+        // No longer forcing immediate leave acknowledgement here
 
 #if UNITY_WEBGL && !UNITY_EDITOR
         JSManager?.SendCustomMessage("error");
@@ -609,7 +607,24 @@ public class SocketIOManager : MonoBehaviour
 
     internal void ReturnHome()
     {
+        homeRetryCount = 0; // Reset retry counter
+        AttemptReturnHome();
+    }
+
+    private void AttemptReturnHome()
+    {
         isPendingHome = true;
+        
+        // Start timeout coroutine
+        if (homeTimeoutCoroutine != null)
+        {
+            StopCoroutine(homeTimeoutCoroutine);
+            homeTimeoutCoroutine = null;
+        }
+        
+        if (gameObject.activeInHierarchy && !isBeingDestroyed)
+            homeTimeoutCoroutine = StartCoroutine(HomeAckTimeoutCheck());
+        
         EmitSimpleRequest("HOME", OnHomeAck);
     }
 
@@ -647,13 +662,29 @@ public class SocketIOManager : MonoBehaviour
         {
             SicBoRoot response = JsonConvert.DeserializeObject<SicBoRoot>(json);
             if (response != null && response.success && response.payload != null)
+            {
+                // Success! Process the room join
                 // isLevelJoin=true → playerCount goes to in-game PlayerCount_Text,
                 // NOT the home-screen TotalPlayers_Text
                 gameManager.OnRoomJoinedWithData(response.payload, true);
+            }
+            else
+            {
+                // JOIN_LEVEL failed - this shouldn't happen with proper HOME handling
+                // but handle it gracefully just in case
+                string errorMsg = response?.payload?.message ?? "Unknown error";
+                Debug.LogError($"[ACK] JOIN_LEVEL failed: {errorMsg}");
+                
+                // Hide loading screen and show error
+                uiController?.HideLoadingScreen();
+                ShowErrorAndBlock($"Failed to join room: {errorMsg}", showDisconnectAfter: true);
+            }
         }
         catch (Exception e)
         {
             Debug.LogError($"[ACK] JOIN_LEVEL parse error: {e.Message}");
+            uiController?.HideLoadingScreen();
+            ShowErrorAndBlock("Failed to join room. Please refresh.", showDisconnectAfter: true);
         }
     }
 
@@ -704,6 +735,14 @@ public class SocketIOManager : MonoBehaviour
     {
         if (isBeingDestroyed) return;
         isPendingHome = false;
+        
+        // Cancel timeout coroutine since we got a response
+        if (homeTimeoutCoroutine != null)
+        {
+            StopCoroutine(homeTimeoutCoroutine);
+            homeTimeoutCoroutine = null;
+        }
+        
         if (showDebugLogs) Debug.Log($"[ACK] HOME {json}");
 
         try
@@ -712,6 +751,9 @@ public class SocketIOManager : MonoBehaviour
 
             if (response != null && response.success && response.payload != null)
             {
+                // Success! Reset retry count and proceed
+                homeRetryCount = 0;
+                
                 if (!string.IsNullOrEmpty(response.payload.roomId))
                     CurrentRoomId = response.payload.roomId;
 
@@ -731,10 +773,17 @@ public class SocketIOManager : MonoBehaviour
 
                 gameManager?.OnLeaveAcknowledged();
             }
+            else
+            {
+                // HOME ack failed - retry
+                Debug.LogWarning($"[ACK] HOME failed: {response?.payload?.message ?? "Unknown error"}");
+                HandleHomeAckFailure();
+            }
         }
         catch (Exception e)
         {
             Debug.LogError($"[ACK] HOME parse error: {e.Message}");
+            HandleHomeAckFailure();
         }
     }
     #endregion
@@ -885,6 +934,63 @@ public class SocketIOManager : MonoBehaviour
 
         focusCheckRoutine = null;
     }
+
+    private IEnumerator HomeAckTimeoutCheck()
+    {
+        float elapsed = 0f;
+
+        while (elapsed < HomeAckTimeout && isPendingHome && !isExiting && !isBeingDestroyed)
+        {
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        if (isBeingDestroyed) yield break;
+
+        // If still pending after timeout, handle as failure
+        if (isPendingHome && !isExiting)
+        {
+            isPendingHome = false;
+            Debug.LogWarning($"[SOCKET] HOME acknowledgement timeout after {HomeAckTimeout}s");
+            HandleHomeAckFailure();
+        }
+
+        homeTimeoutCoroutine = null;
+    }
+    #endregion
+
+    #region Private Helpers - Home Retry Logic
+    private void HandleHomeAckFailure()
+    {
+        if (isBeingDestroyed || isExiting) return;
+
+        homeRetryCount++;
+
+        if (homeRetryCount <= MaxHomeRetries)
+        {
+            Debug.LogWarning($"[SOCKET] Retrying HOME request ({homeRetryCount}/{MaxHomeRetries})...");
+            AttemptReturnHome();
+        }
+        else
+        {
+            Debug.LogError("[SOCKET] HOME request failed after maximum retries");
+            ShowRoomSwitchFailureAndQuit();
+        }
+    }
+
+    private void ShowRoomSwitchFailureAndQuit()
+    {
+        isExiting = true;
+        CleanupRoutines();
+        
+        if (manager != null)
+        {
+            try { manager.Close(); }
+            catch (Exception e) { if (showDebugLogs) Debug.LogWarning($"[SOCKET] Error closing after room switch failure: {e.Message}"); }
+        }
+
+        ShowErrorAndBlock("Failed to switch room. Please refresh the game.", showDisconnectAfter: true);
+    }
     #endregion
 
     #region Private Helpers
@@ -948,6 +1054,7 @@ public class SocketIOManager : MonoBehaviour
         if (initTimeoutRoutine != null) { StopCoroutine(initTimeoutRoutine); initTimeoutRoutine = null; }
         if (disconnectTimerCoroutine != null) { StopCoroutine(disconnectTimerCoroutine); disconnectTimerCoroutine = null; }
         if (focusCheckRoutine != null) { StopCoroutine(focusCheckRoutine); focusCheckRoutine = null; }
+        if (homeTimeoutCoroutine != null) { StopCoroutine(homeTimeoutCoroutine); homeTimeoutCoroutine = null; }
     }
     #endregion
 }
