@@ -98,6 +98,7 @@ public class BetController : MonoBehaviour
     private bool placedBetInPreviousRound = false;
     private bool hasPlacedBetThisRound = false;
     private bool isProcessingBetAction = false;
+    private bool isFirstRoundAfterJoin = true; // Track if this is the first round after joining
     private string pendingBetOption = "";
     private string currentBetAction = "";
     private int receivedBroadcastCount = 0;
@@ -247,6 +248,16 @@ public class BetController : MonoBehaviour
 
     #region Internal API - Round Management
     internal void OnRoundStart() => ClearAllBets(true);
+    
+    /// <summary>
+    /// Call this when player joins a new room to reset the first round flag
+    /// </summary>
+    internal void OnRoomJoined()
+    {
+        isFirstRoundAfterJoin = true;
+        placedBetInPreviousRound = false;
+        previousRoundBets.Clear();
+    }
 
     internal void OnRoundEnd()
     {
@@ -444,8 +455,8 @@ public class BetController : MonoBehaviour
         isBettingEnabled = true;
         hasPlacedBetThisRound = false;
         AnimateBetUnlocked();
-        if (placedBetInPreviousRound && previousRoundBets.Count > 0)
-            ShowRepeatPanelAnimated();
+        if (placedBetInPreviousRound && previousRoundBets.Count > 0 && !isFirstRoundAfterJoin)
+            ShowRepeatPanelPersistent();
     }
 
     internal void DisableBetting()
@@ -460,23 +471,24 @@ public class BetController : MonoBehaviour
             previousRoundBets.Clear();
             previousRoundBets.AddRange(betHistory);
             placedBetInPreviousRound = true;
+            
+            if (isFirstRoundAfterJoin)
+                isFirstRoundAfterJoin = false;
         }
         else
         {
-            previousRoundBets.Clear();
-            placedBetInPreviousRound = false;
+            // Otherwise keep them for next round
+            if (isFirstRoundAfterJoin)
+            {
+                previousRoundBets.Clear();
+                placedBetInPreviousRound = false;
+            }
         }
     }
 
     internal void ClearAllBets(bool opponentBetClear)
         => ClearAllBets(opponentBetClear, null);
 
-    /// <summary>
-    /// Clears all player bet components.
-    /// Pass <paramref name="skipOptions"/> with the winning bet option keys to leave those
-    /// PlayerBetComponents visible -- they are cleared later by ChipWinAnimationController
-    /// once the cashout arc's first half has finished and the chips are in the air.
-    /// </summary>
     internal void ClearAllBets(bool opponentBetClear, ICollection<string> skipOptions)
     {
         areaBets.Clear();
@@ -631,15 +643,11 @@ public class BetController : MonoBehaviour
 
     private void HandleUndoBroadcast(BetPlacedData data)
     {
-        // Don't manipulate state on broadcasts - ACK handles everything
-        // Broadcasts are just notifications that bets changed, but ACK is the source of truth
         Debug.Log($"[BetController] Received undo broadcast for {data.betOption}, amount: {data.amount} - ignoring client-side state changes");
     }
 
     private void HandleCancelBroadcast(BetPlacedData data)
     {
-        // Don't manipulate state on broadcasts - ACK handles everything
-        // Broadcasts are just notifications that bets changed, but ACK is the source of truth
         Debug.Log($"[BetController] Received cancel broadcast for {data.betOption}, amount: {data.amount} - ignoring client-side state changes");
     }
 
@@ -712,8 +720,13 @@ public class BetController : MonoBehaviour
         }
         else
         {
+            // Total bet is 0 - hide bet actions panel
             HideBetActionsPanel();
             hasPlacedBetThisRound = false;
+            
+            // Show repeat panel if we have previous bets and not first round
+            if (placedBetInPreviousRound && previousRoundBets.Count > 0 && !isFirstRoundAfterJoin && isBettingEnabled)
+                ShowRepeatPanelPersistent();
         }
 
         ResetBetActionState();
@@ -742,12 +755,7 @@ public class BetController : MonoBehaviour
                 break;
 
             case "CANCEL":
-                Debug.Log($"[BetController] CANCEL ACK - refundAmount: {response.payload.refundAmount}");
-
-                // Build refund data from betHistory so the animation spawns one chip
-                // per original bet placed (not just one chip for the whole area total).
-                // We aggregate by betOption but keep the full total so BuildCombination
-                // in ChipWinAnimationController can reconstruct the right chip count.
+                
                 Dictionary<string, double> refundBets = new Dictionary<string, double>();
                 foreach (var action in betHistory)
                 {
@@ -1045,6 +1053,53 @@ public class BetController : MonoBehaviour
         });
     }
 
+    private void ShowRepeatPanelPersistent()
+    {
+        if (RepeatPanel == null) return;
+        
+        // Stop any existing timer
+        if (repeatPanelCoroutine != null)
+        {
+            StopCoroutine(repeatPanelCoroutine);
+            repeatPanelCoroutine = null;
+        }
+
+        // Hide bet actions panel
+        if (BetActionsPanel != null)
+        {
+            BetActionsPanelMain.SetActive(false);
+            BetActionsPanel.gameObject.SetActive(false);
+        }
+
+        // Show repeat panel with slide animation
+        RepeatPanelMain.SetActive(true);
+        RepeatPanel.gameObject.SetActive(true);
+        RepeatPanel.anchoredPosition = new Vector2(-200f, RepeatPanel.anchoredPosition.y);
+        RepeatPanel.DOAnchorPosX(0f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad);
+        
+        // Panel stays visible - no auto-hide timer
+    }
+    
+    private void HideRepeatPanel()
+    {
+        if (RepeatPanel == null) return;
+        
+        // Stop any existing coroutine
+        if (repeatPanelCoroutine != null)
+        {
+            StopCoroutine(repeatPanelCoroutine);
+            repeatPanelCoroutine = null;
+        }
+        
+        // Slide out and hide
+        RepeatPanel.DOAnchorPosX(-200f, PANEL_SLIDE_DURATION).SetEase(Ease.InOutQuad)
+            .OnComplete(() => 
+            { 
+                RepeatPanel.gameObject.SetActive(false); 
+                RepeatPanelMain.SetActive(false); 
+            });
+    }
+
     private void ShowRepeatPanelAnimated()
     {
         if (RepeatPanel == null) return;
@@ -1078,8 +1133,9 @@ public class BetController : MonoBehaviour
     private void ShowBetActionsPanelAnimated()
     {
         if (BetActionsPanel == null) return;
-        if (repeatPanelCoroutine != null) { StopCoroutine(repeatPanelCoroutine); repeatPanelCoroutine = null; }
-        if (RepeatPanel != null) { RepeatPanelMain.SetActive(false); RepeatPanel.gameObject.SetActive(false); }
+        
+        // Hide repeat panel when showing bet actions (player has placed a bet)
+        HideRepeatPanel();
 
         if (!BetActionsPanel.gameObject.activeSelf)
         {
@@ -1109,8 +1165,7 @@ public class BetController : MonoBehaviour
     private void HideBetPanels()
     {
         HideBetActionsPanel();
-        if (RepeatPanel != null) { RepeatPanelMain.SetActive(false); RepeatPanel.gameObject.SetActive(false); }
-        if (repeatPanelCoroutine != null) { StopCoroutine(repeatPanelCoroutine); repeatPanelCoroutine = null; }
+        HideRepeatPanel();
     }
     #endregion
 
@@ -1157,8 +1212,7 @@ public class BetController : MonoBehaviour
         currentBetAction = "REPEAT";
         receivedBroadcastCount = 0;
 
-        if (RepeatPanel != null) { RepeatPanelMain.SetActive(false); RepeatPanel.gameObject.SetActive(false); }
-        if (repeatPanelCoroutine != null) { StopCoroutine(repeatPanelCoroutine); repeatPanelCoroutine = null; }
+        HideRepeatPanel();
 
         gameManager.RepeatBet();
     }

@@ -106,6 +106,10 @@ public class GameManager : MonoBehaviour
 
         uiController.HideLoadingScreen();
 
+        // Reset first round state when joining a room
+        if (isLevelJoin)
+            betController.OnRoomJoined();
+
         if (!isLevelJoin && payload.lobby != null)
         {
             uiController.UpdateLobbyHotIndicators(
