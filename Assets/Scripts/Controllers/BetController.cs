@@ -515,6 +515,11 @@ public class BetController : MonoBehaviour
         UpdateTotalBet();
         HideBetActionsPanel();
     }
+
+    internal double GetCurrentTotalBet()
+    {
+        return currentTotalBet;
+    }
     #endregion
 
     #region Internal API - Highlights

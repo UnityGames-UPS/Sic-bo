@@ -1012,7 +1012,7 @@ public class UIController : MonoBehaviour
     #endregion
 
     #region Win Animation
-    internal void ShowWinAnimation(double winAmount)
+    internal void ShowWinAnimation(double totalWin, double totalStake, double profitLoss)
     {
         if (WinAmount_Text == null || WinPanel == null) return;
         winTween?.Kill();
@@ -1025,7 +1025,23 @@ public class UIController : MonoBehaviour
         if (cg == null) cg = WinPanel.AddComponent<CanvasGroup>();
         cg.alpha = 1f;
 
-        WinAmount_Text.text = $"+{winAmount:F2}";
+        // Format the display text based on profit/loss
+        string profitLossText;
+        
+        if (profitLoss > 0)
+        {
+            profitLossText = profitLoss % 1 == 0 ? $"+{profitLoss:F0}" : $"+{profitLoss:F2}";
+        }
+        else if (profitLoss < 0)
+        {
+            profitLossText = profitLoss % 1 == 0 ? $"{profitLoss:F0}" : $"{profitLoss:F2}";
+        }
+        else
+        {
+            profitLossText =  "+0";
+        }
+
+        WinAmount_Text.text = profitLossText;
         WinAmount_Text.gameObject.SetActive(true);
         WinPanel.SetActive(true);
 

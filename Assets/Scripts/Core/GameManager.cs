@@ -24,6 +24,8 @@ public class GameManager : MonoBehaviour
     [Header("Timing")]
     [SerializeField] private float diceResultHighlightDelay = 2f;
     [SerializeField] private float diceShowDelay = 0.5f; // Delay before showing dice after result arrives
+    [Tooltip("Delay after chips reach player before showing win animation. Should match chip cashout duration.")]
+    [SerializeField] private float winAnimationDelay = 0.75f;
 
     [Header("Debug — disable in production builds")]
     [SerializeField] private bool showDebugLogs = false;
@@ -408,8 +410,16 @@ public class GameManager : MonoBehaviour
                 {
                     ApplyBalanceUpdate(payout.balance);
 
-                    if (payout.win > 0)
-                        uiController.ShowWinAnimation(payout.win);
+                    // Get total stake before clearing bets
+                    double totalStake = betController.GetCurrentTotalBet();
+                    
+                    // Only show win animation if player placed a bet (stake > 0)
+                    if (totalStake > 0)
+                    {
+                        double profitLoss = payout.win - totalStake;
+                        // Start coroutine to show win animation after chips reach player
+                        StartCoroutine(CR_DelayedWinAnimation(payout.win, totalStake, profitLoss));
+                    }
                 }
             }
         }
@@ -434,6 +444,16 @@ public class GameManager : MonoBehaviour
 
         chipWinAnimationController?.PlayCashoutAnimation();
         opponentChipManager?.PlayCashoutAnimation();
+    }
+
+    private IEnumerator CR_DelayedWinAnimation(double totalWin, double totalStake, double profitLoss)
+    {
+        // Wait for the chip cashout animation to complete
+        // This delay should match the total time chips take to reach the player
+        yield return new WaitForSeconds(winAnimationDelay);
+        
+        // Show the win animation after chips have reached the player
+        uiController.ShowWinAnimation(totalWin, totalStake, profitLoss);
     }
 
     internal void OnRoundEnd(RoundEndPayload data)
