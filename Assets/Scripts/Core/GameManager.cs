@@ -41,6 +41,7 @@ public class GameManager : MonoBehaviour
 
     #region Private Fields
     private string pendingRoomSwitch = null;
+    private DiceResultData lastDiceResult = null;  // Store dice result for cashout
 
     private readonly List<string> _winnersCache = new List<string>(12);
     private readonly HashSet<int> _seenDiceCache = new HashSet<int>();
@@ -252,6 +253,7 @@ public class GameManager : MonoBehaviour
         if (data == null) return;
 
         CurrentRoundId = data.roundId;
+        lastDiceResult = null;  // Clear stored dice result for new round
 
         int timeRemaining = GameUtilities.CalculateTimeRemaining(data.bettingEndTime, data.serverTime);
 
@@ -295,6 +297,9 @@ public class GameManager : MonoBehaviour
     internal void OnDiceResult(DiceResultData data)
     {
         if (!ValidateDiceResult(data)) return;
+
+        // Store dice result for cashout (fixes race condition)
+        lastDiceResult = data;
 
         // Add result to history panel (this doesn't show visually yet)
         resultPlaneController?.AddNewResult(data);
@@ -423,7 +428,13 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
-        var winningOptions = betController.GetWinningBetOptions();
+
+        // FIX: Use stored dice result instead of checking WinImage state
+        // This prevents race condition where cashout arrives before highlights show
+        List<string> winningOptions = lastDiceResult != null 
+            ? GetAllWinningAreasFromDice(lastDiceResult)
+            : betController.GetWinningBetOptions();
+
         StartCoroutine(CR_CashoutFlow());
         betController.ClearAllBets(false, winningOptions);
     }
@@ -586,6 +597,7 @@ public class GameManager : MonoBehaviour
 
         CurrentRoom = null;
         CurrentRoundId = null;
+        lastDiceResult = null;  // Clear stored dice result
         uiController.ClearRoundId();
 
         GameUtilities.ClearCaches();
@@ -613,6 +625,7 @@ public class GameManager : MonoBehaviour
 
         CurrentRoom = null;
         CurrentRoundId = null;
+        lastDiceResult = null;  // Clear stored dice result
         uiController.ClearRoundId();
 
         GameUtilities.ClearCaches();
