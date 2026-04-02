@@ -141,7 +141,7 @@ public class PlayerBetComponent : MonoBehaviour
     {
         if (totalBetAmountText == null || totalBetAmount <= 0 || winRatio <= 0) return;
 
-        PlayCountingAnimation(totalBetAmount, totalBetAmount+totalBetAmount * winRatio);
+        PlayCountingAnimation(totalBetAmount, totalBetAmount * winRatio);
         PlayBackgroundScaleAnimation();
     }
 
@@ -331,15 +331,31 @@ public class PlayerBetComponent : MonoBehaviour
             return;
         }
 
+        // FIX: Animate only whole numbers, then snap to final decimal
+        // Instead of: 50 → 50.1 → 50.2 → ... → 100.75
+        // We animate: 50 → 51 → 52 → ... → 100 → 100.75
+        double wholeTarget = System.Math.Floor(toAmount);
+        bool hasFractionalPart = toAmount != wholeTarget;
+
         countingTween = DOVirtual.Float(
-            (float)fromAmount, (float)toAmount, countingDuration,
-            value => { if (totalBetAmountText != null) totalBetAmountText.text = GameUtilities.FormatCurrency(value); })
+            (float)fromAmount, (float)wholeTarget, countingDuration,
+            value => 
+            { 
+                if (totalBetAmountText != null) 
+                {
+                    // Display only whole numbers during animation
+                    totalBetAmountText.text = GameUtilities.FormatCurrency(System.Math.Floor(value)); 
+                }
+            })
             .SetEase(countingEase)
             .SetUpdate(true)
             .OnComplete(() =>
             {
                 if (totalBetAmountText != null)
+                {
+                    // Snap to final amount with decimals
                     totalBetAmountText.text = GameUtilities.FormatCurrency(toAmount);
+                }
                 isAnimatingWin = false;
             })
             .SetAutoKill(true)
