@@ -1510,6 +1510,71 @@ public class BetController : MonoBehaviour
         return _winAreasCache;
     }
 
+    /// <summary>
+    /// Gets winning areas data directly from dice result, avoiding race condition
+    /// with WinImage.activeSelf state. Use this version when dice result is available.
+    /// </summary>
+    internal List<WinAreaData> GetWinningAreasData(DiceResultData diceResult)
+    {
+        if (diceResult == null) return GetWinningAreasData(); // Fallback to UI check
+
+        _winAreasCache.Clear();
+        
+        // Calculate winning bet options from dice result
+        List<string> winningOptions = CalculateWinningOptionsFromDice(diceResult);
+        
+        foreach (var kvp in areaBets)
+        {
+            // Only include areas that are actually winning based on dice result
+            if (!winningOptions.Contains(kvp.Key)) continue;
+
+            Transform areaTransform = GetBetAreaTransform(kvp.Key);
+            if (areaTransform == null) continue;
+
+            BetWager wager = gameManager.GetWagerForBetOption(kvp.Key);
+            _winAreasCache.Add(new WinAreaData
+            {
+                betOption = kvp.Key,
+                betAreaTarget = areaTransform,
+                betAmount = kvp.Value,
+                winAmount = wager?.CalculateWin(kvp.Value) ?? 0
+            });
+        }
+        return _winAreasCache;
+    }
+
+    /// <summary>
+    /// Calculate which bet options are winners from dice result data.
+    /// This is the source of truth - does not rely on UI state.
+    /// Matches the logic in GameManager.GetAllWinningAreasFromDice exactly.
+    /// </summary>
+    private List<string> CalculateWinningOptionsFromDice(DiceResultData diceResult)
+    {
+        List<string> winners = new List<string>();
+        
+        // matchSide can be: "small", "big", "odd", or "even"
+        string side = (diceResult.matchSide ?? "").ToLower();
+        if (side == "small") winners.Add("small");
+        if (side == "big") winners.Add("big");
+        if (side == "odd") winners.Add("odd");
+        if (side == "even") winners.Add("even");
+        
+        // Sum
+        winners.Add($"sum_{diceResult.sum}");
+        
+        // Single dice (unique dice values only)
+        HashSet<int> uniqueDice = new HashSet<int>();
+        if (uniqueDice.Add(diceResult.dice1)) winners.Add($"single_{diceResult.dice1}");
+        if (uniqueDice.Add(diceResult.dice2)) winners.Add($"single_{diceResult.dice2}");
+        if (uniqueDice.Add(diceResult.dice3)) winners.Add($"single_{diceResult.dice3}");
+        
+        // Triple same dice
+        if (diceResult.dice1 == diceResult.dice2 && diceResult.dice2 == diceResult.dice3)
+            winners.Add($"specific_3_{diceResult.dice1}");
+        
+        return winners;
+    }
+
     private Transform GetBetAreaTransform(string betOption) => GetBetAreaByOption(betOption)?.PlayerBetContainer;
     private GameObject GetWinImage(string betOption) => GetBetAreaByOption(betOption)?.WinImage;
 

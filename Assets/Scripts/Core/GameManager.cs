@@ -354,7 +354,8 @@ public class GameManager : MonoBehaviour
         // 7. Player dealer → bet area chips   (also runs Phase-1 clear internally)
         if (chipWinAnimationController != null)
         {
-            List<WinAreaData> winAreas = betController.GetWinningAreasData();
+            // FIX: Pass dice result to avoid race condition with WinImage state
+            List<WinAreaData> winAreas = betController.GetWinningAreasData(data);
             if (winAreas != null && winAreas.Count > 0)
                 chipWinAnimationController.PlayDiceResultAnimation(winAreas, data);
         }
