@@ -141,7 +141,7 @@ public class PlayerBetComponent : MonoBehaviour
     {
         if (totalBetAmountText == null || totalBetAmount <= 0 || winRatio <= 0) return;
 
-        PlayCountingAnimation(totalBetAmount, totalBetAmount * winRatio);
+        PlayCountingAnimation(totalBetAmount, totalBetAmount+ (totalBetAmount * winRatio));
         PlayBackgroundScaleAnimation();
     }
 
