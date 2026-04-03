@@ -181,14 +181,28 @@ public static class GameUtilities
             if (_chipCombResultCache.Count >= MaxChipCombinationCount) break;
         }
 
-        // If there's a remainder and we have at least one chip, add the remainder to the last chip
-        // This ensures the displayed bet amount matches the actual bet amount
-        if (remaining > tolerance && _chipCombResultCache.Count > 0)
+        // Handle remaining amounts
+        if (remaining > tolerance)
         {
-            int lastIndex = _chipCombResultCache.Count - 1;
-            ChipCombinationItem lastChip = _chipCombResultCache[lastIndex];
-            lastChip.amount += remaining;
-            _chipCombResultCache[lastIndex] = lastChip;
+            if (_chipCombResultCache.Count > 0)
+            {
+                // If we have chips, add the remainder to the last chip
+                int lastIndex = _chipCombResultCache.Count - 1;
+                ChipCombinationItem lastChip = _chipCombResultCache[lastIndex];
+                lastChip.amount += remaining;
+                _chipCombResultCache[lastIndex] = lastChip;
+            }
+            else if (_sortedValuesCache.Count > 0)
+            {
+                // No chips fit at all (amount < smallest chip) - use smallest chip sprite with actual amount
+                // Example: For amount=33 with chips [50,100,200...], show "33" using the 50 chip sprite
+                double smallestChip = _sortedValuesCache[_sortedValuesCache.Count - 1];
+                _chipCombResultCache.Add(new ChipCombinationItem
+                {
+                    amount = remaining,  // Display the actual amount (e.g., 33)
+                    chipIndex = availableChipValues.IndexOf(smallestChip)  // Use smallest chip sprite
+                });
+            }
         }
 
         return _chipCombResultCache;
