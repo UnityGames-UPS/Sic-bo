@@ -180,6 +180,7 @@ public class SocketIOManager : MonoBehaviour
         };
 
 #if UNITY_WEBGL && !UNITY_EDITOR
+        JSManager.RegisterAuthTokenListener(gameObject.name);
         JSManager.SendCustomMessage("authToken");
         if (gameObject.activeInHierarchy)
             StartCoroutine(WaitForAuthToken(options));
