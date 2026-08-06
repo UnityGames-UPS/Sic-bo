@@ -75,12 +75,10 @@ public class AudioManager : MonoBehaviour
     private bool isBgMusicEnabled = true;
     private bool isSfxEnabled = true;
     private bool isAppFocused = true;
-    private bool wasBgMusicPlayingBeforePause = false;
-    private float bgMusicPauseTime = 0f;
     private bool isUpdatingToggles = false;
     private Coroutine clockTickCoroutine;
     private bool isClockTickPlaying = false;
-    private bool isPaused = false;
+    private bool isForceMuted = false;
     #endregion
 
     #region Unity Lifecycle
@@ -107,14 +105,7 @@ public class AudioManager : MonoBehaviour
     private void OnApplicationFocus(bool hasFocus)
     {
         isAppFocused = hasFocus;
-        if (hasFocus)
-        {
-            ResumeAudio();
-        }
-        else
-        {
-            PauseAudio();
-        }
+        SetMuteAll(!hasFocus);
     }
 
     private void OnDestroy()
@@ -169,9 +160,9 @@ public class AudioManager : MonoBehaviour
 
     private void ApplyAudioSettings()
     {
-        if (bgMusicSource != null) bgMusicSource.mute = !isBgMusicEnabled;
-        if (sfxSource1 != null) sfxSource1.mute = !isSfxEnabled;
-        if (sfxSource2 != null) sfxSource2.mute = !isSfxEnabled;
+        if (bgMusicSource != null) bgMusicSource.mute = isForceMuted || !isBgMusicEnabled;
+        if (sfxSource1 != null) sfxSource1.mute = isForceMuted || !isSfxEnabled;
+        if (sfxSource2 != null) sfxSource2.mute = isForceMuted || !isSfxEnabled;
     }
     #endregion
 
@@ -228,6 +219,7 @@ public class AudioManager : MonoBehaviour
     private void OnSfxToggleChanged(bool isOn)
     {
         if (isUpdatingToggles) return;
+        isForceMuted = false;
         isSfxEnabled = !isOn;
         SaveAudioSettings();
         ApplyAudioSettings();
@@ -239,6 +231,7 @@ public class AudioManager : MonoBehaviour
     private void OnMusicToggleChanged(bool isOn)
     {
         if (isUpdatingToggles) return;
+        isForceMuted = false;
         isBgMusicEnabled = !isOn;
         SaveAudioSettings();
         ApplyAudioSettings();
@@ -264,36 +257,11 @@ public class AudioManager : MonoBehaviour
     #endregion
 
     #region Focus Management
-    private void PauseAudio()
+    internal void SetMuteAll(bool forceMute)
     {
-        if (isPaused) return;
-        isPaused = true;
-
-        if (bgMusicSource != null && bgMusicSource.isPlaying)
-        {
-            wasBgMusicPlayingBeforePause = true;
-            bgMusicPauseTime = bgMusicSource.time;
-            bgMusicSource.Pause();
-        }
-
-        if (sfxSource1 != null && sfxSource1.isPlaying) sfxSource1.Pause();
-        if (sfxSource2 != null && sfxSource2.isPlaying) sfxSource2.Pause();
-    }
-
-    private void ResumeAudio()
-    {
-        if (!isPaused) return;
-        isPaused = false;
-
-        if (wasBgMusicPlayingBeforePause && bgMusicSource != null && isBgMusicEnabled)
-        {
-            bgMusicSource.time = bgMusicPauseTime;
-            bgMusicSource.UnPause();
-            wasBgMusicPlayingBeforePause = false;
-        }
-
-        sfxSource1?.UnPause();
-        sfxSource2?.UnPause();
+        if (forceMute == isForceMuted) return;
+        isForceMuted = forceMute;
+        ApplyAudioSettings();
     }
     #endregion
 
@@ -424,13 +392,13 @@ public class AudioManager : MonoBehaviour
     #region Core Playback
     private void PlaySfx(AudioClip clip)
     {
-        if (!isSfxEnabled || clip == null || !isAppFocused || isPaused) return;
+        if (!isSfxEnabled || clip == null || !isAppFocused || isForceMuted) return;
         sfxSource1?.PlayOneShot(clip, sfxVolume);
     }
 
     private void PlayAnimationSfx(AudioClip clip)
     {
-        if (!isSfxEnabled || clip == null || !isAppFocused || isPaused) return;
+        if (!isSfxEnabled || clip == null || !isAppFocused || isForceMuted) return;
         sfxSource2?.PlayOneShot(clip, sfxVolume);
     }
     #endregion

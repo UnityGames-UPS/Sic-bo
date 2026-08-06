@@ -1,4 +1,4 @@
-﻿using DG.Tweening;
+using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -113,6 +113,7 @@ public class UIController : MonoBehaviour
     [SerializeField] private BetTimerController betTimerController;
     [SerializeField] private LeaderboardController leaderboardController;
     [SerializeField] private JSFunctCalls jsFunctCalls;
+    [SerializeField] private SocketIOManager socketController;
 
     [Header("Stats Display")]
     [SerializeField] private TMP_Text StatsRoundCount_Text;
@@ -226,6 +227,7 @@ public class UIController : MonoBehaviour
 
         leaderboardController?.Initialize();
         RegisterFullscreenListener();
+        jsFunctCalls?.RegisterVisibilityListener(gameObject.name);
     }
 
     private void OnDestroy()
@@ -233,6 +235,14 @@ public class UIController : MonoBehaviour
         winTween?.Kill();
         currentPopupTween?.Kill();
         if (inGamePopupCoroutine != null) StopCoroutine(inGamePopupCoroutine);
+    }
+
+    public void OnFocusChanged(string value)
+    {
+        bool focused = value == "1";
+        Debug.Log("UNITY FOCUS CHANGED: " + value + " (focused: " + focused + ")");
+        AudioManager.Instance?.SetMuteAll(!focused);
+        socketController?.HandleFocusChange(focused);
     }
     #endregion
 

@@ -1,4 +1,4 @@
-﻿using Best.SocketIO;
+using Best.SocketIO;
 using Best.SocketIO.Events;
 using Newtonsoft.Json;
 using System;
@@ -52,7 +52,7 @@ public class SocketIOManager : MonoBehaviour
     private bool isBeingDestroyed = false;
     private bool hasFocus = true;
     private float focusLostTime = 0f;
-    private const float maxBackgroundTime = 120f;
+    private const float maxBackgroundTime = 60f;
     private bool hasForceDisconnected = false;
     #endregion
 
@@ -117,16 +117,15 @@ public class SocketIOManager : MonoBehaviour
         StartCoroutine(CloseSocket());
     }
 
-    private void OnApplicationFocus(bool focus)
+    internal void HandleFocusChange(bool focus)
     {
         if (isBeingDestroyed) return;
-
         hasFocus = focus;
 
         if (!focus)
         {
             focusLostTime = Time.time;
-            if (focusCheckRoutine == null && gameObject.activeInHierarchy)
+            if (focusCheckRoutine == null && !isExiting && !isBeingDestroyed && gameObject.activeInHierarchy)
                 focusCheckRoutine = StartCoroutine(FocusTimeoutCheck());
         }
         else
@@ -136,12 +135,17 @@ public class SocketIOManager : MonoBehaviour
                 StopCoroutine(focusCheckRoutine);
                 focusCheckRoutine = null;
             }
+        }
+    }
 
-            // Reconcile results when tab regains focus to prevent blank rows
-            if (isConnected && gameManager != null)
-            {
-                gameManager.ReconcileResultsOnFocusGain();
-            }
+    private void OnApplicationFocus(bool focus)
+    {
+        if (isBeingDestroyed) return;
+
+        // Note: Focus timeout is handled via JS HandleFocusChange only (Check 4 asymmetric rule)
+        if (focus && isConnected && gameManager != null)
+        {
+            gameManager.ReconcileResultsOnFocusGain();
         }
     }
     #endregion
@@ -254,6 +258,7 @@ public class SocketIOManager : MonoBehaviour
         gameSocket.On<string>("game:cashout_timer", OnCashoutTimer);
         gameSocket.On<string>("game:lobby_count", OnLobbyCount);
         gameSocket.On<string>("game:leaderboard_update", OnLeaderboardUpdate);
+        gameSocket.On<string>("balance:sync", OnBalanceSync);
         gameSocket.On<string>("room:joined", OnRoomJoined);
         gameSocket.On<string>("room:left", OnRoomLeft);
         gameSocket.On<string>("pong", OnPongReceived);
@@ -310,15 +315,41 @@ public class SocketIOManager : MonoBehaviour
     private void OnError(Error error)
     {
         if (isBeingDestroyed) return;
-        // Always log socket-level errors — these are exceptional, not high-frequency
-        Debug.LogError($"[SOCKET] Error: {error.message}");
-
-        // If a HOME request was pending and the server errored, the timeout handler will retry
-        // No longer forcing immediate leave acknowledgement here
-
+        Debug.LogError("[ERROR] Socket error: " + error);
+        if (error != null && !string.IsNullOrEmpty(error.message) && error.message.Contains("Session expired"))
+        {
+            Debug.LogWarning("Session expired detected");
+            OnDisconnected();
 #if UNITY_WEBGL && !UNITY_EDITOR
-        JSManager?.SendCustomMessage("error");
+            JSManager?.SendCustomMessage("session_expired");
 #endif
+        }
+        else
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            JSManager?.SendCustomMessage("error");
+#endif
+        }
+    }
+
+    private void OnBalanceSync(string json)
+    {
+        if (isBeingDestroyed) return;
+        try
+        {
+            Debug.Log($"[SOCKET] balance:sync {json}");
+            BalanceSyncPayload syncPayload = JsonConvert.DeserializeObject<BalanceSyncPayload>(json);
+            if (syncPayload == null) return;
+
+            if (PlayerData == null) PlayerData = new Player();
+            PlayerData.balance = syncPayload.balance;
+
+            uiController?.UpdateBalance(syncPayload.balance);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[SOCKET] balance:sync parse error: {e.Message}");
+        }
     }
     #endregion
 
@@ -924,12 +955,12 @@ public class SocketIOManager : MonoBehaviour
                     catch (Exception e) { if (showDebugLogs) Debug.LogWarning($"[SOCKET] Focus close error: {e.Message}"); }
                 }
 
-                ShowErrorAndBlock("Game timed out due to inactivity. Please refresh.", showDisconnectAfter: true);
+                uiController?.ShowDisconnectPopup();
                 focusCheckRoutine = null;
                 yield break;
             }
 
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSecondsRealtime(1f);
         }
 
         focusCheckRoutine = null;

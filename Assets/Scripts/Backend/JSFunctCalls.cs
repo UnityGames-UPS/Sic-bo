@@ -21,6 +21,9 @@ public class JSFunctCalls : MonoBehaviour
 
     [DllImport("__Internal")]
     private static extern void RegisterFullscreenChangeListener(string gameObjectName);
+
+    [DllImport("__Internal")]
+    private static extern void RegisterVisibilityChangeListener(string gameObjectName);
     #endregion
 
     #region Unity Lifecycle
@@ -95,6 +98,16 @@ public class JSFunctCalls : MonoBehaviour
         RegisterFullscreenChangeListener(gameObjectName);
 #else
         Debug.Log("[JS] Fullscreen listener not registered (editor mode)");
+#endif
+    }
+
+    internal void RegisterVisibilityListener(string gameObjectName)
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        Debug.Log($"[JS] Registering visibility change listener on '{gameObjectName}'");
+        RegisterVisibilityChangeListener(gameObjectName);
+#else
+        Debug.Log("[JS] Visibility listener not registered (editor mode)");
 #endif
     }
     #endregion

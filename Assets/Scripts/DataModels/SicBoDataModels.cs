@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 
@@ -19,6 +19,12 @@ public class AuthTokenData
     public string cookie;
     public string socketURL;
     public string nameSpace;
+}
+
+[Serializable]
+public class BalanceSyncPayload
+{
+    public double balance;
 }
 #endregion
 

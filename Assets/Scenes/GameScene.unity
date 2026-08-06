@@ -24180,7 +24180,7 @@ MonoBehaviour:
   gameManager: {fileID: 1673436615}
   uiController: {fileID: 1759262012}
   JSManager: {fileID: 285508710}
-  testToken: ec3549db818944a4b7c9285d1240cfb7
+  testToken: a6d88ea40b8d4f34aa3aa68e633ec7ff
   RaycastBlocker: {fileID: 776184813}
   disconnectDelay: 60
   showDebugLogs: 1
@@ -98448,6 +98448,7 @@ MonoBehaviour:
   betTimerController: {fileID: 1713741160}
   leaderboardController: {fileID: 1373798843}
   jsFunctCalls: {fileID: 285508710}
+  socketController: {fileID: 410521236}
   StatsRoundCount_Text: {fileID: 456553621}
   StatsDice1_Text: {fileID: 1013433085}
   StatsDice2_Text: {fileID: 656144862}
