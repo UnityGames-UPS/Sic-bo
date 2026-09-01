@@ -131,11 +131,12 @@ public class GameManager : MonoBehaviour
             opponentChipManager?.SetLeaderboardData(payload.leaderboards);
             opponentChipManager?.LockLeaderboardsForRound();
 
-            // Process existing bets from other players when joining mid-round
+            // Process existing bets when joining mid-round (opponents + local player)
             if (payload.bets != null && payload.bets.Count > 0)
             {
-                Debug.Log($"[GameManager] OnRoomJoinedWithData: Found {payload.bets.Count} existing bets, calling AddJoinTimeBets");
+                Debug.Log($"[GameManager] OnRoomJoinedWithData: Found {payload.bets.Count} existing bets, restoring opponent & player bets.");
                 opponentChipManager?.AddJoinTimeBets(payload.bets);
+                betController?.RestorePlayerJoinTimeBets(payload.bets, PlayerUsername);
             }
             else
             {
@@ -301,6 +302,10 @@ public class GameManager : MonoBehaviour
         // Store dice result for cashout (fixes race condition)
         lastDiceResult = data;
 
+        // Snapshot winning areas IMMEDIATELY while areaBets is 100% intact!
+        // This prevents asynchronous game:cashout socket message from wiping areaBets before ShowResultEffects runs.
+        betController?.CacheWinningAreasData(data);
+
         // Add result to history panel (this doesn't show visually yet)
         resultPlaneController?.AddNewResult(data);
 
@@ -356,12 +361,30 @@ public class GameManager : MonoBehaviour
         {
             // FIX: Pass dice result to avoid race condition with WinImage state
             List<WinAreaData> winAreas = betController.GetWinningAreasData(data);
+            Debug.Log($"[GameManagerAnim] ShowResultEffects: betController returned {winAreas?.Count ?? 0} winning area(s) for local player.");
             if (winAreas != null && winAreas.Count > 0)
+            {
                 chipWinAnimationController.PlayDiceResultAnimation(winAreas, data);
+            }
+            else
+            {
+                Debug.Log("[GameManagerAnim] ShowResultEffects: Local player has no winning bets. Skipping dealer->bet-area chip flight for player.");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[GameManagerAnim] ShowResultEffects: chipWinAnimationController is NULL on GameManager!");
         }
 
         // 8. Opponent dealer → bet area chips (Phase-1 fade + Phase-2 flight, in sync)
-        opponentChipManager?.PlayOpponentWinAnimations();
+        if (opponentChipManager != null)
+        {
+            opponentChipManager.PlayOpponentWinAnimations();
+        }
+        else
+        {
+            Debug.LogWarning("[GameManagerAnim] ShowResultEffects: opponentChipManager is NULL on GameManager!");
+        }
     }
 
     private List<string> GetAllWinningAreasFromDice(DiceResultData data)
@@ -396,6 +419,7 @@ public class GameManager : MonoBehaviour
     internal void OnCashout(CashoutData data)
     {
         if (data == null) return;
+        Debug.Log("[GameManagerAnim] OnCashout: Received cashout event from server.");
 
         if (data.leaderboards != null)
         {
@@ -452,8 +476,12 @@ public class GameManager : MonoBehaviour
         float postLand = chipWinAnimationController != null
             ? chipWinAnimationController.PostLandWait : 0.5f;
 
-        yield return new WaitForSeconds(dealerFlight + postLand);
+        float totalWait = dealerFlight + postLand;
+        Debug.Log($"[GameManagerAnim] CR_CashoutFlow: Waiting {totalWait:F2}s (dealerFlight={dealerFlight:F2}s + postLand={postLand:F2}s) before triggering cashout sweeps.");
 
+        yield return new WaitForSeconds(totalWait);
+
+        Debug.Log("[GameManagerAnim] CR_CashoutFlow: Triggering PlayCashoutAnimation on ChipWinAnimationController & OpponentChipManager.");
         chipWinAnimationController?.PlayCashoutAnimation();
         opponentChipManager?.PlayCashoutAnimation();
     }

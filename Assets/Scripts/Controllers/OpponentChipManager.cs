@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
@@ -189,9 +189,18 @@ public class OpponentChipManager : MonoBehaviour
 
     internal void AddOpponentBet(string betOption, double amount, string username = "")
     {
-        if (!opponentContainers.ContainsKey(betOption)) return;
-        if (opponentDealerArea == null || chipPrefab == null || grayChipSprite == null) return;
+        if (!opponentContainers.ContainsKey(betOption))
+        {
+            Debug.LogWarning($"[OpponentChipAnim] AddOpponentBet SKIPPED: Container for '{betOption}' not found in opponentContainers map.");
+            return;
+        }
+        if (opponentDealerArea == null || chipPrefab == null || grayChipSprite == null)
+        {
+            Debug.LogWarning($"[OpponentChipAnim] AddOpponentBet SKIPPED: Unassigned reference (opponentDealerArea={(opponentDealerArea != null)}, chipPrefab={(chipPrefab != null)}, grayChipSprite={(grayChipSprite != null)}).");
+            return;
+        }
 
+        Debug.Log($"[OpponentChipAnim] AddOpponentBet: Spawning live bet chip for '{username}' on '{betOption}' (amount={amount}).");
         AudioManager.Instance?.PlayChipAdd();
         StartCoroutine(CR_SpawnAndAnimateChip(betOption, amount, username));
     }
@@ -259,18 +268,30 @@ public class OpponentChipManager : MonoBehaviour
 
     /// <summary>
     /// Called by GameManager.ShowResultEffects() — starts the win chip
-    /// animation sequence.  Timing is derived entirely from
+    /// animation sequence. Timing is derived entirely from
     /// ChipWinAnimationController so player and opponent chips are in lockstep.
     /// </summary>
     internal void PlayOpponentWinAnimations()
     {
+        Debug.Log($"[OpponentChipAnim] PlayOpponentWinAnimations START: Processing opponent win animations for {activeOpponentChips.Count} active opponent chip(s).");
         if (winAnimationCoroutine != null) StopCoroutine(winAnimationCoroutine);
         winAnimationCoroutine = StartCoroutine(CR_OpponentWinAnimation());
     }
 
     internal void PlayCashoutAnimation()
     {
-        if (isCashoutRunning || activeOpponentChips.Count == 0) return;
+        if (isCashoutRunning)
+        {
+            Debug.LogWarning("[OpponentChipAnim] PlayCashoutAnimation SKIPPED: Cashout animation is already running.");
+            return;
+        }
+        if (activeOpponentChips.Count == 0)
+        {
+            Debug.Log($"[OpponentChipAnim] PlayCashoutAnimation SKIPPED: activeOpponentChips count is 0.");
+            return;
+        }
+
+        Debug.Log($"[OpponentChipAnim] PlayCashoutAnimation START: Sweeping {activeOpponentChips.Count} opponent chip(s).");
         if (winAnimationCoroutine != null)
             StartCoroutine(WaitForWinAnimationThenCashout());
         else

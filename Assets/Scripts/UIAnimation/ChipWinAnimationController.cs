@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
@@ -112,22 +112,56 @@ internal class ChipWinAnimationController : MonoBehaviour
     #region Internal API
     internal void PlayDiceResultAnimation(List<WinAreaData> winAreas, DiceResultData diceResult)
     {
-        if (isAnimating || winAreas == null || winAreas.Count == 0 || diceResult == null) return;
+        if (isAnimating)
+        {
+            Debug.LogWarning("[ChipWinAnim] PlayDiceResultAnimation SKIPPED: Animation is already running (isAnimating=true).");
+            return;
+        }
+        if (winAreas == null || winAreas.Count == 0)
+        {
+            Debug.Log($"[ChipWinAnim] PlayDiceResultAnimation SKIPPED: winAreas is null or empty (Count: {winAreas?.Count ?? 0}). Player has no winning bets on this round.");
+            return;
+        }
+        if (diceResult == null)
+        {
+            Debug.LogWarning("[ChipWinAnim] PlayDiceResultAnimation SKIPPED: diceResult is null.");
+            return;
+        }
+
+        Debug.Log($"[ChipWinAnim] PlayDiceResultAnimation START: Processing {winAreas.Count} winning area(s) for player.");
         if (winCoroutine != null) StopCoroutine(winCoroutine);
         var recalculated = RecalculateWinAmounts(winAreas, diceResult);
+        Debug.Log($"[ChipWinAnim] RecalculateWinAmounts produced {recalculated.Count} area(s) with actual win > 0.");
         winCoroutine = StartCoroutine(CR_DealerToBetAreas(recalculated));
     }
 
     internal void PlayCashoutAnimation()
     {
-        if (activeWinChips.Count == 0 && stakeReturnChips.Count == 0) return;
+        if (playerNameTarget == null)
+        {
+            Debug.LogError("[ChipWinAnim] PlayCashoutAnimation BLOCKED: playerNameTarget is NULL in Inspector! Assign Player Header RectTransform.");
+            return;
+        }
+        if (activeWinChips.Count == 0 && stakeReturnChips.Count == 0)
+        {
+            Debug.Log($"[ChipWinAnim] PlayCashoutAnimation SKIPPED: No win chips ({activeWinChips.Count}) or stake return chips ({stakeReturnChips.Count}) to sweep.");
+            return;
+        }
+
+        Debug.Log($"[ChipWinAnim] PlayCashoutAnimation START: Sweeping {activeWinChips.Count} win chip(s) and {stakeReturnChips.Count} stake return chip(s) to player target ({playerNameTarget.name}).");
         if (cashoutCoroutine != null) StopCoroutine(cashoutCoroutine);
         cashoutCoroutine = StartCoroutine(CR_Cashout());
     }
 
     internal void PlayRefundAnimation(Dictionary<string, double> refundBets, bool clearComponentsAfter = true)
     {
-        if (refundBets == null || refundBets.Count == 0) return;
+        if (refundBets == null || refundBets.Count == 0)
+        {
+            Debug.Log("[ChipWinAnim] PlayRefundAnimation SKIPPED: refundBets is null or empty.");
+            return;
+        }
+
+        Debug.Log($"[ChipWinAnim] PlayRefundAnimation START: Refunding {refundBets.Count} bet area(s) (clearComponentsAfter={clearComponentsAfter}).");
         StartCoroutine(CR_RefundChips(refundBets, clearComponentsAfter));
     }
 

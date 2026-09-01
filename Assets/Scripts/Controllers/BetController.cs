@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -510,7 +510,11 @@ public class BetController : MonoBehaviour
         for (int i = 0; i < SumAreas.Count; i++)
             ClearAreaUnlessSkipped(SumAreas[i], $"sum_{i + 4}", skipOptions);
 
-        if (opponentBetClear) ClearAllOpponentBets();
+        if (opponentBetClear)
+        {
+            ClearAllOpponentBets();
+            _cachedWinAreas.Clear();
+        }
 
         UpdateTotalBet();
         HideBetActionsPanel();
@@ -654,6 +658,43 @@ public class BetController : MonoBehaviour
     private void HandleCancelBroadcast(BetPlacedData data)
     {
         Debug.Log($"[BetController] Received cancel broadcast for {data.betOption}, amount: {data.amount} - ignoring client-side state changes");
+    }
+
+    internal void RestorePlayerJoinTimeBets(List<BetInfo> bets, string localUsername)
+    {
+        if (bets == null || bets.Count == 0 || string.IsNullOrEmpty(localUsername)) return;
+
+        Debug.Log($"[BetController] RestorePlayerJoinTimeBets: Checking {bets.Count} room bet(s) to restore local player '{localUsername}' bets.");
+
+        foreach (var bet in bets)
+        {
+            if (bet == null || string.IsNullOrEmpty(bet.betOption) || bet.amount <= 0) continue;
+            if (bet.username != localUsername) continue; // Skip opponents' bets
+
+            Debug.Log($"[BetController] Restoring local player bet on '{bet.betOption}' for amount={bet.amount}.");
+
+            AddBetToAreaFromServer(bet.betOption, bet.amount);
+            ApplyBadgesToContainer(GetBetAreaByOption(bet.betOption)?.PlayerBetContainer);
+
+            if (!areaBets.ContainsKey(bet.betOption)) areaBets[bet.betOption] = 0;
+            areaBets[bet.betOption] += bet.amount;
+            currentTotalBet += bet.amount;
+
+            betHistory.Add(new BetAction
+            {
+                betOption = bet.betOption,
+                amount = bet.amount,
+                chipIndex = GetChipIndexForAmount(bet.amount)
+            });
+
+            hasPlacedBetThisRound = true;
+        }
+
+        UpdateTotalBet();
+        if (hasPlacedBetThisRound)
+        {
+            ShowBetActionsPanelAnimated();
+        }
     }
 
     private void HandleOpponentBet(BetPlacedData data)
@@ -1510,36 +1551,93 @@ public class BetController : MonoBehaviour
         return _winAreasCache;
     }
 
-    /// <summary>
-    /// Gets winning areas data directly from dice result, avoiding race condition
-    /// with WinImage.activeSelf state. Use this version when dice result is available.
-    /// </summary>
-    internal List<WinAreaData> GetWinningAreasData(DiceResultData diceResult)
-    {
-        if (diceResult == null) return GetWinningAreasData(); // Fallback to UI check
+    private readonly List<WinAreaData> _cachedWinAreas = new List<WinAreaData>();
 
-        _winAreasCache.Clear();
-        
-        // Calculate winning bet options from dice result
+    /// <summary>
+    /// Snapshots winning areas immediately on OnDiceResult while areaBets is still 100% intact.
+    /// Prevents race condition where asynchronous game:cashout clears areaBets before ShowResultEffects runs.
+    /// </summary>
+    internal void CacheWinningAreasData(DiceResultData diceResult)
+    {
+        _cachedWinAreas.Clear();
+        if (diceResult == null) return;
+
         List<string> winningOptions = CalculateWinningOptionsFromDice(diceResult);
-        
+        Debug.Log($"[BetControllerAnim] CacheWinningAreasData: SNAPSHOTTING winning areas while areaBets count={areaBets.Count}. Dice: side={diceResult.matchSide}, sum={diceResult.sum}. Winning options from dice: {string.Join(", ", winningOptions)}");
+
         foreach (var kvp in areaBets)
         {
-            // Only include areas that are actually winning based on dice result
             if (!winningOptions.Contains(kvp.Key)) continue;
 
             Transform areaTransform = GetBetAreaTransform(kvp.Key);
             if (areaTransform == null) continue;
 
             BetWager wager = gameManager.GetWagerForBetOption(kvp.Key);
+            double calcWin = wager?.CalculateWin(kvp.Value) ?? 0;
+
+            _cachedWinAreas.Add(new WinAreaData
+            {
+                betOption = kvp.Key,
+                betAreaTarget = areaTransform,
+                betAmount = kvp.Value,
+                winAmount = calcWin
+            });
+            Debug.Log($"[BetControllerAnim] SNAPSHOTTED WINNING AREA: '{kvp.Key}' -> betAmount={kvp.Value}, winAmount={calcWin}.");
+        }
+
+        Debug.Log($"[BetControllerAnim] CacheWinningAreasData finished: {_cachedWinAreas.Count} winning area(s) snapshotted.");
+    }
+
+    /// <summary>
+    /// Gets winning areas data directly from dice result, avoiding race condition
+    /// with WinImage.activeSelf state. Returns snapshotted data if available.
+    /// </summary>
+    internal List<WinAreaData> GetWinningAreasData(DiceResultData diceResult)
+    {
+        if (_cachedWinAreas.Count > 0)
+        {
+            Debug.Log($"[BetControllerAnim] GetWinningAreasData: Returning {_cachedWinAreas.Count} snapshotted winning area(s).");
+            return _cachedWinAreas;
+        }
+
+        if (diceResult == null) return GetWinningAreasData(); // Fallback to UI check
+
+        _winAreasCache.Clear();
+        
+        // Calculate winning bet options from dice result
+        List<string> winningOptions = CalculateWinningOptionsFromDice(diceResult);
+        Debug.Log($"[BetControllerAnim] GetWinningAreasData (fallback): diceResult side={diceResult.matchSide}, sum={diceResult.sum}. Active player areaBets count: {areaBets.Count}. Winning options from dice: {string.Join(", ", winningOptions)}");
+        
+        foreach (var kvp in areaBets)
+        {
+            // Only include areas that are actually winning based on dice result
+            if (!winningOptions.Contains(kvp.Key))
+            {
+                Debug.Log($"[BetControllerAnim] Area '{kvp.Key}' (amount={kvp.Value}) is NOT a winning option.");
+                continue;
+            }
+
+            Transform areaTransform = GetBetAreaTransform(kvp.Key);
+            if (areaTransform == null)
+            {
+                Debug.LogWarning($"[BetControllerAnim] Transform for winning area '{kvp.Key}' is NULL!");
+                continue;
+            }
+
+            BetWager wager = gameManager.GetWagerForBetOption(kvp.Key);
+            double calcWin = wager?.CalculateWin(kvp.Value) ?? 0;
+            Debug.Log($"[BetControllerAnim] MATCHED WINNING AREA: '{kvp.Key}' -> betAmount={kvp.Value}, winAmount={calcWin}.");
+
             _winAreasCache.Add(new WinAreaData
             {
                 betOption = kvp.Key,
                 betAreaTarget = areaTransform,
                 betAmount = kvp.Value,
-                winAmount = wager?.CalculateWin(kvp.Value) ?? 0
+                winAmount = calcWin
             });
         }
+
+        Debug.Log($"[BetControllerAnim] GetWinningAreasData finished: {_winAreasCache.Count} winning area(s) compiled for chip flight.");
         return _winAreasCache;
     }
 
