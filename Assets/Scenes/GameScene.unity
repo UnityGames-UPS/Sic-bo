@@ -9551,7 +9551,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 17
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -32899,7 +32899,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 19}
   m_SizeDelta: {x: 900, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &590212579
@@ -32922,7 +32922,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Unable to reconnect. Please check your internet connection and try again.
+  m_text: Please restart the game.
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
   m_sharedMaterial: {fileID: 2870210248413001566, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
@@ -32949,8 +32949,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 45
-  m_fontSizeBase: 45
+  m_fontSize: 65
+  m_fontSizeBase: 65
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -62250,7 +62250,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 130}
-  m_SizeDelta: {x: 550, y: 200}
+  m_SizeDelta: {x: 774.86, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1119448860
 MonoBehaviour:
@@ -62307,7 +62307,7 @@ MonoBehaviour:
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 0
+  m_fontStyle: 17
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
@@ -106278,8 +106278,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -30}
-  m_SizeDelta: {x: 550, y: 200}
+  m_AnchoredPosition: {x: 0, y: -58}
+  m_SizeDelta: {x: 846.06, y: 200}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1902095085
 MonoBehaviour:
@@ -106301,7 +106301,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Reconneting...
+  m_text: Trying to reconnect....
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
   m_sharedMaterial: {fileID: 2870210248413001566, guid: 968c6ba6d9e437f439fd5cb33f099fa6, type: 2}
